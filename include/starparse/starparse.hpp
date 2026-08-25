@@ -16,7 +16,7 @@ namespace StarParse {
         const char* help_{};
 
         consteval Opt(char s, std::string_view h) : short_name(s), help_(std::define_static_string(h)) {}
-        consteval std::string_view help() const { return help_; }
+        constexpr std::string_view help() const { return help_; }
     };
 
     struct Positional {
@@ -31,7 +31,7 @@ namespace StarParse {
             M v{};
             auto [pointer, error_code] = std::from_chars(s.data(), s.data() + s.size(), v);
             if (error_code != std::errc{} || pointer != s.data() + s.size()) {
-                throw std::invalid_argument("bad value");
+                throw std::invalid_argument(std::format("bad value for type: {}", std::meta::display_string_of(^^M)));
             }
             return v;
         } else {
@@ -43,6 +43,15 @@ namespace StarParse {
         for (std::meta::info a : std::meta::annotations_of(m)) {
             if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^Positional)) {
                 return std::meta::extract<Positional>(a);
+            }
+        }
+        return std::nullopt;
+    }
+
+    consteval std::optional<Opt> opt_of(std::meta::info m) {
+        for (std::meta::info a : std::meta::annotations_of(m)) {
+            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^Opt)) {
+                return std::meta::extract<Opt>(a);
             }
         }
         return std::nullopt;
@@ -64,13 +73,15 @@ namespace StarParse {
                 using M = typename [:std::meta::type_of(m):];
                 constexpr auto pos = positional_of(m);
                 if (is_flag) {
-                    if (!matched && argument == std::meta::identifier_of(m)) {
+                    constexpr auto opt = opt_of(m);
+                    const bool matching_string = argument == std::meta::identifier_of(m) || (argument.size() == 1 && opt.has_value() && argument.at(0) == opt->short_name);
+                    if (!matched && matching_string) {
                         matched = true;
                         if constexpr (std::same_as<M, bool>) {
                             out.[:m:] = true;
                         } else {
                             if (i + 1 >= argc) {
-                                throw std::invalid_argument("missing value for option");
+                                throw std::invalid_argument(std::format("missing value for option: {}", argument));
                             }
                             out.[:m:] = from_string<M>(argv[++i]);
                         }
@@ -84,7 +95,7 @@ namespace StarParse {
                 }
             }
             if (!matched) {
-                throw std::invalid_argument("unrecognized argument");
+                throw std::invalid_argument(std::format("unrecognized argument: {}", argument));
             }
         }
         return out;
