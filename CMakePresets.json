@@ -1,0 +1,41 @@
+{
+    "version": 6,
+    "cmakeMinimumRequired": { "major": 3, "minor": 25, "patch": 0 },
+    "configurePresets": [
+        {
+            "name": "gcc",
+            "displayName": "GCC 16 Release",
+            "description": "Homebrew GCC with -freflection",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "cacheVariables": {
+                "CMAKE_CXX_COMPILER": "g++-16",
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+            }
+        },
+        {
+            "name": "gcc-debug",
+            "displayName": "GCC 16 Debug",
+            "inherits": "gcc",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        }
+    ],
+    "buildPresets": [
+        { "name": "gcc", "configurePreset": "gcc" },
+        { "name": "gcc-debug", "configurePreset": "gcc-debug" }
+    ],
+    "testPresets": [
+        {
+            "name": "gcc",
+            "configurePreset": "gcc",
+            "output": { "outputOnFailure": true }
+        },
+        {
+            "name": "gcc-debug",
+            "configurePreset": "gcc-debug",
+            "output": { "outputOnFailure": true }
+        }
+    ]
+}
