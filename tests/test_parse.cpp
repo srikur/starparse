@@ -1,3 +1,4 @@
+#include <print>
 #include <starparse/starparse.hpp>
 #include <string>
 
@@ -8,6 +9,14 @@ struct Args {
 };
 
 auto main(int argc, char** argv) -> int {
-    const auto args{StarParse::parse<Args>(argc, argv)};
+    const auto result{StarParse::parse<Args>(argc, argv)};
+    // if (result.help_requested()) {
+    //     std::print("{}", StarParse::help_text<Args>());
+    //     return 0;
+    // }
+    // if (!result) {
+    //     std::print(result.errors());
+    // }
+    const auto& args = *result;
     std::println("arg1: {}, verbose: {}, arg2: {}", args.arg1, args.verbose, args.arg2);
 }
