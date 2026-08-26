@@ -83,6 +83,11 @@ namespace StarParse {
     }
 
     template <typename T>
+    consteval bool is_named_option(std::meta::info m) {
+        return opt_of(m).has_value() || positional_of(m).has_value() || is_bare<T>();
+    }
+
+    template <typename T>
     consteval std::optional<size_t> positional_index_of(std::meta::info m) {
         if (auto pos = positional_of(m)) {
             return pos->index;
@@ -111,7 +116,8 @@ namespace StarParse {
         template for (constexpr auto m : members) {
             using M = typename [:std::meta::type_of(m):];
             constexpr auto opt = opt_of(m);
-            const bool match = name == std::meta::identifier_of(m) || (is_short && name.size() == 1 && opt.has_value() && name[0] == opt->short_name);
+            constexpr bool named = is_named_option<T>(m);
+            const bool match = (named && name == std::meta::identifier_of(m)) || (is_short && name.size() == 1 && opt.has_value() && name[0] == opt->short_name);
             if (match) takes = !std::same_as<M, bool>;
         }
         return takes;
@@ -245,7 +251,8 @@ namespace StarParse {
                     ctx.separator_seen = true;
                 } else if (attrs.dashed || attrs.double_dashed) {
                     constexpr auto opt = opt_of(m);
-                    const bool matching_string = attrs.name == std::meta::identifier_of(m) || (attrs.name.size() == 1 && opt.has_value() && attrs.name[0] == opt->short_name);
+                    constexpr bool named = is_named_option<T>(m);
+                    const bool matching_string = (named && attrs.name == std::meta::identifier_of(m)) || (attrs.name.size() == 1 && opt.has_value() && attrs.name[0] == opt->short_name);
                     if (!matched && matching_string) {
                         matched = true;
                         if constexpr (std::same_as<M, bool>) {
