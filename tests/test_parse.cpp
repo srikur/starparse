@@ -16,5 +16,8 @@ struct Args2 {
 
 auto main(int argc, char** argv) -> int {
     const auto args{StarParse::immediate_parse<Args>(argc, argv)};
-    std::println("arg1: {}, verbose: {}, arg2: {}", args.arg1, args.verbose, args.arg2);
+    std::println("Args  arg1: {}, verbose: {}, arg2: {}", args.arg1, args.verbose, args.arg2);
+
+    const auto args2{StarParse::immediate_parse<Args2>(argc, argv)};
+    std::println("Args2 arg1: {}, verbose: {}, arg2: {}", args2.arg1, args2.verbose, args2.arg2);
 }

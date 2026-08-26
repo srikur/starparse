@@ -72,6 +72,37 @@ namespace StarParse {
         return std::nullopt;
     }
 
+    template <typename T>
+    consteval bool is_bare() {
+        for (std::meta::info m : std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current())) {
+            if (opt_of(m).has_value() || positional_of(m).has_value()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    template <typename T>
+    consteval std::optional<size_t> positional_index_of(std::meta::info m) {
+        if (auto pos = positional_of(m)) {
+            return pos->index;
+        }
+        if (!is_bare<T>() || std::meta::dealias(std::meta::remove_cv(std::meta::type_of(m))) == std::meta::dealias(^^bool)) {
+            return std::nullopt;
+        }
+        size_t index{0};
+        for (std::meta::info member : std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current())) {
+            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(member))) == std::meta::dealias(^^bool)) {
+                continue;
+            }
+            if (member == m) {
+                return index;
+            }
+            ++index;
+        }
+        return std::nullopt;
+    }
+
     template<typename T>
     bool option_takes_value(std::string_view name, bool is_short) {
         static constexpr auto members = std::define_static_array(
@@ -80,7 +111,7 @@ namespace StarParse {
         template for (constexpr auto m : members) {
             using M = typename [:std::meta::type_of(m):];
             constexpr auto opt = opt_of(m);
-            const bool match = is_short ? (name.size() == 1 && opt.has_value() && name[0] == opt->short_name) : name == std::meta::identifier_of(m);
+            const bool match = name == std::meta::identifier_of(m) || (is_short && name.size() == 1 && opt.has_value() && name[0] == opt->short_name);
             if (match) takes = !std::same_as<M, bool>;
         }
         return takes;
@@ -165,6 +196,7 @@ namespace StarParse {
         std::vector<ParseError> errors_;
     };
 
+    template <typename T>
     std::vector<ArgAttributes> get_arg_attrs(int argc, char** argv) {
         std::vector<ArgAttributes> attr_array;
         attr_array.reserve(argc - 1);
@@ -194,17 +226,16 @@ namespace StarParse {
         static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
         size_t next_positional{0};
         ArgContext ctx{};
-        // struct/class field attrs
-        const auto field_attrs = get_field_attrs<T>();
-        const auto attr_array = get_arg_attrs(argc, argv);
+        const auto attr_array = get_arg_attrs<T>(argc, argv);
 
         for (const auto& attrs : attr_array) {
             bool matched{false};
             template for (constexpr auto m : members) {
                 using M = typename [:std::meta::type_of(m):];
+                constexpr auto pos = positional_index_of<T>(m);
                 if (attrs.is_positional || ctx.separator_seen) {
-                    if constexpr () {
-                        if (!matched && next_positional == pos->index) {
+                    if constexpr (pos.has_value()) {
+                        if (!matched && next_positional == *pos) {
                             matched = true;
                             next_positional++;
                             out.[:m:] = from_string<M>(attrs.name);
@@ -212,7 +243,7 @@ namespace StarParse {
                     }
                 } else if (attrs.is_separator) {
                     ctx.separator_seen = true;
-                } else if (attrs.dashed) {
+                } else if (attrs.dashed || attrs.double_dashed) {
                     constexpr auto opt = opt_of(m);
                     const bool matching_string = attrs.name == std::meta::identifier_of(m) || (attrs.name.size() == 1 && opt.has_value() && attrs.name[0] == opt->short_name);
                     if (!matched && matching_string) {
@@ -233,34 +264,6 @@ namespace StarParse {
             }
         }
         return ParsedArgs<T>{out, help_requested, errors};
-    }
-
-    struct FieldAttributes {
-        std::meta::info field_type;
-        size_t order;
-        std::optional<char> short_name;
-        size_t positional_index;
-        std::string_view help_text;
-    };
-
-    template<typename T>
-    auto get_field_attrs() {
-        static constexpr auto members = std::define_static_array(
-                std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
-        std::unordered_map<std::string, FieldAttributes> field_attrs{};
-        field_attrs.reserve(members.size());
-        for (auto [index, member] : std::views::enumerate(members)) {
-            constexpr auto pos = positional_of(member);
-            constexpr auto opt = opt_of(member);
-            field_attrs[std::meta::identifier_of(member)] = FieldAttributes{
-                std::meta::type_of(member),
-                index,
-                opt ? opt->short_name : std::nullopt;
-                pos ? pos->index : index;
-                opt ? opt->help_text : std::string_view{};
-            };
-        }
-        return field_attrs;
     }
 
     template<typename T>
