@@ -23,6 +23,15 @@ namespace StarParse {
         size_t index;
     };
 
+    struct Universal {
+        size_t index;
+        char short_name{0};
+        const char* help_{};
+
+        consteval Universal(size_t i, char s, std::string_view h) : index(i), short_name(s), help_(std::define_static_string(h)) {}
+        constexpr std::string_view help() const { return help_; }
+    };
+
     enum class DashType { SINGLE, DOUBLE, BOTH, NONE };
 
     struct Settings {
@@ -156,16 +165,7 @@ namespace StarParse {
         std::vector<ParseError> errors_;
     };
 
-    template <typename T>
-    ParsedArgs<T> parse(int argc, char** argv, Settings settings = {}) {
-        T out{};
-        bool help_requested{};
-        std::vector<ParseError> errors{};
-        static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
-        size_t next_positional{0};
-        ArgContext ctx{};
-
-
+    std::vector<ArgAttributes> get_arg_attrs(int argc, char** argv) {
         std::vector<ArgAttributes> attr_array;
         attr_array.reserve(argc - 1);
         bool separator_seen{false};
@@ -183,14 +183,27 @@ namespace StarParse {
             }
             attr_array.push_back(a);
         }
+        return attr_array;
+    }
+
+    template <typename T>
+    ParsedArgs<T> parse(int argc, char** argv, Settings settings = {}) {
+        T out{};
+        bool help_requested{};
+        std::vector<ParseError> errors{};
+        static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
+        size_t next_positional{0};
+        ArgContext ctx{};
+        // struct/class field attrs
+        const auto field_attrs = get_field_attrs<T>();
+        const auto attr_array = get_arg_attrs(argc, argv);
 
         for (const auto& attrs : attr_array) {
             bool matched{false};
             template for (constexpr auto m : members) {
                 using M = typename [:std::meta::type_of(m):];
-                constexpr auto pos = positional_of(m);
                 if (attrs.is_positional || ctx.separator_seen) {
-                    if constexpr (pos.has_value()) {
+                    if constexpr () {
                         if (!matched && next_positional == pos->index) {
                             matched = true;
                             next_positional++;
@@ -220,6 +233,34 @@ namespace StarParse {
             }
         }
         return ParsedArgs<T>{out, help_requested, errors};
+    }
+
+    struct FieldAttributes {
+        std::meta::info field_type;
+        size_t order;
+        std::optional<char> short_name;
+        size_t positional_index;
+        std::string_view help_text;
+    };
+
+    template<typename T>
+    auto get_field_attrs() {
+        static constexpr auto members = std::define_static_array(
+                std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
+        std::unordered_map<std::string, FieldAttributes> field_attrs{};
+        field_attrs.reserve(members.size());
+        for (auto [index, member] : std::views::enumerate(members)) {
+            constexpr auto pos = positional_of(member);
+            constexpr auto opt = opt_of(member);
+            field_attrs[std::meta::identifier_of(member)] = FieldAttributes{
+                std::meta::type_of(member),
+                index,
+                opt ? opt->short_name : std::nullopt;
+                pos ? pos->index : index;
+                opt ? opt->help_text : std::string_view{};
+            };
+        }
+        return field_attrs;
     }
 
     template<typename T>
