@@ -89,6 +89,7 @@ namespace StarParse {
         explicit ArgAttributes(std::string_view argument) {
             if (!argument.starts_with("-")) {
                 is_positional = true;
+                argument.remove_prefix(1);
                 name = argument;
                 return;
             }
@@ -134,8 +135,11 @@ namespace StarParse {
         explicit operator bool() const {
             return out_ == T{};
         }
-        const T& operator*() const& {
-            return *out_;
+        T& operator*() {
+            return out_;
+        }
+        const T& operator*() const {
+            return out_;
         }
         T&& value() && {
             return out_;
@@ -186,10 +190,12 @@ namespace StarParse {
                 using M = typename [:std::meta::type_of(m):];
                 constexpr auto pos = positional_of(m);
                 if (attrs.is_positional || ctx.separator_seen) {
-                    if (!matched && next_positional == pos->index) {
-                        matched = true;
-                        next_positional++;
-                        out.[:m:] = from_string<M>(attrs.name);
+                    if constexpr (pos.has_value()) {
+                        if (!matched && next_positional == pos->index) {
+                            matched = true;
+                            next_positional++;
+                            out.[:m:] = from_string<M>(attrs.name);
+                        }
                     }
                 } else if (attrs.is_separator) {
                     ctx.separator_seen = true;
