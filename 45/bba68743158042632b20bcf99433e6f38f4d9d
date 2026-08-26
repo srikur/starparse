@@ -1,0 +1,14 @@
+include/starparse/starparse.hpp
+  h_83b6cee88cb5ab 137
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "45bba68743158042632b20bcf99433e6f38f4d9d",
+  "prompts": {},
+  "humans": {
+    "h_83b6cee88cb5ab": {
+      "author": "srikur <srikur@endeavorai.com>"
+    }
+  }
+}
