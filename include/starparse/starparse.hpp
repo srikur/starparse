@@ -9,6 +9,7 @@
 #include <stdexcept>
 #include <charconv>
 #include <print>
+#include <type_traits>
 
 namespace StarParse {
     using namespace std::literals;
@@ -51,6 +52,13 @@ namespace StarParse {
                 throw std::invalid_argument(std::format("bad value for type: {}", std::meta::display_string_of(^^M)));
             }
             return v;
+        } else if constexpr (std::is_enum_v<M>) {
+            template for (constexpr auto e : std::define_static_array(std::meta::enumerators_of(^^M))) {
+                if (s == std::meta::identifier_of(e)) {
+                    return [:e:];
+                }
+            }
+            throw std::invalid_argument(std::format("bad value for type: {}", std::meta::display_string_of(^^M)));
         } else {
             static_assert(false, "no conversion for this field type");
         }
