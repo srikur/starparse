@@ -279,8 +279,8 @@ namespace StarParse {
     }
 
     template <typename T>
-    ParsedArgs<T> parse(int argc, char** argv, Settings settings = {}) {
-        T out{};
+    ParsedArgs<T> parse(int argc, char** argv, T initial = {}, Settings settings = {}) {
+        T out{std::move(initial)};
         bool help_requested{};
         std::vector<ParseError> errors{};
         static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
@@ -331,8 +331,8 @@ namespace StarParse {
     }
 
     template<typename T>
-    T immediate_parse(int argc, char** argv, Settings settings = {}) {
-        auto result = parse<T>(argc, argv, settings);
+    T immediate_parse(int argc, char** argv, T initial = {}, Settings settings = {}) {
+        auto result = parse<T>(argc, argv, std::move(initial), settings);
         return std::move(result).value();
     }
 }
