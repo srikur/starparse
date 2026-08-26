@@ -1,0 +1,49 @@
+cmake/starparseConfig.cmake.in
+  s_0e063bbe82041f::t_55f3c0e7010409 1-5
+tests/test_bare.cpp
+  s_0e063bbe82041f::t_481cbd6f158384 1-14
+examples/CMakeLists.txt
+  s_0e063bbe82041f::t_ae12e650b849b2 1-5
+.github/workflows/release.yml
+  s_0e063bbe82041f::t_7a473a8d50675d 1-20
+CMakePresets.json
+  s_0e063bbe82041f::t_b4816233de4f3d 1-41
+tests/test_errors.cpp
+  s_0e063bbe82041f::t_1db95890a01f32 1-17
+tests/CMakeLists.txt
+  s_0e063bbe82041f::t_80fa0ba172906a 14
+  s_0e063bbe82041f::t_c01581937263f2 1-13,15-46
+  s_0e063bbe82041f::t_a8505c124d8a1c 47-50
+include/starparse/starparse.hpp
+  s_0e063bbe82041f::t_3d5174aca28aeb 1-2
+tests/test_positional_named.cpp
+  s_0e063bbe82041f::t_64fddb08cda411 1-14
+tests/test_prefill.cpp
+  s_0e063bbe82041f::t_36aed81be8c976 1-16
+.github/workflows/ci.yml
+  s_0e063bbe82041f::t_824f582450b22e 1-27
+README.md
+  s_0e063bbe82041f::t_8fb21bbae28f67 2-87
+CMakeLists.txt
+  s_0e063bbe82041f::t_ebef2b08f700c2 1-64
+examples/basic.cpp
+  s_0e063bbe82041f::t_887ac55ba5d44a 1-24
+tests/test_bundle.cpp
+  s_0e063bbe82041f::t_19078ba82357b2 1-16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "47ef776242f6aa5e9905fd16054d46552290b268",
+  "prompts": {},
+  "sessions": {
+    "s_0e063bbe82041f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a4e1a79d-8ef3-4b17-952c-afae65ffdc8c",
+        "model": "claude-fable-5"
+      },
+      "human_author": "srikur <srikur@endeavorai.com>"
+    }
+  }
+}
