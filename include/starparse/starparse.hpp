@@ -129,6 +129,7 @@ namespace StarParse {
         bool is_help{};
         bool is_positional{};
         bool is_separator{};
+        bool has_value{};
         std::string_view name{};
         std::string_view value{};
 
@@ -152,12 +153,57 @@ namespace StarParse {
                     argument.remove_prefix(2);
                     name = argument;
                 }
-                if (name == "help") {
-                    is_help = true;
-                }
+            }
+
+            if (const auto equals = name.find('='); equals != std::string_view::npos) {
+                value = name.substr(equals + 1);
+                has_value = true;
+                name = name.substr(0, equals);
+            }
+            if (double_dashed && name == "help") {
+                is_help = true;
             }
         }
     };
+
+    template<typename T>
+    bool matches_full_name(std::string_view name) {
+        static constexpr auto members = std::define_static_array(
+                std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
+        bool found{false};
+        template for (constexpr auto m : members) {
+            constexpr bool named = is_named_option<T>(m);
+            if (named && name == std::meta::identifier_of(m)) {
+                found = true;
+            }
+        }
+        return found;
+    }
+
+    template<typename T>
+    bool is_flag_bundle(std::string_view name) {
+        static constexpr auto members = std::define_static_array(
+                std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
+        if (name.size() < 2) {
+            return false;
+        }
+        for (const char c : name) {
+            bool is_flag{false};
+            template for (constexpr auto m : members) {
+                using M = typename [:std::meta::type_of(m):];
+                constexpr auto opt = opt_of(m);
+                if constexpr (opt.has_value() && std::same_as<M, bool>) {
+                    if (c == opt->short_name) {
+                        is_flag = true;
+                    }
+                }
+            }
+            if (!is_flag) {
+                return false;
+            }
+        }
+        return true;
+    }
 
     struct ArgContext {
         bool separator_seen{};
@@ -215,9 +261,17 @@ namespace StarParse {
             }
             if (separator_seen) {
                 a.is_positional = true;
+            } else if (a.dashed && !a.has_value && a.name.size() > 1 && !matches_full_name<T>(a.name) && is_flag_bundle<T>(a.name)) {
+                for (size_t f{0}; f < a.name.size(); ++f) {
+                    ArgAttributes flag{a};
+                    flag.name = a.name.substr(f, 1);
+                    attr_array.push_back(flag);
+                }
+                continue;
             }
-            if ((a.dashed || a.double_dashed) && a.value.empty() && option_takes_value<T>(a.name, a.dashed) && i + 1 < argc) {
+            if ((a.dashed || a.double_dashed) && !a.has_value && option_takes_value<T>(a.name, a.dashed) && i + 1 < argc) {
                 a.value = argv[++i];
+                a.has_value = true;
             }
             attr_array.push_back(a);
         }
@@ -256,9 +310,12 @@ namespace StarParse {
                     if (!matched && matching_string) {
                         matched = true;
                         if constexpr (std::same_as<M, bool>) {
+                            if (attrs.has_value) {
+                                throw std::invalid_argument(std::format("option does not take a value: {}", attrs.name));
+                            }
                             out.[:m:] = true;
                         } else {
-                            if (attrs.value.empty()) {
+                            if (!attrs.has_value) {
                                 throw std::invalid_argument(std::format("missing value for option: {}", attrs.name));
                             }
                             out.[:m:] = from_string<M>(attrs.value);
