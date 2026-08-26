@@ -142,7 +142,7 @@ namespace StarParse {
             return out_;
         }
         T&& value() && {
-            return out_;
+            return std::move(out_);
         }
         std::span<const ParseError> errors() const {
             return errors_;
@@ -220,6 +220,12 @@ namespace StarParse {
             }
         }
         return ParsedArgs<T>{out, help_requested, errors};
+    }
+
+    template<typename T>
+    T immediate_parse(int argc, char** argv, Settings settings = {}) {
+        auto result = parse<T>(argc, argv, settings);
+        return std::move(result).value();
     }
 }
 
