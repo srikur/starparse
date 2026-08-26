@@ -89,13 +89,13 @@ namespace StarParse {
         explicit ArgAttributes(std::string_view argument) {
             if (!argument.starts_with("-")) {
                 is_positional = true;
-                argument.remove_prefix(1);
                 name = argument;
                 return;
             }
 
             if (argument.starts_with("-") && argument.size() > 1 && argument.at(1) != '-') {
                 dashed = true;
+                argument.remove_prefix(1);
                 name = argument;
             } else if (argument.starts_with("--")) {
                 if (argument.size() == 2) {
