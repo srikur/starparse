@@ -1,0 +1,25 @@
+include/starparse/starparse.hpp
+  s_0e063bbe82041f::t_5026df295c14c3 235,237-238,246
+  s_0e063bbe82041f::t_15d16cbf8ec6da 75-105
+  s_0e063bbe82041f::t_18c834846134d8 114
+  s_0e063bbe82041f::t_86133b20c3f8bd 199
+  s_0e063bbe82041f::t_821cdda94e094c 229
+tests/test_parse.cpp
+  s_0e063bbe82041f::t_448fa5d6978d27 19-22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "a52e40f7e35cb9441755766cecdd6065137aecb5",
+  "prompts": {},
+  "sessions": {
+    "s_0e063bbe82041f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a4e1a79d-8ef3-4b17-952c-afae65ffdc8c",
+        "model": "claude-fable-5"
+      },
+      "human_author": "srikur <srikur@endeavorai.com>"
+    }
+  }
+}
