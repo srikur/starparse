@@ -1,0 +1,22 @@
+include/starparse/starparse.hpp
+  s_0e063bbe82041f::t_c833064472ada9 254-255
+  s_0e063bbe82041f::t_37eaaaecdb790c 87
+  s_0e063bbe82041f::t_a8642a84763ef8 119-120
+  s_0e063bbe82041f::t_587d970d6c739b 85-86,88-89
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "5e1b20fd31c67d306461d248e2030baa3f12d891",
+  "prompts": {},
+  "sessions": {
+    "s_0e063bbe82041f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a4e1a79d-8ef3-4b17-952c-afae65ffdc8c",
+        "model": "claude-fable-5"
+      },
+      "human_author": "srikur <srikur@endeavorai.com>"
+    }
+  }
+}
