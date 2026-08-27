@@ -1,0 +1,35 @@
+tests/CMakeLists.txt
+  s_0e063bbe82041f::t_685d2d12ff6ca9 49-61
+  s_0e063bbe82041f::t_7117c29445952d 25-29
+  s_0e063bbe82041f::t_3f0e6e35d6035b 15-16
+tests/test_alias.cpp
+  s_0e063bbe82041f::t_fa41dfeb79c06e 1-15
+tests/test_enum.cpp
+  s_0e063bbe82041f::t_288374aec00191 1-24
+include/starparse/starparse.hpp
+  s_0e063bbe82041f::t_84771225ecc722 244-253
+  s_0e063bbe82041f::t_33fecb6747acec 13-14
+  s_0e063bbe82041f::t_2cc0152c130a29 93
+  s_0e063bbe82041f::t_edc644ec5c1f8a 52-65,71,73
+  s_0e063bbe82041f::t_122292ea5c9f56 49-51
+  s_0e063bbe82041f::t_8ab3b1ef118790 66-70
+  s_0e063bbe82041f::t_f058ab6d5f7710 72
+  s_0e063bbe82041f::t_4fa456933762db 74
+  s_0e063bbe82041f::t_b628f5a6c95652 40-48,95-96,99-100,169,225,365
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "c9a127c86f2a0ad261c89bdd84a1a27349ad26de",
+  "prompts": {},
+  "sessions": {
+    "s_0e063bbe82041f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a4e1a79d-8ef3-4b17-952c-afae65ffdc8c",
+        "model": "claude-fable-5"
+      },
+      "human_author": "srikur <srikur@endeavorai.com>"
+    }
+  }
+}
