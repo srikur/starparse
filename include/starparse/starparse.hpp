@@ -10,6 +10,8 @@
 #include <charconv>
 #include <print>
 #include <type_traits>
+#include <array>
+#include <vector>
 
 namespace StarParse {
     using namespace std::literals;
@@ -35,6 +37,41 @@ namespace StarParse {
         constexpr std::string_view help() const { return help_; }
     };
 
+    struct Alias {
+        const char* const* names_{};
+        size_t count_{};
+
+        template<std::convertible_to<std::string_view>... Ts>
+            requires (sizeof...(Ts) > 0)
+        consteval Alias(Ts... ns) 
+        : names_(std::define_static_array(
+                    std::array{std::define_static_string(std::string_view{ns})...}).data()),
+          count_(sizeof...(ns)) {}
+    };
+
+    consteval std::vector<const char*> alias_name_list(std::meta::info m) {
+        std::vector<const char*> names{};
+        for (std::meta::info a : std::meta::annotations_of(m)) {
+            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) != std::meta::dealias(^^Alias)) {
+                continue;
+            }
+            auto alias = std::meta::extract<Alias>(a);
+            for (size_t i{0}; i < alias.count_; i++) {
+                names.push_back(alias.names_[i]);
+            }
+        }
+        return names;
+    }
+
+    template<std::meta::info M>
+    bool matches_alias(std::string_view name) {
+        static constexpr auto aliases = std::define_static_array(alias_name_list(M));
+        for (const char* alias : aliases) {
+            if (name == std::string_view{alias}) return true;
+        }
+        return false;
+    }
+
     enum class DashType { SINGLE, DOUBLE, BOTH, NONE };
 
     struct Settings {
@@ -53,12 +90,14 @@ namespace StarParse {
             }
             return v;
         } else if constexpr (std::is_enum_v<M>) {
+            std::optional<M> parsed;
             template for (constexpr auto e : std::define_static_array(std::meta::enumerators_of(^^M))) {
-                if (s == std::meta::identifier_of(e)) {
-                    return [:e:];
+                if (!parsed.has_value() && (s == std::meta::identifier_of(e) || matches_alias<e>(s))) {
+                    parsed = [:e:];
                 }
             }
-            throw std::invalid_argument(std::format("bad value for type: {}", std::meta::display_string_of(^^M)));
+            if (!parsed) throw std::invalid_argument(std::format("bad value for type: {}", std::meta::display_string_of(^^M)));
+            return *parsed;
         } else {
             static_assert(false, "no conversion for this field type");
         }
@@ -127,7 +166,7 @@ namespace StarParse {
             using M = typename [:std::meta::type_of(m):];
             constexpr auto opt = opt_of(m);
             constexpr bool named = is_named_option<T>(m);
-            const bool match = (named && name == std::meta::identifier_of(m)) || (is_short && name.size() == 1 && opt.has_value() && name[0] == opt->short_name);
+            const bool match = (named && (name == std::meta::identifier_of(m) || matches_alias<m>(name))) || (is_short && name.size() == 1 && opt.has_value() && name[0] == opt->short_name);
             if (match) takes = !std::same_as<M, bool>;
         }
         return takes;
@@ -183,7 +222,7 @@ namespace StarParse {
         bool found{false};
         template for (constexpr auto m : members) {
             constexpr bool named = is_named_option<T>(m);
-            if (named && name == std::meta::identifier_of(m)) {
+            if (named && (name == std::meta::identifier_of(m) || matches_alias<m>(name))) {
                 found = true;
             }
         }
@@ -202,9 +241,16 @@ namespace StarParse {
             template for (constexpr auto m : members) {
                 using M = typename [:std::meta::type_of(m):];
                 constexpr auto opt = opt_of(m);
-                if constexpr (opt.has_value() && std::same_as<M, bool>) {
-                    if (c == opt->short_name) {
-                        is_flag = true;
+                if constexpr (std::same_as<M, bool>) {
+                    if constexpr (opt.has_value()) {
+                        if (c == opt->short_name) {
+                            is_flag = true;
+                        }
+                    }
+                    if constexpr (is_named_option<T>(m)) {
+                        if (matches_alias<m>(std::string_view{&c, 1})) {
+                            is_flag = true;
+                        }
                     }
                 }
             }
@@ -316,7 +362,7 @@ namespace StarParse {
                 } else if (attrs.dashed || attrs.double_dashed) {
                     constexpr auto opt = opt_of(m);
                     constexpr bool named = is_named_option<T>(m);
-                    const bool matching_string = (named && attrs.name == std::meta::identifier_of(m)) || (attrs.name.size() == 1 && opt.has_value() && attrs.name[0] == opt->short_name);
+                    const bool matching_string = (named && (attrs.name == std::meta::identifier_of(m) || matches_alias<m>(attrs.name))) || (attrs.name.size() == 1 && opt.has_value() && attrs.name[0] == opt->short_name);
                     if (!matched && matching_string) {
                         matched = true;
                         if constexpr (std::same_as<M, bool>) {
