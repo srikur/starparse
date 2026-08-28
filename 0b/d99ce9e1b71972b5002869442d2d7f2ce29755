@@ -1,0 +1,18 @@
+tests/test_parse.cpp
+  h_83b6cee88cb5ab 6-9,19,27
+  h_83b6cee88cb5ab 11,16-18,20
+include/starparse/starparse.hpp
+  h_83b6cee88cb5ab 41,61,65,74,116,125,135,340-341,346-353,423
+  h_83b6cee88cb5ab 23,25,27,42,56,136,295,342-345
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "0bd99ce9e1b71972b5002869442d2d7f2ce29755",
+  "prompts": {},
+  "humans": {
+    "h_83b6cee88cb5ab": {
+      "author": "srikur <srikur@endeavorai.com>"
+    }
+  }
+}
