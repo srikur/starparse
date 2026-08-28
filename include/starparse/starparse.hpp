@@ -16,7 +16,7 @@
 namespace StarParse {
     using namespace std::literals;
 
-    struct Opt {
+    struct Opt final {
         char short_name{0};
         const char *help_{};
 
@@ -29,22 +29,13 @@ namespace StarParse {
         [[nodiscard]] constexpr std::string_view help() const { return help_; }
     };
 
-    struct Positional {
+    struct Positional final {
         size_t index;
     };
 
-    struct Universal {
-        size_t index;
-        char short_name{0};
-        const char *help_{};
+    struct Required final {};
 
-        consteval Universal(const size_t i, char s, std::string_view h) : index(i), short_name(s),
-                                                                          help_(std::define_static_string(h)) {}
-
-        [[nodiscard]] constexpr std::string_view help() const { return help_; }
-    };
-
-    struct Alias {
+    struct Alias final {
         const char *const*names_{};
         size_t count_{};
 
@@ -169,6 +160,19 @@ namespace StarParse {
     }
 
     template<typename T>
+    consteval size_t member_index_of(const std::meta::info m) {
+        size_t index{0};
+        for (const std::meta::info member :
+             std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current())) {
+            if (member == m) {
+                return index;
+            }
+            ++index;
+        }
+        throw std::invalid_argument("member not found");
+    }
+
+    template<typename T>
     bool option_takes_value(std::string_view name, bool is_short) {
         static constexpr auto members = std::define_static_array(
             std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
@@ -182,6 +186,15 @@ namespace StarParse {
             if (match) takes = !std::same_as<M, bool>;
         }
         return takes;
+    }
+
+    consteval bool is_required(const std::meta::info m) {
+        for (const std::meta::info a : std::meta::annotations_of(m)) {
+            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^Required)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     struct ArgAttributes {
@@ -373,6 +386,7 @@ namespace StarParse {
         size_t next_positional{0};
         ArgContext ctx{};
         const auto attr_array = get_arg_attrs<T>(argc, argv);
+        std::array<bool, members.size()> fields_set{};
 
         for (const auto &attrs : attr_array) {
             bool matched{false};
@@ -385,6 +399,7 @@ namespace StarParse {
                             matched = true;
                             next_positional++;
                             out.[:m:] = from_string<M>(attrs.name);
+                            fields_set[member_index_of<T>(m)] = true;
                         }
                     }
                 } else if (attrs.is_separator) {
@@ -403,11 +418,13 @@ namespace StarParse {
                                     std::format("option does not take a value: {}", attrs.name));
                             }
                             out.[:m:] = true;
+                            fields_set[member_index_of<T>(m)] = true;
                         } else {
                             if (!attrs.has_value) {
                                 throw std::invalid_argument(std::format("missing value for option: {}", attrs.name));
                             }
                             out.[:m:] = from_string<M>(attrs.value);
+                            fields_set[member_index_of<T>(m)] = true;
                         }
                     }
                 }
@@ -416,6 +433,19 @@ namespace StarParse {
                 throw std::invalid_argument(std::format("unrecognized argument: {}", attrs.name));
             }
         }
+
+        std::vector<std::string_view> missing_fields;
+        template for (constexpr auto m : members) {
+            if constexpr (is_required(m)) {
+                if (!fields_set[member_index_of<T>(m)]) {
+                    missing_fields.push_back(std::string_view{std::meta::identifier_of(m)});
+                }
+            }
+        }
+        if (!missing_fields.empty()) {
+            throw std::invalid_argument(std::format("Required fields not specified: {}", missing_fields));
+        }
+
         return ParsedArgs<T>{out, help_requested, errors};
     }
 
