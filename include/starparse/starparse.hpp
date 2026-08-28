@@ -26,6 +26,9 @@ namespace StarParse {
         explicit consteval Opt(std::string_view h) : help_(std::define_static_string(h)) {
         }
 
+        explicit consteval Opt(const char s) : short_name(s) {
+        }
+
         [[nodiscard]] constexpr std::string_view help() const { return help_; }
     };
 
