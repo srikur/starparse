@@ -21,7 +21,7 @@ namespace StarParse {
         const char* help_{};
 
         consteval Opt(char s, std::string_view h) : short_name(s), help_(std::define_static_string(h)) {}
-        constexpr std::string_view help() const { return help_; }
+        [[nodiscard]] constexpr std::string_view help() const { return help_; }
     };
 
     struct Positional {
@@ -34,7 +34,7 @@ namespace StarParse {
         const char* help_{};
 
         consteval Universal(size_t i, char s, std::string_view h) : index(i), short_name(s), help_(std::define_static_string(h)) {}
-        constexpr std::string_view help() const { return help_; }
+        [[nodiscard]] constexpr std::string_view help() const { return help_; }
     };
 
     struct Alias {
@@ -163,7 +163,7 @@ namespace StarParse {
                 std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
         bool takes{false};
         template for (constexpr auto m : members) {
-            using M = typename [:std::meta::type_of(m):];
+            using M = [:std::meta::type_of(m):];
             constexpr auto opt = opt_of(m);
             constexpr bool named = is_named_option<T>(m);
             const bool match = (named && (name == std::meta::identifier_of(m) || matches_alias<m>(name))) || (is_short && name.size() == 1 && opt.has_value() && name[0] == opt->short_name);
@@ -183,13 +183,13 @@ namespace StarParse {
         std::string_view value{};
 
         explicit ArgAttributes(std::string_view argument) {
-            if (!argument.starts_with("-")) {
+            if (!argument.starts_with('-')) {
                 is_positional = true;
                 name = argument;
                 return;
             }
 
-            if (argument.starts_with("-") && argument.size() > 1 && argument.at(1) != '-') {
+            if (argument.starts_with('-') && argument.size() > 1 && argument.at(1) != '-') {
                 dashed = true;
                 argument.remove_prefix(1);
                 name = argument;
@@ -239,7 +239,7 @@ namespace StarParse {
         for (const char c : name) {
             bool is_flag{false};
             template for (constexpr auto m : members) {
-                using M = typename [:std::meta::type_of(m):];
+                using M = [:std::meta::type_of(m):];
                 constexpr auto opt = opt_of(m);
                 if constexpr (std::same_as<M, bool>) {
                     if constexpr (opt.has_value()) {
@@ -292,10 +292,10 @@ namespace StarParse {
         T&& value() && {
             return std::move(out_);
         }
-        std::span<const ParseError> errors() const {
+        [[nodiscard]] std::span<const ParseError> errors() const {
             return errors_;
         }
-        bool help_requested() {
+        [[nodiscard]] bool help_requested() const {
             return show_help_;
         }
     private:
@@ -305,7 +305,7 @@ namespace StarParse {
     };
 
     template <typename T>
-    std::vector<ArgAttributes> get_arg_attrs(int argc, char** argv) {
+    std::vector<ArgAttributes> get_arg_attrs(const int argc, char** argv) {
         std::vector<ArgAttributes> attr_array;
         attr_array.reserve(argc - 1);
         bool separator_seen{false};
@@ -347,7 +347,7 @@ namespace StarParse {
         for (const auto& attrs : attr_array) {
             bool matched{false};
             template for (constexpr auto m : members) {
-                using M = typename [:std::meta::type_of(m):];
+                using M = [:std::meta::type_of(m):];
                 constexpr auto pos = positional_index_of<T>(m);
                 if (attrs.is_positional || ctx.separator_seen) {
                     if constexpr (pos.has_value()) {
@@ -387,7 +387,7 @@ namespace StarParse {
     }
 
     template<typename T>
-    T immediate_parse(int argc, char** argv, T initial = {}, Settings settings = {}) {
+    T immediate_parse(const int argc, char** argv, T initial = {}, Settings settings = {}) {
         auto result = parse<T>(argc, argv, std::move(initial), settings);
         return std::move(result).value();
     }
