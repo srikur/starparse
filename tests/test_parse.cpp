@@ -13,7 +13,7 @@ struct Args {
     [[=StarParse::Opt{'k', "Flag k"}]] bool kay;
     [[=StarParse::Opt{'f', "Flag f"}]] bool eff;
     int arg2;
-    [[=StarParse::Opt{'m', "Mode (0-3)"}]] Mode mode;
+    [[=StarParse::Opt{"Mode (0-3)"}]] Mode mode;
 };
 
 auto main(int argc, char** argv) -> int {
