@@ -2,6 +2,7 @@
 #include <starparse/starparse.hpp>
 #include <string>
 #include <utility>
+#include <optional>
 
 using StarParse::Alias;
 using StarParse::Opt;
@@ -16,14 +17,14 @@ struct Args {
     [[=Opt{'v', "Verbose mode"}]] bool verbose;
     [[=Opt{'k', "Flag k"}]] bool kay;
     [[=Opt{'f', "Flag f"}]] bool eff;
-    [[=Opt{'o'}]] std::string output_file;
-    [[=Opt{'m'}]] Mode mode;
+    [[=Opt{'o'}]] std::optional<std::string> output_file;
+    [[=Opt{'m'}]] std::optional<Mode> mode;
 };
 
 auto main(int argc, char **argv) -> int {
     const auto args{StarParse::immediate_parse<Args>(argc, argv)};
     std::println("arg1: {}", args.arg1);
     std::println("k: {}, v: {}, f: {}", args.kay, args.verbose, args.eff);
-    std::println("mode: {}", std::to_underlying(args.mode));
-    std::println("output_file: {}", args.output_file);
+    std::println("mode: {}", args.mode ? std::to_string(std::to_underlying(*args.mode)) : std::string{"nullopt"});
+    std::println("output_file: {}", args.output_file.value_or("nullopt"));
 }

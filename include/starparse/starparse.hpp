@@ -70,15 +70,37 @@ namespace StarParse {
         return false;
     }
 
+    consteval bool is_optional(std::meta::info r) {
+        r = std::meta::dealias(r);
+        return std::meta::has_template_arguments(r) && std::meta::template_of(r) == ^^std::optional;
+    }
+
     enum class DashType { SINGLE, DOUBLE, BOTH, NONE };
 
     struct Settings {
         DashType dash_type{DashType::BOTH};
     };
 
+    consteval std::meta::info value_type_of(const std::meta::info r) {
+        return std::meta::template_arguments_of(std::meta::dealias(r))[0];
+    }
+
+    consteval bool is_flag_type(std::meta::info r) {
+        r = std::meta::dealias(std::meta::remove_cv(r));
+        if (is_optional(r)) {
+            r = std::meta::dealias(value_type_of(r));
+        }
+        return r == std::meta::dealias(^^bool);
+    }
+
     template<typename M>
     M from_string(std::string_view s) {
-        if constexpr (std::constructible_from<M, std::string_view>) {
+        if constexpr (is_optional(^^M)) {
+            using T = [:value_type_of(^^M):];
+            return M{from_string<T>(s)};
+        } else if constexpr (std::same_as<M, bool>) {
+            static_assert(false, "bool fields are flags set by presence; they cannot be parsed from a value");
+        } else if constexpr (std::constructible_from<M, std::string_view>) {
             return M{s};
         } else if constexpr (std::is_arithmetic_v<M>) {
             M v{};
@@ -142,13 +164,12 @@ namespace StarParse {
         if (auto pos = positional_of(m)) {
             return pos->index;
         }
-        if (!is_bare<T>() || std::meta::dealias(std::meta::remove_cv(std::meta::type_of(m))) ==
-            std::meta::dealias(^^bool)) {
+        if (!is_bare<T>() || is_flag_type(std::meta::type_of(m))) {
             return std::nullopt;
         }
         size_t index{0};
         for (std::meta::info member : std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current())) {
-            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(member))) == std::meta::dealias(^^bool)) {
+            if (is_flag_type(std::meta::type_of(member))) {
                 continue;
             }
             if (member == m) {
@@ -183,7 +204,7 @@ namespace StarParse {
             constexpr bool named = is_named_option<T>(m);
             const bool match = (named && (name == std::meta::identifier_of(m) || matches_alias<m>(name))) || (
                                    is_short && name.size() == 1 && opt.has_value() && name[0] == opt->short_name);
-            if (match) takes = !std::same_as<M, bool>;
+            if (match) takes = !is_flag_type(^^M);
         }
         return takes;
     }
@@ -195,6 +216,17 @@ namespace StarParse {
             }
         }
         return false;
+    }
+
+    template<typename T>
+    consteval bool no_required_optionals() {
+        for (const std::meta::info m :
+             std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current())) {
+            if (is_required(m) && is_optional(std::meta::remove_cv(std::meta::type_of(m)))) {
+                return false;
+            }
+        }
+        return true;
     }
 
     struct ArgAttributes {
@@ -265,7 +297,7 @@ namespace StarParse {
             template for (constexpr auto m : members) {
                 using M = [:std::meta::type_of(m):];
                 constexpr auto opt = opt_of(m);
-                if constexpr (std::same_as<M, bool>) {
+                if constexpr (is_flag_type(^^M)) {
                     if constexpr (opt.has_value()) {
                         if (c == opt->short_name) {
                             is_flag = true;
@@ -378,6 +410,8 @@ namespace StarParse {
 
     template<typename T>
     ParsedArgs<T> parse(int argc, char **argv, T initial = {}, Settings settings = {}) {
+        static_assert(no_required_optionals<T>(),
+                      "a Required field cannot have a std::optional type; drop one of the two");
         T out{std::move(initial)};
         bool help_requested{};
         std::vector<ParseError> errors{};
@@ -412,7 +446,7 @@ namespace StarParse {
                                 attrs.name.size() == 1 && opt.has_value() && attrs.name[0] == opt->short_name);
                     if (!matched && matching_string) {
                         matched = true;
-                        if constexpr (std::same_as<M, bool>) {
+                        if constexpr (is_flag_type(^^M)) {
                             if (attrs.has_value) {
                                 throw std::invalid_argument(
                                     std::format("option does not take a value: {}", attrs.name));
