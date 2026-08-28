@@ -20,14 +20,11 @@ namespace StarParse {
         char short_name{0};
         const char *help_{};
 
-        explicit consteval Opt(const char s, std::string_view h) : short_name(s), help_(std::define_static_string(h)) {
-        }
+        explicit consteval Opt(const char s, std::string_view h) : short_name(s), help_(std::define_static_string(h)) {}
 
-        explicit consteval Opt(std::string_view h) : help_(std::define_static_string(h)) {
-        }
+        explicit consteval Opt(std::string_view h) : help_(std::define_static_string(h)) {}
 
-        explicit consteval Opt(const char s) : short_name(s) {
-        }
+        explicit consteval Opt(const char s) : short_name(s) {}
 
         [[nodiscard]] constexpr std::string_view help() const { return help_; }
     };
@@ -41,9 +38,8 @@ namespace StarParse {
         char short_name{0};
         const char *help_{};
 
-        consteval Universal(size_t i, char s, std::string_view h) : index(i), short_name(s),
-                                                                    help_(std::define_static_string(h)) {
-        }
+        consteval Universal(const size_t i, char s, std::string_view h) : index(i), short_name(s),
+                                                                          help_(std::define_static_string(h)) {}
 
         [[nodiscard]] constexpr std::string_view help() const { return help_; }
     };
@@ -57,17 +53,16 @@ namespace StarParse {
         consteval Alias(Ts... ns)
             : names_(std::define_static_array(
                   std::array{std::define_static_string(std::string_view{ns})...}).data()),
-              count_(sizeof...(ns)) {
-        }
+              count_(sizeof...(ns)) {}
     };
 
     consteval std::vector<const char *> alias_name_list(std::meta::info m) {
         std::vector<const char *> names{};
-        for (std::meta::info a : std::meta::annotations_of(m)) {
+        for (const std::meta::info a : std::meta::annotations_of(m)) {
             if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) != std::meta::dealias(^^Alias)) {
                 continue;
             }
-            auto alias = std::meta::extract<Alias>(a);
+            const auto alias = std::meta::extract<Alias>(a);
             for (size_t i{0}; i < alias.count_; i++) {
                 names.push_back(alias.names_[i]);
             }
@@ -76,7 +71,7 @@ namespace StarParse {
     }
 
     template<std::meta::info M>
-    bool matches_alias(std::string_view name) {
+    bool matches_alias(const std::string_view name) {
         static constexpr auto aliases = std::define_static_array(alias_name_list(M));
         for (const char *alias : aliases) {
             if (name == std::string_view{alias}) return true;
@@ -118,7 +113,7 @@ namespace StarParse {
     }
 
     consteval std::optional<Positional> positional_of(std::meta::info m) {
-        for (std::meta::info a : std::meta::annotations_of(m)) {
+        for (const std::meta::info a : std::meta::annotations_of(m)) {
             if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^Positional)) {
                 return std::meta::extract<Positional>(a);
             }
@@ -127,7 +122,7 @@ namespace StarParse {
     }
 
     consteval std::optional<Opt> opt_of(std::meta::info m) {
-        for (std::meta::info a : std::meta::annotations_of(m)) {
+        for (const std::meta::info a : std::meta::annotations_of(m)) {
             if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^Opt)) {
                 return std::meta::extract<Opt>(a);
             }
@@ -137,7 +132,8 @@ namespace StarParse {
 
     template<typename T>
     consteval bool is_bare() {
-        for (std::meta::info m : std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current())) {
+        for (const std::meta::info m :
+             std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current())) {
             if (opt_of(m).has_value() || positional_of(m).has_value()) {
                 return false;
             }
@@ -296,8 +292,7 @@ namespace StarParse {
     public:
         ParsedArgs(T out, const bool show_help, std::vector<ParseError> &errors) : out_(std::move(out)),
             show_help_(show_help),
-            errors_(std::move(errors)) {
-        }
+            errors_(std::move(errors)) {}
 
         explicit operator bool() const {
             return out_ == T{};
@@ -342,14 +337,21 @@ namespace StarParse {
             }
             if (separator_seen) {
                 a.is_positional = true;
-            } else if (a.dashed && !a.has_value && a.name.size() > 1 && !matches_full_name<T>(a.name) && is_flag_bundle<
-                           T>(a.name)) {
-                for (size_t f{0}; f < a.name.size(); ++f) {
-                    ArgAttributes flag{a};
-                    flag.name = a.name.substr(f, 1);
-                    attr_array.push_back(flag);
+            } else if (a.dashed && !a.has_value && a.name.size() > 1 && !matches_full_name<T>(a.name)) {
+                if (is_flag_bundle<T>(a.name)) {
+                    for (size_t f{0}; f < a.name.size(); ++f) {
+                        ArgAttributes flag{a};
+                        flag.name = a.name.substr(f, 1);
+                        attr_array.push_back(flag);
+                    }
+                    continue;
                 }
-                continue;
+                if (option_takes_value<T>(a.name.substr(0, 1), true)) {
+                    // try attached value split (e.g., -ofile for -o file)
+                    a.value = a.name.substr(1, a.name.size() - 1);
+                    a.name = a.name.substr(0, 1);
+                    a.has_value = true;
+                }
             }
             if ((a.dashed || a.double_dashed) && !a.has_value && option_takes_value<T>(a.name, a.dashed) && i + 1 <
                 argc) {
@@ -418,7 +420,7 @@ namespace StarParse {
     }
 
     template<typename T>
-    T immediate_parse(const int argc, char **argv, T initial = {}, Settings settings = {}) {
+    T immediate_parse(const int argc, char **argv, T initial = {}, const Settings settings = {}) {
         auto result = parse<T>(argc, argv, std::move(initial), settings);
         return std::move(result).value();
     }
