@@ -1,0 +1,16 @@
+tests/test_parse.cpp
+  h_83b6cee88cb5ab 22,31-32
+include/starparse/starparse.hpp
+  h_83b6cee88cb5ab 3,83-85,377,388,416-440,452,474
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "f0f588a1be3a50e8e5f8ea7a17872d38cc6cc48c",
+  "prompts": {},
+  "humans": {
+    "h_83b6cee88cb5ab": {
+      "author": "srikur <srikur@endeavorai.com>"
+    }
+  }
+}
