@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <concepts>
 #include <optional>
 #include <string_view>
@@ -79,6 +80,9 @@ namespace StarParse {
 
     struct Settings {
         DashType dash_type{DashType::BOTH};
+        bool allow_kebab_casing{true};
+        bool allow_upper_casing{true};
+        bool allow_aliases{true};
     };
 
     consteval std::meta::info value_type_of(const std::meta::info r) {
@@ -370,7 +374,7 @@ namespace StarParse {
     };
 
     template<typename T>
-    std::vector<ArgAttributes> get_arg_attrs(const int argc, char **argv) {
+    std::vector<ArgAttributes> get_arg_attrs(const int argc, char **argv, const Settings &settings) {
         std::vector<ArgAttributes> attr_array;
         attr_array.reserve(argc - 1);
         bool separator_seen{false};
@@ -381,6 +385,7 @@ namespace StarParse {
                 continue;
             }
             if (separator_seen) {
+                // post-separator, all args are positional
                 a.is_positional = true;
             } else if (a.dashed && !a.has_value && a.name.size() > 1 && !matches_full_name<T>(a.name)) {
                 if (is_flag_bundle<T>(a.name)) {
@@ -408,6 +413,31 @@ namespace StarParse {
         return attr_array;
     }
 
+    template<std::meta::info M>
+    inline constexpr std::string_view snake_name_v = std::meta::identifier_of(M);
+
+    template<std::meta::info M>
+    inline constexpr std::string_view kebab_name_v = [] {
+        std::string s(std::meta::identifier_of(M));
+        std::ranges::replace(s, '_', '-');
+        return std::string_view(std::define_static_string(s), s.size());
+    }();
+
+    template<std::meta::info M>
+    constexpr bool does_match_name(std::string_view name,
+                                   const std::optional<Opt> &opt,
+                                   const Settings &settings) {
+        if (name.size() == 1 && opt.has_value() && name[0] == opt->short_name)
+            return true;
+        if (name == snake_name_v<M>)
+            return true;
+        if (settings.allow_kebab_casing && name == kebab_name_v<M>)
+            return true;
+        if (settings.allow_aliases && matches_alias<M>(name))
+            return true;
+        return false;
+    }
+
     template<typename T>
     ParsedArgs<T> parse(int argc, char **argv, T initial = {}, Settings settings = {}) {
         static_assert(no_required_optionals<T>(),
@@ -419,7 +449,7 @@ namespace StarParse {
             std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
         size_t next_positional{0};
         ArgContext ctx{};
-        const auto attr_array = get_arg_attrs<T>(argc, argv);
+        const auto attr_array = get_arg_attrs<T>(argc, argv, settings);
         std::array<bool, members.size()> fields_set{};
 
         for (const auto &attrs : attr_array) {
@@ -441,9 +471,7 @@ namespace StarParse {
                 } else if (attrs.dashed || attrs.double_dashed) {
                     constexpr auto opt = opt_of(m);
                     constexpr bool named = is_named_option<T>(m);
-                    const bool matching_string =
-                            (named && (attrs.name == std::meta::identifier_of(m) || matches_alias<m>(attrs.name))) || (
-                                attrs.name.size() == 1 && opt.has_value() && attrs.name[0] == opt->short_name);
+                    const bool matching_string = named && does_match_name<m>(attrs.name, opt, settings);
                     if (!matched && matching_string) {
                         matched = true;
                         if constexpr (is_flag_type(^^M)) {
