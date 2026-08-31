@@ -1,0 +1,16 @@
+tests/test_parse.cpp
+  h_83b6cee88cb5ab 16
+tests/CMakeLists.txt
+  h_83b6cee88cb5ab 30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "9862d9eddda4087f4dac26a511e82a929c22f109",
+  "prompts": {},
+  "humans": {
+    "h_83b6cee88cb5ab": {
+      "author": "srikur <srikur@endeavorai.com>"
+    }
+  }
+}
