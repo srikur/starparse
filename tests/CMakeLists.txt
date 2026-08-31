@@ -27,6 +27,7 @@ starparse_case(parse.flag_bundle test_parse "k: true, v: true, f: true" -kvf)
 starparse_case(parse.long_flag   test_parse "k: false, v: true, f: false" --verbose)
 starparse_case(parse.short_flags test_parse "k: true, v: false, f: true" -k -f)
 starparse_case(parse.enum_value  test_parse "mode: 2" -m MODE_2)
+starparse_case(parse.attached_value  test_parse "output_file: filename" -ofilename)
 
 # Bare struct: every field addressable by name, non-bools also positional.
 starparse_case(bare.named_mixed_dashes test_bare "Bare arg1: hello, verbose: false, arg2: 42" --arg1=hello -arg2=42)
