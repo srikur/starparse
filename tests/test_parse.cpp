@@ -13,7 +13,7 @@ enum class Mode {
 };
 
 struct Args {
-    [[=Positional{}, =StarParse::Required{}]] std::string arg1;
+    [[=Positional{}]] std::string arg1;
     [[=Opt{'v', "Verbose mode"}]] bool verbose;
     [[=Opt{'k', "Flag k"}]] bool kay;
     [[=Opt{'f', "Flag f"}]] bool eff;
