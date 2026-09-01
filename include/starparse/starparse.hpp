@@ -108,13 +108,23 @@ namespace StarParse {
         return r == std::meta::dealias(^^bool);
     }
 
+    consteval bool is_specialization_of(std::meta::info type, const std::meta::info templ) {
+        type = std::meta::dealias(type);
+        return std::meta::has_template_arguments(type) && std::meta::template_of(type) == templ;
+    }
+
+    constexpr bool bool_from_string(const std::string_view s) {
+        if (s.size() == 1) return s[0] == 'T' || s[0] == 't';
+        return s == "True" || s == "true";
+    }
+
     template<typename M>
     M from_string(std::string_view s) {
         if constexpr (is_optional(^^M)) {
             using T = [:value_type_of(^^M):];
             return M{from_string<T>(s)};
         } else if constexpr (std::same_as<M, bool>) {
-            static_assert(false, "bool fields are flags set by presence; they cannot be parsed from a value");
+            return M{bool_from_string(s)};
         } else if constexpr (std::constructible_from<M, std::string_view>) {
             return M{s};
         } else if constexpr (std::is_arithmetic_v<M>) {
@@ -487,10 +497,10 @@ namespace StarParse {
                         matched = true;
                         if constexpr (is_flag_type(^^M)) {
                             if (attrs.has_value) {
-                                throw std::invalid_argument(
-                                    std::format("option does not take a value: {}", attrs.name));
+                                out.[:m:] = from_string<M>(attrs.value);
+                            } else {
+                                out.[:m:] = true;
                             }
-                            out.[:m:] = true;
                             fields_set[member_index_of<T>(m)] = true;
                         } else {
                             if (!attrs.has_value) {

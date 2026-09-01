@@ -20,6 +20,7 @@ struct [[=Program{"starparse", "CMD line arg paraer", "0.0.1"}]] Args {
     [[=Opt{'f', "Flag f"}]] bool eff;
     [[=Opt{'o'}]] std::optional<std::string> output_file;
     [[=Opt{'m'}]] std::optional<Mode> mode;
+    // [[=Opt{'I'}]] std::vector<std::string> include_paths;
 };
 
 auto main(int argc, char **argv) -> int {
@@ -28,4 +29,5 @@ auto main(int argc, char **argv) -> int {
     std::println("k: {}, v: {}, f: {}", args.kay, args.verbose, args.eff);
     std::println("mode: {}", args.mode ? std::to_string(std::to_underlying(*args.mode)) : std::string{"nullopt"});
     std::println("output_file: {}", args.output_file.value_or("nullopt"));
+    // std::println("include_paths: {}", args.include_paths);
 }
