@@ -7,12 +7,13 @@
 using StarParse::Alias;
 using StarParse::Opt;
 using StarParse::Positional;
+using StarParse::Program;
 
 enum class Mode {
     MODE_0, MODE_1, MODE_2, MODE_3 [[=Alias{"m3", "3", "mode3"}]]
 };
 
-struct Args {
+struct [[=Program{"starparse", "CMD line arg paraer", "0.0.1"}]] Args {
     [[=Positional{}]] std::string arg1;
     [[=Opt{'v', "Verbose mode"}]] bool verbose;
     [[=Opt{'k', "Flag k"}]] bool kay;

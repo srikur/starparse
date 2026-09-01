@@ -48,6 +48,17 @@ namespace StarParse {
               count_(sizeof...(ns)) {}
     };
 
+    struct Program final {
+        explicit consteval
+        Program(std::string_view name, std::string_view description, std::string_view version) : name_(
+                std::define_static_string(name)), description_(std::define_static_string(description)),
+            version_(std::define_static_string(version)) {}
+
+        const char *name_{};
+        const char *description_{};
+        const char *version_{};
+    };
+
     consteval std::vector<const char *> alias_name_list(std::meta::info m) {
         std::vector<const char *> names{};
         for (const std::meta::info a : std::meta::annotations_of(m)) {
