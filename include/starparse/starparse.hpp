@@ -228,6 +228,7 @@ namespace StarParse {
 
     template<typename T>
     ParsedArgs<T> parse(int argc, char **argv, T initial = {}, Settings settings = {}) {
+        static_assert(no_positional_containers<T>(), "cannot use Positional in combination with a container");
         static_assert(no_required_optionals<T>(),
                       "a Required field cannot have a std::optional type; drop one of the two");
         T out{std::move(initial)};

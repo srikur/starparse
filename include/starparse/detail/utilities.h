@@ -64,6 +64,7 @@ namespace detail::StarParse::Utilities {
 
     consteval bool is_vector(const std::meta::info r) { return is_specialization_of(r, ^^std::vector); }
     consteval bool is_array(const std::meta::info r) { return is_specialization_of(r, ^^std::array); }
+    consteval bool is_container(const std::meta::info m) { return is_vector(m) || is_array(m); }
 
     constexpr bool bool_from_string(const std::string_view s) {
         if (s.size() == 1) return s[0] == 'T' || s[0] == 't';
@@ -187,8 +188,17 @@ namespace detail::StarParse::Utilities {
     }
 
     consteval bool is_required(const std::meta::info m) {
-        for (const std::meta::info a : std::meta::annotations_of(m)) {
+        for (const auto a : std::meta::annotations_of(m)) {
             if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^Required)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    consteval bool is_positional(const std::meta::info m) {
+        for (const auto a : std::meta::annotations_of(m)) {
+            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^Positional)) {
                 return true;
             }
         }
@@ -197,9 +207,18 @@ namespace detail::StarParse::Utilities {
 
     template<typename T>
     consteval bool no_required_optionals() {
-        for (const std::meta::info m :
-             std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current())) {
+        for (const auto m : std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current())) {
             if (is_required(m) && is_optional(std::meta::remove_cv(std::meta::type_of(m)))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    template<typename T>
+    consteval bool no_positional_containers() {
+        for (const auto m : std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current())) {
+            if (is_positional(m) && is_container(std::meta::remove_cv(std::meta::type_of(m)))) {
                 return false;
             }
         }
