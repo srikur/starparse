@@ -11,10 +11,11 @@ option(STARPARSE_BUILD_EXAMPLES "Build the starparse examples" ${PROJECT_IS_TOP_
 option(STARPARSE_INSTALL "Generate install rules for starparse" ${PROJECT_IS_TOP_LEVEL})
 
 add_library(starparse INTERFACE
-        include/starparse/detail/annotations.h
-        include/starparse/detail/settings.h
-        include/starparse/detail/utilities.h
-        include/starparse/detail/parser.h)
+        include/starparse/detail/annotations.hpp
+        include/starparse/detail/settings.hpp
+        include/starparse/detail/utilities.hpp
+        include/starparse/detail/parser.hpp
+        include/starparse/detail/errors.hpp)
 add_library(starparse::starparse ALIAS starparse)
 
 target_compile_features(starparse INTERFACE cxx_std_26)

@@ -4,12 +4,13 @@
 #include <ranges>
 #include <expected>
 
-#include <starparse/detail/parser.h>
-#include <starparse/detail/settings.h>
+#include <starparse/detail/parser.hpp>
+#include <starparse/detail/settings.hpp>
 
 namespace StarParse {
-    using detail::StarParse::Settings;
-    using namespace detail::StarParse::Parser;
+    using detail::Settings;
+    using detail::ParseError;
+    using detail::ErrorKind;
 
     template<typename T>
     std::expected<T, std::vector<ParseError> > try_parse(const int argc, char **argv, T initial = {},

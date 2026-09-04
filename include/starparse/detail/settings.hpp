@@ -1,6 +1,6 @@
 #pragma once
 
-namespace detail::StarParse {
+namespace StarParse::detail {
     struct Settings {
         bool allow_kebab_casing{true};
         bool allow_upper_casing{true};

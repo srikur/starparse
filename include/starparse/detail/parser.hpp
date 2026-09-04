@@ -4,23 +4,18 @@
 #include <optional>
 #include <string_view>
 #include <meta>
-#include <ranges>
 #include <string>
 #include <stdexcept>
 #include <print>
 #include <array>
 #include <vector>
 
-#include <starparse/detail/annotations.h>
-#include <starparse/detail/settings.h>
-#include <starparse/detail/utilities.h>
+#include <starparse/detail/annotations.hpp>
+#include <starparse/detail/settings.hpp>
+#include <starparse/detail/utilities.hpp>
+#include <starparse/detail/errors.hpp>
 
-namespace detail::StarParse::Parser {
-    using namespace std::literals;
-    using namespace detail::StarParse::Annotations;
-    using StarParse::Settings;
-    using namespace detail::StarParse::Utilities;
-
+namespace StarParse::detail::Parser {
     struct ArgAttributes {
         bool dashed{};
         bool double_dashed{};
@@ -70,7 +65,7 @@ namespace detail::StarParse::Parser {
         bool found{false};
         template for (constexpr auto m : members) {
             constexpr bool named = is_named_option<T>(m);
-            if (named && (name == std::meta::identifier_of(m) || matches_alias<m>(name))) {
+            if (named && (name == std::meta::identifier_of(m) || Utilities::matches_alias<m>(name))) {
                 found = true;
             }
         }
@@ -89,14 +84,14 @@ namespace detail::StarParse::Parser {
             template for (constexpr auto m : members) {
                 using M = [:std::meta::type_of(m):];
                 constexpr auto opt = opt_of(m);
-                if constexpr (is_flag_type(^^M)) {
+                if constexpr (Utilities::is_flag_type(^^M)) {
                     if constexpr (opt.has_value()) {
                         if (c == opt->short_name) {
                             is_flag = true;
                         }
                     }
                     if constexpr (is_named_option<T>(m)) {
-                        if (matches_alias<m>(std::string_view{&c, 1})) {
+                        if (Utilities::matches_alias<m>(std::string_view{&c, 1})) {
                             is_flag = true;
                         }
                     }
@@ -111,17 +106,6 @@ namespace detail::StarParse::Parser {
 
     struct ArgContext {
         bool separator_seen{};
-    };
-
-    enum class ErrorKind {
-        UNKNOWN_OPTION, MISSING_VALUE, INVALID_VALUE, UNEXPECTED_POSITIONAL, MISSING_REQUIRED, DUPLICATE_OPTION, EXCEPTION
-    };
-
-    struct ParseError {
-        ErrorKind kind;
-        std::string_view token;
-        std::string_view option;
-        int argv_index;
     };
 
     template<typename T>
@@ -184,14 +168,15 @@ namespace detail::StarParse::Parser {
                     }
                     continue;
                 }
-                if (option_takes_value<T>(a.name.substr(0, 1), true)) {
+                if (Utilities::option_takes_value<T>(a.name.substr(0, 1), true)) {
                     // try attached value split (e.g., -ofile for -o file)
                     a.value = a.name.substr(1, a.name.size() - 1);
                     a.name = a.name.substr(0, 1);
                     a.has_value = true;
                 }
             }
-            if ((a.dashed || a.double_dashed) && !a.has_value && option_takes_value<T>(a.name, a.dashed) && i + 1 <
+            if ((a.dashed || a.double_dashed) && !a.has_value && Utilities::option_takes_value<T>(a.name, a.dashed) && i
+                + 1 <
                 argc) {
                 a.value = argv[++i];
                 a.has_value = true;
@@ -213,7 +198,7 @@ namespace detail::StarParse::Parser {
 
     template<std::meta::info M>
     constexpr bool does_match_name(std::string_view name,
-                                   const std::optional<Opt> &opt,
+                                   const std::optional<Annotations::Opt> &opt,
                                    const Settings &settings) {
         if (name.size() == 1 && opt.has_value() && name[0] == opt->short_name)
             return true;
@@ -221,15 +206,16 @@ namespace detail::StarParse::Parser {
             return true;
         if (settings.allow_kebab_casing && name == kebab_name_v<M>)
             return true;
-        if (settings.allow_aliases && matches_alias<M>(name))
+        if (settings.allow_aliases && Utilities::matches_alias<M>(name))
             return true;
         return false;
     }
 
     template<typename T>
     ParsedArgs<T> parse(int argc, char **argv, T initial = {}, Settings settings = {}) {
-        static_assert(no_positional_containers<T>(), "cannot use Positional in combination with a container");
-        static_assert(no_required_optionals<T>(),
+        static_assert(Utilities::no_positional_containers<T>(),
+                      "cannot use Positional in combination with a container");
+        static_assert(Utilities::no_required_optionals<T>(),
                       "a Required field cannot have a std::optional type; drop one of the two");
         T out{std::move(initial)};
         bool help_requested{};
@@ -264,7 +250,7 @@ namespace detail::StarParse::Parser {
                     if (!matched && matching_string) {
                         matched = true;
                         constexpr auto idx = member_index_of<T>(m);
-                        if constexpr (is_flag_type(^^M)) {
+                        if constexpr (Utilities::is_flag_type(^^M)) {
                             if (attrs.has_value) {
                                 assign_from_string(out.[:m:], attrs.value, !fields_set[idx]);
                             } else {

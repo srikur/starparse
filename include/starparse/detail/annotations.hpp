@@ -6,7 +6,7 @@
 #include <string>
 #include <array>
 
-namespace detail::StarParse::Annotations {
+namespace StarParse::detail::Annotations {
     struct Opt final {
         char short_name{0};
         const char *help_{};

@@ -12,10 +12,14 @@
 #include <array>
 #include <vector>
 
-#include "annotations.h"
+#include "annotations.hpp"
 
-namespace detail::StarParse::Utilities {
-    using namespace Annotations;
+namespace StarParse::detail::Utilities {
+    using Annotations::Alias;
+    using Annotations::Positional;
+    using Annotations::Opt;
+    using Annotations::Program;
+    using Annotations::Required;
 
     consteval std::vector<const char *> alias_name_list(const std::meta::info m) {
         std::vector<const char *> names{};
