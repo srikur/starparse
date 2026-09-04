@@ -32,7 +32,7 @@ namespace StarParse {
     T force_parse(const int argc, char **argv, T initial = {}, const detail::Settings settings = {}) {
         auto result = detail::Parser::parse<T>(argc, argv, std::move(initial), settings);
         if (!result.errors().empty()) {
-            throw std::invalid_argument("Argument parsing error!");
+            throw std::invalid_argument(result.errors()[0].to_string());
         }
         return std::move(result).value();
     }

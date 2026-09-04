@@ -239,7 +239,7 @@ namespace StarParse::detail::Parser {
                         if (!matched && next_positional == *pos) {
                             matched = true;
                             next_positional++;
-                            assign_from_string(out.[:m:], attrs.value, idx, !fields_set[idx], errors);
+                            assign_from_string(out.[:m:], attrs.name, attrs.argv_index, !fields_set[idx], errors);
                             fields_set[idx] = true;
                         }
                     }
@@ -253,7 +253,7 @@ namespace StarParse::detail::Parser {
                         matched = true;
                         if constexpr (is_flag_type(^^M)) {
                             if (attrs.has_value) {
-                                assign_from_string(out.[:m:], attrs.value, idx, !fields_set[idx], errors);
+                                assign_from_string(out.[:m:], attrs.value, attrs.argv_index, !fields_set[idx], errors);
                             } else {
                                 out.[:m:] = true;
                             }
@@ -266,7 +266,7 @@ namespace StarParse::detail::Parser {
                                 });
                                 continue;
                             }
-                            assign_from_string(out.[:m:], attrs.value, idx, !fields_set[idx], errors);
+                            assign_from_string(out.[:m:], attrs.value, attrs.argv_index, !fields_set[idx], errors);
                             fields_set[idx] = true;
                         }
                     }
@@ -274,7 +274,8 @@ namespace StarParse::detail::Parser {
             }
             if (!matched) {
                 errors.push_back({
-                    .kind = ErrorKind::UNKNOWN_OPTION, .token{}, .option = attrs.name, .argv_index = attrs.argv_index
+                    .kind = ErrorKind::UNKNOWN_OPTION, .token = attrs.name, .option{},
+                    .argv_index = attrs.argv_index
                 });
             }
         }
