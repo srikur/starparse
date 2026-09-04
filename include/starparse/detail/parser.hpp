@@ -5,8 +5,6 @@
 #include <string_view>
 #include <meta>
 #include <string>
-#include <stdexcept>
-#include <print>
 #include <array>
 #include <vector>
 
@@ -19,6 +17,7 @@ namespace StarParse::detail::Parser {
     using namespace StarParse::detail::Utilities;
 
     struct ArgAttributes {
+        int argv_index{};
         bool dashed{};
         bool double_dashed{};
         bool is_help{};
@@ -28,7 +27,7 @@ namespace StarParse::detail::Parser {
         std::string_view name{};
         std::string_view value{};
 
-        explicit ArgAttributes(std::string_view argument) {
+        explicit ArgAttributes(std::string_view argument, const int index) : argv_index(index) {
             if (!argument.starts_with('-')) {
                 is_positional = true;
                 name = argument;
@@ -153,7 +152,7 @@ namespace StarParse::detail::Parser {
         attr_array.reserve(argc - 1);
         bool separator_seen{false};
         for (int i{1}; i < argc; ++i) {
-            ArgAttributes a{argv[i]};
+            ArgAttributes a{argv[i], i};
             if (a.is_separator) {
                 separator_seen = true;
                 continue;
@@ -233,14 +232,15 @@ namespace StarParse::detail::Parser {
             bool matched{false};
             template for (constexpr auto m : members) {
                 using M = [:std::meta::type_of(m):];
+                constexpr auto idx = member_index_of<T>(m);
                 constexpr auto pos = positional_index_of<T>(m);
                 if (attrs.is_positional || ctx.separator_seen) {
                     if constexpr (pos.has_value()) {
                         if (!matched && next_positional == *pos) {
                             matched = true;
                             next_positional++;
-                            out.[:m:] = from_string<M>(attrs.name);
-                            fields_set[member_index_of<T>(m)] = true;
+                            assign_from_string(out.[:m:], attrs.value, idx, !fields_set[idx], errors);
+                            fields_set[idx] = true;
                         }
                     }
                 } else if (attrs.is_separator) {
@@ -251,39 +251,46 @@ namespace StarParse::detail::Parser {
                     const bool matching_string = named && does_match_name<m>(attrs.name, opt, settings);
                     if (!matched && matching_string) {
                         matched = true;
-                        constexpr auto idx = member_index_of<T>(m);
-                        if constexpr (Utilities::is_flag_type(^^M)) {
+                        if constexpr (is_flag_type(^^M)) {
                             if (attrs.has_value) {
-                                assign_from_string(out.[:m:], attrs.value, !fields_set[idx]);
+                                assign_from_string(out.[:m:], attrs.value, idx, !fields_set[idx], errors);
                             } else {
                                 out.[:m:] = true;
                             }
                             fields_set[idx] = true;
                         } else {
                             if (!attrs.has_value) {
-                                throw std::invalid_argument(std::format("missing value for option: {}", attrs.name));
+                                errors.push_back({
+                                    .kind = ErrorKind::MISSING_VALUE, .token{}, .option = attrs.name,
+                                    .argv_index = attrs.argv_index
+                                });
+                                continue;
                             }
-                            assign_from_string(out.[:m:], attrs.value, !fields_set[idx]);
+                            assign_from_string(out.[:m:], attrs.value, idx, !fields_set[idx], errors);
                             fields_set[idx] = true;
                         }
                     }
                 }
             }
             if (!matched) {
-                throw std::invalid_argument(std::format("unrecognized argument: {}", attrs.name));
+                errors.push_back({
+                    .kind = ErrorKind::UNKNOWN_OPTION, .token{}, .option = attrs.name, .argv_index = attrs.argv_index
+                });
             }
         }
 
         std::vector<std::string_view> missing_fields;
         template for (constexpr auto m : members) {
             if constexpr (is_required(m)) {
-                if (!fields_set[member_index_of<T>(m)]) {
-                    missing_fields.push_back(std::string_view{std::meta::identifier_of(m)});
+                const size_t index = member_index_of<T>(m);
+                if (!fields_set[index]) {
+                    const auto field_name = std::string_view{std::meta::identifier_of(m)};
+                    errors.push_back({
+                        .kind = ErrorKind::MISSING_REQUIRED, .token{}, .option = field_name,
+                        .argv_index = index
+                    });
                 }
             }
-        }
-        if (!missing_fields.empty()) {
-            throw std::invalid_argument(std::format("Required fields not specified: {}", missing_fields));
         }
 
         return ParsedArgs<T>{out, help_requested, errors};

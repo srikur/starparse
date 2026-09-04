@@ -14,6 +14,7 @@ starparse_test_executable(test_prefill)
 starparse_test_executable(test_errors)
 starparse_test_executable(test_alias)
 starparse_test_executable(test_enum)
+starparse_test_executable(test_try_parse)
 
 # starparse_case(<test name> <target> <expected output regex> [args...])
 function(starparse_case name target expected)
@@ -65,3 +66,7 @@ starparse_case(enum.bad_value   test_enum "error: bad value for type: Mode" --mo
 starparse_case(errors.unrecognized  test_errors "error: unrecognized argument: nope" --nope)
 starparse_case(errors.missing_value test_errors "error: missing value for option: arg1" --arg1)
 starparse_case(errors.bad_value     test_errors "error: bad value for type: int" abc)
+
+# Specifically testing try_parse()
+starparse_case(try_parse.single_error test_try_parse "parse error\(s\): \\[\"Unknown option supplied for argument fake_arg (value: none) at position 1.\"\\]" --fake_arg)
+starparse_case(try_parse.successful_parse test_try_parse "verbose: true, arg1: arg1" -v arg1)

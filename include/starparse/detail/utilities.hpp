@@ -7,12 +7,12 @@
 #include <string>
 #include <stdexcept>
 #include <charconv>
-#include <print>
 #include <type_traits>
 #include <array>
 #include <vector>
 
-#include "annotations.hpp"
+#include <starparse/detail/annotations.hpp>
+#include <starparse/detail/errors.hpp>
 
 namespace StarParse::detail::Utilities {
     consteval std::vector<const char *> alias_name_list(const std::meta::info m) {
@@ -69,11 +69,25 @@ namespace StarParse::detail::Utilities {
         return s == "True" || s == "true";
     }
 
+    template<typename T>
+    consteval size_t member_index_of(const std::meta::info m) {
+        size_t index{0};
+        for (const std::meta::info member :
+             std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current())) {
+            if (member == m) {
+                return index;
+            }
+            ++index;
+        }
+        throw std::invalid_argument("member not found");
+    }
+
     template<typename M>
-    M from_string(std::string_view s) {
+    std::expected<M, ParseError> from_string(std::string_view s, const int index) {
         if constexpr (is_optional(^^M)) {
             using T = [:value_type_of(^^M):];
-            return M{from_string<T>(s)};
+            if (auto result = from_string<T>(s, index)) return M{*result};
+            else return std::unexpected(result.error());
         } else if constexpr (std::same_as<M, bool>) {
             return M{bool_from_string(s)};
         } else if constexpr (std::constructible_from<M, std::string_view>) {
@@ -82,7 +96,10 @@ namespace StarParse::detail::Utilities {
             M v{};
             auto [pointer, error_code] = std::from_chars(s.data(), s.data() + s.size(), v);
             if (error_code != std::errc{} || pointer != s.data() + s.size()) {
-                throw std::invalid_argument(std::format("bad value for type: {}", std::meta::display_string_of(^^M)));
+                return std::unexpected(ParseError{
+                    .kind = ErrorKind::INVALID_VALUE, .token = s, .option = std::meta::display_string_of(^^M),
+                    .argv_index = index
+                });
             }
             return v;
         } else if constexpr (std::is_enum_v<M>) {
@@ -93,15 +110,17 @@ namespace StarParse::detail::Utilities {
                 }
             }
             if (!parsed)
-                throw std::invalid_argument(
-                    std::format("bad value for type: {}", std::meta::display_string_of(^^M)));
+                return std::unexpected(ParseError{
+                    .kind = ErrorKind::INVALID_VALUE, .token = s, .option = std::meta::display_string_of(^^M),
+                    .argv_index = index
+                });
             return *parsed;
         } else {
             static_assert(false, "no conversion for this field type");
         }
     }
 
-    consteval std::optional<Positional> positional_of(std::meta::info m) {
+    consteval std::optional<Positional> positional_of(const std::meta::info m) {
         for (const std::meta::info a : std::meta::annotations_of(m)) {
             if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^Positional)) {
                 return std::meta::extract<Positional>(a);
@@ -110,7 +129,7 @@ namespace StarParse::detail::Utilities {
         return std::nullopt;
     }
 
-    consteval std::optional<Opt> opt_of(std::meta::info m) {
+    consteval std::optional<Opt> opt_of(const std::meta::info m) {
         for (const std::meta::info a : std::meta::annotations_of(m)) {
             if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^Opt)) {
                 return std::meta::extract<Opt>(a);
@@ -154,19 +173,6 @@ namespace StarParse::detail::Utilities {
             ++index;
         }
         return std::nullopt;
-    }
-
-    template<typename T>
-    consteval size_t member_index_of(const std::meta::info m) {
-        size_t index{0};
-        for (const std::meta::info member :
-             std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current())) {
-            if (member == m) {
-                return index;
-            }
-            ++index;
-        }
-        throw std::invalid_argument("member not found");
     }
 
     template<typename T>
@@ -224,13 +230,16 @@ namespace StarParse::detail::Utilities {
     }
 
     template<typename M>
-    void assign_from_string(M &field, const std::string_view s, const bool first_occurrence) {
+    void assign_from_string(M &field, const std::string_view s, const int index, const bool first_occurrence,
+                            auto &errors) {
         if constexpr (is_vector(std::meta::remove_cv(^^M))) {
             using E = [:value_type_of(^^M):];
             if (first_occurrence) field.clear();
-            field.push_back(from_string<E>(s));
+            if (auto result = from_string<E>(s, index)) field.push_back(*result);
+            else errors.push_back(result.error());
         } else {
-            field = from_string<M>(s);
+            if (auto result = from_string<M>(s, index)) field = *result;
+            else errors.push_back(result.error());
         }
     }
 }
