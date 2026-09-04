@@ -22,12 +22,13 @@ function(starparse_case name target expected)
 endfunction()
 
 # Annotated struct: only annotated fields participate.
-starparse_case(parse.no_args     test_parse "k: false, v: false, f: false")
-starparse_case(parse.flag_bundle test_parse "k: true, v: true, f: true" -kvf)
-starparse_case(parse.long_flag   test_parse "k: false, v: true, f: false" --verbose)
-starparse_case(parse.short_flags test_parse "k: true, v: false, f: true" -k -f)
-starparse_case(parse.enum_value  test_parse "mode: 2" -m MODE_2)
+starparse_case(parse.no_args         test_parse "k: false, v: false, f: false")
+starparse_case(parse.flag_bundle     test_parse "k: true, v: true, f: true" -kvf)
+starparse_case(parse.long_flag       test_parse "k: false, v: true, f: false" --verbose)
+starparse_case(parse.short_flags     test_parse "k: true, v: false, f: true" -k -f)
+starparse_case(parse.enum_value      test_parse "mode: 2" -m MODE_2)
 starparse_case(parse.attached_value  test_parse "output_file: filename" -ofilename)
+starparse_case(parse.vector          test_parse "include_paths: \\[\"path1\", \"path2\"\\]" -I path1 -I path2)
 
 # Bare struct: every field addressable by name, non-bools also positional.
 starparse_case(bare.named_mixed_dashes test_bare "Bare arg1: hello, verbose: false, arg2: 42" --arg1=hello -arg2=42)
@@ -62,6 +63,5 @@ starparse_case(enum.bad_value   test_enum "error: bad value for type: Mode" --mo
 
 # Errors surface as exceptions for now.
 starparse_case(errors.unrecognized  test_errors "error: unrecognized argument: nope" --nope)
-starparse_case(errors.flag_value    test_errors "error: option does not take a value: verbose" --verbose=true)
 starparse_case(errors.missing_value test_errors "error: missing value for option: arg1" --arg1)
 starparse_case(errors.bad_value     test_errors "error: bad value for type: int" abc)

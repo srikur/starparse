@@ -224,4 +224,15 @@ namespace detail::StarParse::Utilities {
         }
         return true;
     }
+
+    template<typename M>
+    void assign_from_string(M &field, const std::string_view s, const bool first_occurrence) {
+        if constexpr (is_vector(std::meta::remove_cv(^^M))) {
+            using E = [:value_type_of(^^M):];
+            if (first_occurrence) field.clear();
+            field.push_back(from_string<E>(s));
+        } else {
+            field = from_string<M>(s);
+        }
+    }
 }

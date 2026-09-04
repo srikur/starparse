@@ -21,7 +21,7 @@ struct [[=Program{"starparse", "CMD line arg paraer", "0.0.1"}]] Args {
     [[=Opt{'f', "Flag f"}]] bool eff;
     [[=Opt{'o'}]] std::optional<std::string> output_file;
     [[=Opt{'m'}]] std::optional<Mode> mode;
-    [[=Positional{}]] std::vector<std::string> include_paths;
+    [[=Opt{'I'}]] std::vector<std::string> include_paths;
 };
 
 auto main(int argc, char **argv) -> int {

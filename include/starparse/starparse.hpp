@@ -263,19 +263,20 @@ namespace StarParse {
                     const bool matching_string = named && does_match_name<m>(attrs.name, opt, settings);
                     if (!matched && matching_string) {
                         matched = true;
+                        constexpr auto idx = member_index_of<T>(m);
                         if constexpr (is_flag_type(^^M)) {
                             if (attrs.has_value) {
-                                out.[:m:] = from_string<M>(attrs.value);
+                                assign_from_string(out.[:m:], attrs.value, !fields_set[idx]);
                             } else {
                                 out.[:m:] = true;
                             }
-                            fields_set[member_index_of<T>(m)] = true;
+                            fields_set[idx] = true;
                         } else {
                             if (!attrs.has_value) {
                                 throw std::invalid_argument(std::format("missing value for option: {}", attrs.name));
                             }
-                            out.[:m:] = from_string<M>(attrs.value);
-                            fields_set[member_index_of<T>(m)] = true;
+                            assign_from_string(out.[:m:], attrs.value, !fields_set[idx]);
+                            fields_set[idx] = true;
                         }
                     }
                 }
