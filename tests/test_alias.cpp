@@ -9,7 +9,7 @@ struct Args {
     [[=StarParse::Positional{1}, =StarParse::Alias{"count"}]] int arg2;
 };
 
-auto main(int argc, char** argv) -> int {
+auto main(int argc, char **argv) -> int {
     const auto args{StarParse::force_parse<Args>(argc, argv)};
     std::println("input: {}, verbose: {}, keep: {}, arg2: {}", args.input, args.verbose, args.keep, args.arg2);
 }

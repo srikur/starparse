@@ -8,25 +8,21 @@
 #include <starparse/detail/settings.hpp>
 
 namespace StarParse {
-    using detail::Settings;
-    using detail::ParseError;
-    using detail::ErrorKind;
-
     template<typename T>
-    std::expected<T, std::vector<ParseError> > try_parse(const int argc, char **argv, T initial = {},
-                                                         const Settings settings = {}) {
+    std::expected<T, std::vector<detail::ParseError> > try_parse(const int argc, char **argv, T initial = {},
+                                                                 const detail::Settings settings = {}) {
         try {
-            auto result = parse<T>(argc, argv, std::move(initial), settings);
+            auto result = detail::Parser::parse<T>(argc, argv, std::move(initial), settings);
             return result.errors().size() ? result.errors() : std::move(result).value();
         } catch ([[maybe_unused]] const std::exception &e) {
-            return std::vector{ParseError{.kind = ErrorKind::EXCEPTION}};
+            return std::vector{detail::ParseError{.kind = detail::ErrorKind::EXCEPTION}};
         }
     }
 
     template<typename T>
-    T parse_or_exit(const int argc, char **argv, T initial = {}, const Settings settings = {}) {
+    T parse_or_exit(const int argc, char **argv, T initial = {}, const detail::Settings settings = {}) {
         try {
-            auto result = parse<T>(argc, argv, std::move(initial), settings);
+            auto result = detail::Parser::parse<T>(argc, argv, std::move(initial), settings);
             return std::move(result).value();
         } catch ([[maybe_unused]] const std::exception &e) {
             std::terminate();
@@ -34,8 +30,8 @@ namespace StarParse {
     }
 
     template<typename T>
-    T force_parse(const int argc, char **argv, T initial = {}, const Settings settings = {}) {
-        auto result = parse<T>(argc, argv, std::move(initial), settings);
+    T force_parse(const int argc, char **argv, T initial = {}, const detail::Settings settings = {}) {
+        auto result = detail::Parser::parse<T>(argc, argv, std::move(initial), settings);
         return std::move(result).value();
     }
 }

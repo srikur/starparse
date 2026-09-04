@@ -15,12 +15,6 @@
 #include "annotations.hpp"
 
 namespace StarParse::detail::Utilities {
-    using Annotations::Alias;
-    using Annotations::Positional;
-    using Annotations::Opt;
-    using Annotations::Program;
-    using Annotations::Required;
-
     consteval std::vector<const char *> alias_name_list(const std::meta::info m) {
         std::vector<const char *> names{};
         for (const std::meta::info a : std::meta::annotations_of(m)) {

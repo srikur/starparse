@@ -6,12 +6,13 @@
 #include <string>
 #include <array>
 
-namespace StarParse::detail::Annotations {
+namespace StarParse::inline annotations {
     struct Opt final {
         char short_name{0};
         const char *help_{};
 
-        explicit consteval Opt(const char s, std::string_view h) : short_name(s), help_(std::define_static_string(h)) {}
+        explicit consteval Opt(const char s, std::string_view h) : short_name(s),
+                                                                   help_(std::define_static_string(h)) {}
 
         explicit consteval Opt(std::string_view h) : help_(std::define_static_string(h)) {}
 

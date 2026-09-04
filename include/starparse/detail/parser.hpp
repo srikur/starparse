@@ -16,6 +16,8 @@
 #include <starparse/detail/errors.hpp>
 
 namespace StarParse::detail::Parser {
+    using namespace StarParse::detail::Utilities;
+
     struct ArgAttributes {
         bool dashed{};
         bool double_dashed{};
@@ -198,7 +200,7 @@ namespace StarParse::detail::Parser {
 
     template<std::meta::info M>
     constexpr bool does_match_name(std::string_view name,
-                                   const std::optional<Annotations::Opt> &opt,
+                                   const std::optional<Opt> &opt,
                                    const Settings &settings) {
         if (name.size() == 1 && opt.has_value() && name[0] == opt->short_name)
             return true;
