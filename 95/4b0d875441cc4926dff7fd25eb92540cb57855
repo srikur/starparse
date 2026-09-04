@@ -1,0 +1,34 @@
+include/starparse/detail/parser.hpp
+  h_83b6cee88cb5ab 277
+  s_41fb25fc14cd22::t_a933e556d733be 242
+  s_41fb25fc14cd22::t_6a615abfc837a7 269
+  s_41fb25fc14cd22::t_98857aa261a05b 256
+  h_83b6cee88cb5ab 278
+tests/CMakeLists.txt
+  h_83b6cee88cb5ab 66,71
+  s_41fb25fc14cd22::t_ef2badf1afdaf2 63
+  s_41fb25fc14cd22::t_65d4b7c72606f8 65,67-68,72
+include/starparse/starparse.hpp
+  s_41fb25fc14cd22::t_a0297251df16ae 35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "954b0d875441cc4926dff7fd25eb92540cb57855",
+  "prompts": {},
+  "humans": {
+    "h_83b6cee88cb5ab": {
+      "author": "srikur <srikur@endeavorai.com>"
+    }
+  },
+  "sessions": {
+    "s_41fb25fc14cd22": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "416085ce-d38a-4b62-9cf9-39cb55579b10",
+        "model": "claude-fable-5"
+      },
+      "human_author": "srikur <srikur@endeavorai.com>"
+    }
+  }
+}
