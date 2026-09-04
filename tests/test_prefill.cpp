@@ -11,6 +11,6 @@ struct Flags {
 
 auto main(int argc, char** argv) -> int {
     Flags defaults{.arg1 = "default1", .keep = true, .verbose = false, .arg2 = 99};
-    const auto f{StarParse::immediate_parse(argc, argv, defaults)};
+    const auto f{StarParse::force_parse(argc, argv, defaults)};
     std::println("arg1: {}, keep: {}, verbose: {}, arg2: {}", f.arg1, f.keep, f.verbose, f.arg2);
 }

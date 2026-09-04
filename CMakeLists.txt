@@ -13,7 +13,8 @@ option(STARPARSE_INSTALL "Generate install rules for starparse" ${PROJECT_IS_TOP
 add_library(starparse INTERFACE
         include/starparse/detail/annotations.h
         include/starparse/detail/settings.h
-        include/starparse/detail/utilities.h)
+        include/starparse/detail/utilities.h
+        include/starparse/detail/parser.h)
 add_library(starparse::starparse ALIAS starparse)
 
 target_compile_features(starparse INTERFACE cxx_std_26)
