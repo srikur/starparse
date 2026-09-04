@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <format>
 #include <optional>
 #include <string_view>
 #include <meta>
@@ -21,6 +22,7 @@ namespace StarParse::detail::Parser {
         bool dashed{};
         bool double_dashed{};
         bool is_help{};
+        bool is_version{};
         bool is_positional{};
         bool is_separator{};
         bool has_value{};
@@ -55,6 +57,8 @@ namespace StarParse::detail::Parser {
             }
             if (double_dashed && name == "help") {
                 is_help = true;
+            } else if (double_dashed && name == "version") {
+                is_version = true;
             }
         }
     };
@@ -85,7 +89,7 @@ namespace StarParse::detail::Parser {
             template for (constexpr auto m : members) {
                 using M = [:std::meta::type_of(m):];
                 constexpr auto opt = opt_of(m);
-                if constexpr (Utilities::is_flag_type(^^M)) {
+                if constexpr (is_flag_type(^^M)) {
                     if constexpr (opt.has_value()) {
                         if (c == opt->short_name) {
                             is_flag = true;
@@ -112,9 +116,10 @@ namespace StarParse::detail::Parser {
     template<typename T>
     class ParsedArgs {
     public:
-        ParsedArgs(T out, const bool show_help, std::vector<ParseError> &errors) : out_(std::move(out)),
-            show_help_(show_help),
-            errors_(std::move(errors)) {}
+        ParsedArgs(T out, const bool show_help, const bool show_version,
+                   std::vector<ParseError> &errors) : out_(std::move(out)),
+                                                      show_help_(show_help), show_version_(show_version),
+                                                      errors_(std::move(errors)) {}
 
         explicit operator bool() const {
             return out_ == T{};
@@ -140,9 +145,119 @@ namespace StarParse::detail::Parser {
             return show_help_;
         }
 
+        [[nodiscard]] bool version_requested() const {
+            return show_version_;
+        }
+
+        [[nodiscard]] static std::string version() {
+            constexpr auto program = program_of(^^T);
+            if constexpr (program.has_value()) {
+                return std::format("{} version {}", program->name, program->version);
+            } else {
+                return "No version information.";
+            }
+        }
+
+        [[nodiscard]] std::string help() const {
+            static constexpr auto members = std::define_static_array(
+                std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
+            constexpr auto program = program_of(^^T);
+            constexpr std::string_view program_name =
+                    program.has_value() ? std::string_view{program->name} : std::string_view{"program"};
+
+            struct ArgumentRow {
+                size_t index{};
+                std::string_view name;
+                std::string description;
+                bool required{};
+            };
+            struct OptionRow {
+                std::string invocation;
+                std::string description;
+            };
+            std::vector<ArgumentRow> arguments;
+            std::vector<OptionRow> options;
+
+            template for (constexpr auto m : members) {
+                using M = [:std::meta::type_of(m):];
+                constexpr auto opt = opt_of(m);
+                constexpr auto pos = positional_index_of<T>(m);
+                constexpr auto name = std::string_view{std::meta::identifier_of(m)};
+                constexpr bool required = is_required(m);
+
+                std::string description;
+                if constexpr (opt.has_value()) {
+                    if (opt->help_ != nullptr) description = opt->help();
+                }
+                if constexpr (required) {
+                    description += description.empty() ? "(required)" : " (required)";
+                }
+
+                if constexpr (pos.has_value()) {
+                    arguments.push_back({*pos, name, std::move(description), required});
+                } else if constexpr (is_named_option<T>(m)) {
+                    std::string invocation{"    "};
+                    if constexpr (opt.has_value()) {
+                        if constexpr (opt->short_name != 0) {
+                            invocation = std::format("-{}, ", opt->short_name);
+                        }
+                    }
+                    invocation += std::format("--{}", name);
+                    for (const char *alias : alias_names<m>()) {
+                        const std::string_view a{alias};
+                        invocation += std::format(", {}{}", a.size() == 1 ? "-" : "--", a);
+                    }
+                    if constexpr (!is_flag_type(^^M)) {
+                        invocation += " <value>";
+                    }
+                    options.push_back({std::move(invocation), std::move(description)});
+                }
+            }
+            std::ranges::sort(arguments, {}, &ArgumentRow::index);
+            options.push_back({"    --help", "Show this help message"});
+            options.push_back({"    --version", "Show version information"});
+
+            std::string usage = std::format("Usage: {} [options]", program_name);
+            for (const auto &argument : arguments) {
+                usage += argument.required
+                             ? std::format(" <{}>", argument.name)
+                             : std::format(" [{}]", argument.name);
+            }
+
+            size_t column{0};
+            for (const auto &argument : arguments) column = std::max(column, argument.name.size());
+            for (const auto &option : options) column = std::max(column, option.invocation.size());
+            column += 2;
+
+            std::string text;
+            if constexpr (program.has_value()) {
+                if (program->description != nullptr && *program->description != '\0') {
+                    text += std::format("{} - {}\n\n", program_name, program->description);
+                } else {
+                    text += std::format("{}\n\n", program_name);
+                }
+            }
+            text += usage;
+            text += '\n';
+            if (!arguments.empty()) {
+                text += "\nArguments:\n";
+                for (const auto &argument : arguments) {
+                    if (argument.description.empty()) text += std::format("  {}\n", argument.name);
+                    else text += std::format("  {:<{}}{}\n", argument.name, column, argument.description);
+                }
+            }
+            text += "\nOptions:\n";
+            for (const auto &option : options) {
+                if (option.description.empty()) text += std::format("  {}\n", option.invocation);
+                else text += std::format("  {:<{}}{}\n", option.invocation, column, option.description);
+            }
+            return text;
+        }
+
     private:
         T out_{};
         bool show_help_{};
+        bool show_version_{};
         std::vector<ParseError> errors_;
     };
 
@@ -219,7 +334,7 @@ namespace StarParse::detail::Parser {
         static_assert(Utilities::no_required_optionals<T>(),
                       "a Required field cannot have a std::optional type; drop one of the two");
         T out{std::move(initial)};
-        bool help_requested{};
+        bool help_requested{}, version_requested{};
         std::vector<ParseError> errors{};
         static constexpr auto members = std::define_static_array(
             std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
@@ -230,6 +345,14 @@ namespace StarParse::detail::Parser {
 
         for (const auto &attrs : attr_array) {
             bool matched{false};
+            if (attrs.is_help) {
+                help_requested = true;
+                break;
+            }
+            if (attrs.is_version) {
+                version_requested = true;
+                break;
+            }
             template for (constexpr auto m : members) {
                 using M = [:std::meta::type_of(m):];
                 constexpr auto idx = member_index_of<T>(m);
@@ -294,6 +417,6 @@ namespace StarParse::detail::Parser {
             }
         }
 
-        return ParsedArgs<T>{out, help_requested, errors};
+        return ParsedArgs<T>{out, help_requested, version_requested, errors};
     }
 }

@@ -9,6 +9,7 @@
 #include <charconv>
 #include <type_traits>
 #include <array>
+#include <span>
 #include <vector>
 
 #include <starparse/detail/annotations.hpp>
@@ -36,6 +37,12 @@ namespace StarParse::detail::Utilities {
             if (name == std::string_view{alias}) return true;
         }
         return false;
+    }
+
+    template<std::meta::info M>
+    std::span<const char *const> alias_names() {
+        static constexpr auto aliases = std::define_static_array(alias_name_list(M));
+        return aliases;
     }
 
     consteval bool is_optional(std::meta::info r) {
@@ -124,6 +131,15 @@ namespace StarParse::detail::Utilities {
         for (const std::meta::info a : std::meta::annotations_of(m)) {
             if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^Positional)) {
                 return std::meta::extract<Positional>(a);
+            }
+        }
+        return std::nullopt;
+    }
+
+    consteval std::optional<Program> program_of(const std::meta::info r) {
+        for (const std::meta::info a : std::meta::annotations_of(r)) {
+            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^Program)) {
+                return std::meta::extract<Program>(a);
             }
         }
         return std::nullopt;

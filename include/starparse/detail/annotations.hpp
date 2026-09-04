@@ -41,12 +41,12 @@ namespace StarParse::inline annotations {
 
     struct Program final {
         explicit consteval
-        Program(std::string_view name, std::string_view description, std::string_view version) : name_(
-                std::define_static_string(name)), description_(std::define_static_string(description)),
-            version_(std::define_static_string(version)) {}
+        Program(std::string_view n, std::string_view d, std::string_view v) : name(std::define_static_string(n)),
+                                                                              description(std::define_static_string(d)),
+                                                                              version(std::define_static_string(v)) {}
 
-        const char *name_{};
-        const char *description_{};
-        const char *version_{};
+        const char *name{};
+        const char *description{};
+        const char *version{};
     };
 }
