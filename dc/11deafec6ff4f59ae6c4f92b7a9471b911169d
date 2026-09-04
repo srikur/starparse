@@ -1,0 +1,35 @@
+include/starparse/detail/annotations.hpp
+  h_83b6cee88cb5ab 44-46,48-50
+include/starparse/detail/utilities.hpp
+  s_41fb25fc14cd22::t_a2a9b180486744 12
+  s_41fb25fc14cd22::t_c664c6c205d0f2 42-47
+  s_41fb25fc14cd22::t_9eccfe3f7be826 139-147
+include/starparse/starparse.hpp
+  h_83b6cee88cb5ab 15-22,32-39,50-57
+include/starparse/detail/parser.hpp
+  s_41fb25fc14cd22::t_c75d28818684df 153-155,157,162-168,170-171,173-254
+  h_83b6cee88cb5ab 25,60-61,119,121,148-152,156,158-161,169,172,255-256,260,337,348-355,420
+  s_41fb25fc14cd22::t_e9961197341b56 4
+  h_83b6cee88cb5ab 92,120,122
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "dc11deafec6ff4f59ae6c4f92b7a9471b911169d",
+  "prompts": {},
+  "humans": {
+    "h_83b6cee88cb5ab": {
+      "author": "srikur <srikur@endeavorai.com>"
+    }
+  },
+  "sessions": {
+    "s_41fb25fc14cd22": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "416085ce-d38a-4b62-9cf9-39cb55579b10",
+        "model": "claude-fable-5"
+      },
+      "human_author": "srikur <srikur@endeavorai.com>"
+    }
+  }
+}
