@@ -1,0 +1,20 @@
+tests/test_parse.cpp
+  h_83b6cee88cb5ab 24
+include/starparse/detail/utilities.h
+  h_83b6cee88cb5ab 227-237
+include/starparse/starparse.hpp
+  h_83b6cee88cb5ab 266,269,273,278-279
+tests/CMakeLists.txt
+  h_83b6cee88cb5ab 25-29,31
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "50185f7052589cf2def95c5de7c962f96a753274",
+  "prompts": {},
+  "humans": {
+    "h_83b6cee88cb5ab": {
+      "author": "srikur <srikur@endeavorai.com>"
+    }
+  }
+}
