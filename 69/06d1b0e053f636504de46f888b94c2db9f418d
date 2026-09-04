@@ -1,0 +1,37 @@
+tests/test_prefill.cpp
+  h_83b6cee88cb5ab 14
+tests/test_positional_named.cpp
+  h_83b6cee88cb5ab 12
+tests/test_bare.cpp
+  h_83b6cee88cb5ab 12
+CMakeLists.txt
+  h_83b6cee88cb5ab 17
+  h_83b6cee88cb5ab 16
+tests/test_errors.cpp
+  h_83b6cee88cb5ab 12
+tests/test_alias.cpp
+  h_83b6cee88cb5ab 13
+include/starparse/starparse.hpp
+  h_83b6cee88cb5ab 6,11,14
+tests/test_bundle.cpp
+  h_83b6cee88cb5ab 14
+tests/test_parse.cpp
+  h_83b6cee88cb5ab 28
+include/starparse/detail/parser.h
+  h_83b6cee88cb5ab 1-303
+examples/basic.cpp
+  h_83b6cee88cb5ab 17
+tests/test_enum.cpp
+  h_83b6cee88cb5ab 19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "6906d1b0e053f636504de46f888b94c2db9f418d",
+  "prompts": {},
+  "humans": {
+    "h_83b6cee88cb5ab": {
+      "author": "srikur <srikur@endeavorai.com>"
+    }
+  }
+}
