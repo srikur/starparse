@@ -181,7 +181,7 @@ namespace StarParse::detail::Parser {
             template for (constexpr auto m : members) {
                 using M = [:std::meta::type_of(m):];
                 constexpr auto opt = opt_of(m);
-                constexpr auto pos = positional_index_of<T>(m);
+                constexpr auto pos = positional_of(m);
                 constexpr auto name = std::string_view{std::meta::identifier_of(m)};
                 constexpr bool required = is_required(m);
 
@@ -189,12 +189,15 @@ namespace StarParse::detail::Parser {
                 if constexpr (opt.has_value()) {
                     if (opt->help_ != nullptr) description = opt->help();
                 }
-                if constexpr (required) {
-                    description += description.empty() ? "(required)" : " (required)";
+                if constexpr (pos.has_value()) {
+                    if (pos->help_ != nullptr) description = pos->help();
+                    if constexpr (required) {
+                        description += description.empty() ? "(required)" : " (required)";
+                    }
                 }
 
                 if constexpr (pos.has_value()) {
-                    arguments.push_back({*pos, name, std::move(description), required});
+                    arguments.push_back({pos->index, name, std::move(description), required});
                 } else if constexpr (is_named_option<T>(m)) {
                     std::string invocation{"    "};
                     if constexpr (opt.has_value()) {

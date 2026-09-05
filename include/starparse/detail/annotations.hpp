@@ -22,7 +22,15 @@ namespace StarParse::inline annotations {
     };
 
     struct Positional final {
-        size_t index;
+        size_t index{};
+        const char *help_{};
+
+        explicit consteval
+        Positional(const size_t i, std::string_view h) : index(i), help_(std::define_static_string(h)) {}
+
+        explicit consteval Positional(const size_t i) : index(i) {}
+
+        [[nodiscard]] constexpr std::string_view help() const { return help_; }
     };
 
     struct Required final {};

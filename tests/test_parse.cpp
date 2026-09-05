@@ -9,7 +9,7 @@ enum class Mode {
 };
 
 struct [[=StarParse::Program{"starparse", "CMD line arg paraer", "0.0.1"}]] Args {
-    [[=StarParse::Positional{}]] std::string arg1;
+    [[=StarParse::Positional{0}]] std::string arg1;
     [[=StarParse::Opt{'v', "Verbose mode"}]] bool verbose;
     [[=StarParse::Opt{'k', "Flag k"}]] bool kay;
     [[=StarParse::Opt{'f', "Flag f"}]] bool eff;

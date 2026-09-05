@@ -4,7 +4,7 @@
 
 struct Args {
     [[=StarParse::Opt{'v', "Verbose mode"}]] bool verbose;
-    [[=StarParse::Positional{}]] int arg1;
+    [[=StarParse::Positional{0, "Argument 1 help string"}]] int arg1;
 };
 
 auto main(int argc, char **argv) -> int {
