@@ -11,6 +11,6 @@ struct Flags {
 };
 
 auto main(int argc, char** argv) -> int {
-    const auto f{StarParse::immediate_parse<Flags>(argc, argv)};
+    const auto f{StarParse::force_parse<Flags>(argc, argv)};
     std::println("arg1: {}, keep: {}, verbose: {}, force: {}, arg2: {}", f.arg1, f.keep, f.verbose, f.force, f.arg2);
 }

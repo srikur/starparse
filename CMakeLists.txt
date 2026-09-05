@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.25)
 
 project(starparse
-    VERSION 0.1.0
+    VERSION 0.0.1
     DESCRIPTION "C++26 reflection-based command line argument parser"
     HOMEPAGE_URL "https://github.com/srikur/starparse"
     LANGUAGES CXX)
@@ -10,7 +10,12 @@ option(STARPARSE_BUILD_TESTS "Build the starparse tests" ${PROJECT_IS_TOP_LEVEL}
 option(STARPARSE_BUILD_EXAMPLES "Build the starparse examples" ${PROJECT_IS_TOP_LEVEL})
 option(STARPARSE_INSTALL "Generate install rules for starparse" ${PROJECT_IS_TOP_LEVEL})
 
-add_library(starparse INTERFACE)
+add_library(starparse INTERFACE
+        include/starparse/detail/annotations.hpp
+        include/starparse/detail/settings.hpp
+        include/starparse/detail/utilities.hpp
+        include/starparse/detail/parser.hpp
+        include/starparse/detail/errors.hpp)
 add_library(starparse::starparse ALIAS starparse)
 
 target_compile_features(starparse INTERFACE cxx_std_26)

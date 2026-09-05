@@ -9,6 +9,6 @@ struct Args {
 };
 
 auto main(int argc, char** argv) -> int {
-    const auto args{StarParse::immediate_parse<Args>(argc, argv)};
+    const auto args{StarParse::force_parse<Args>(argc, argv)};
     std::println("Args arg1: {}, verbose: {}, arg2: {}", args.arg1, args.verbose, args.arg2);
 }

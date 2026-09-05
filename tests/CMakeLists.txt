@@ -14,6 +14,7 @@ starparse_test_executable(test_prefill)
 starparse_test_executable(test_errors)
 starparse_test_executable(test_alias)
 starparse_test_executable(test_enum)
+starparse_test_executable(test_try_parse)
 
 # starparse_case(<test name> <target> <expected output regex> [args...])
 function(starparse_case name target expected)
@@ -22,12 +23,13 @@ function(starparse_case name target expected)
 endfunction()
 
 # Annotated struct: only annotated fields participate.
-starparse_case(parse.no_args     test_parse "k: false, v: false, f: false")
-starparse_case(parse.flag_bundle test_parse "k: true, v: true, f: true" -kvf)
-starparse_case(parse.long_flag   test_parse "k: false, v: true, f: false" --verbose)
-starparse_case(parse.short_flags test_parse "k: true, v: false, f: true" -k -f)
-starparse_case(parse.enum_value  test_parse "mode: 2" -m MODE_2)
+starparse_case(parse.no_args         test_parse "k: false, v: false, f: false")
+starparse_case(parse.flag_bundle     test_parse "k: true, v: true, f: true" -kvf)
+starparse_case(parse.long_flag       test_parse "k: false, v: true, f: false" --verbose)
+starparse_case(parse.short_flags     test_parse "k: true, v: false, f: true" -k -f)
+starparse_case(parse.enum_value      test_parse "mode: 2" -m MODE_2)
 starparse_case(parse.attached_value  test_parse "output_file: filename" -ofilename)
+starparse_case(parse.vector          test_parse "include_paths: \\[\"path1\", \"path2\"\\]" -I path1 -I path2)
 
 # Bare struct: every field addressable by name, non-bools also positional.
 starparse_case(bare.named_mixed_dashes test_bare "Bare arg1: hello, verbose: false, arg2: 42" --arg1=hello -arg2=42)
@@ -58,10 +60,13 @@ starparse_case(enum.by_name     test_enum "mode: 1, input: hello" --mode=safe he
 starparse_case(enum.by_alias    test_enum "mode: 0, input: hello" --mode quick hello)
 starparse_case(enum.alias_dry   test_enum "mode: 2, input: hello" -m dry hello)
 starparse_case(enum.alias_short test_enum "mode: 2, input: hello" -m n hello)
-starparse_case(enum.bad_value   test_enum "error: bad value for type: Mode" --mode=slow hello)
+starparse_case(enum.bad_value   test_enum "error: Invalid value supplied for argument Mode \\(value: slow\\) at position 1." --mode=slow hello)
 
-# Errors surface as exceptions for now.
-starparse_case(errors.unrecognized  test_errors "error: unrecognized argument: nope" --nope)
-starparse_case(errors.flag_value    test_errors "error: option does not take a value: verbose" --verbose=true)
-starparse_case(errors.missing_value test_errors "error: missing value for option: arg1" --arg1)
-starparse_case(errors.bad_value     test_errors "error: bad value for type: int" abc)
+# force_parse() surfaces the first parse error as an exception.
+starparse_case(errors.unrecognized  test_errors "error: Unknown option supplied for argument  \\(value: nope\\) at position 1." --nope)
+starparse_case(errors.missing_value test_errors "error: Missing value supplied for argument arg1 \\(value: none\\) at position 1." --arg1)
+starparse_case(errors.bad_value     test_errors "error: Invalid value supplied for argument int \\(value: abc\\) at position 1." abc)
+
+# Specifically testing try_parse()
+starparse_case(try_parse.single_error test_try_parse "parse error\\(s\\): \\[\"Unknown option supplied for argument  \\(value: fake_arg\\) at position 1.\"\\]" --fake_arg)
+starparse_case(try_parse.successful_parse test_try_parse "verbose: true, arg1: 3" 3 --verbose)

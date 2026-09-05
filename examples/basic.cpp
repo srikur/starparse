@@ -14,7 +14,7 @@ struct Options {
 auto main(int argc, char** argv) -> int {
     // Fields not mentioned on the command line keep these values
     Options defaults{.output = "archive.out", .jobs = 1};
-    const auto opts{StarParse::immediate_parse(argc, argv, defaults)};
+    const auto opts{StarParse::force_parse(argc, argv, defaults)};
 
     std::println("input:   {}", opts.input);
     std::println("output:  {}", opts.output);
