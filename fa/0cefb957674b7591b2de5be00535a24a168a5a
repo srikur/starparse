@@ -1,0 +1,21 @@
+tests/test_kebab.cpp
+  h_83b6cee88cb5ab 1-15
+include/starparse/detail/utilities.hpp
+  h_83b6cee88cb5ab 194-219,221,229
+include/starparse/detail/parser.hpp
+  h_83b6cee88cb5ab 290,298
+  h_83b6cee88cb5ab 297
+tests/CMakeLists.txt
+  h_83b6cee88cb5ab 18,74-77
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "fa0cefb957674b7591b2de5be00535a24a168a5a",
+  "prompts": {},
+  "humans": {
+    "h_83b6cee88cb5ab": {
+      "author": "srikur <srikur@endeavorai.com>"
+    }
+  }
+}
