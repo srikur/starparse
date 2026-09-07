@@ -15,6 +15,7 @@ starparse_test_executable(test_errors)
 starparse_test_executable(test_alias)
 starparse_test_executable(test_enum)
 starparse_test_executable(test_try_parse)
+starparse_test_executable(test_kebab)
 
 # starparse_case(<test name> <target> <expected output regex> [args...])
 function(starparse_case name target expected)
@@ -70,3 +71,7 @@ starparse_case(errors.bad_value     test_errors "error: Invalid value supplied f
 # Specifically testing try_parse()
 starparse_case(try_parse.single_error test_try_parse "parse error\\(s\\): \\[\"Unknown option supplied for argument  \\(value: fake_arg\\) at position 1.\"\\]" --fake_arg)
 starparse_case(try_parse.successful_parse test_try_parse "verbose: true, arg1: 3" 3 --verbose)
+
+# Kebab casing
+starparse_case(kebab.basic     test_kebab "dry run: 42" --dry-run=42)
+starparse_case(kebab.with_value     test_kebab "dry run: 42" --dry-run 42)

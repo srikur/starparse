@@ -191,8 +191,34 @@ namespace StarParse::detail::Utilities {
         return std::nullopt;
     }
 
+    template<std::meta::info M>
+    inline constexpr std::string_view snake_name_v = std::meta::identifier_of(M);
+
+    template<std::meta::info M>
+    inline constexpr std::string_view kebab_name_v = [] {
+        std::string s(std::meta::identifier_of(M));
+        std::ranges::replace(s, '_', '-');
+        return std::string_view(std::define_static_string(s), s.size());
+    }();
+
+    template<std::meta::info M>
+    constexpr bool does_match_name(std::string_view name,
+                                   const std::optional<Opt> &opt,
+                                   const Settings &settings,
+                                   const bool allow_short = true) {
+        if (allow_short && name.size() == 1 && opt.has_value() && name[0] == opt->short_name)
+            return true;
+        if (name == snake_name_v<M>)
+            return true;
+        if (settings.allow_kebab_casing && name == kebab_name_v<M>)
+            return true;
+        if (settings.allow_aliases && Utilities::matches_alias<M>(name))
+            return true;
+        return false;
+    }
+
     template<typename T>
-    bool option_takes_value(std::string_view name, bool is_short) {
+    bool option_takes_value(std::string_view name, bool is_short, const Settings &settings) {
         static constexpr auto members = std::define_static_array(
             std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
         bool takes{false};
@@ -200,8 +226,7 @@ namespace StarParse::detail::Utilities {
             using M = [:std::meta::type_of(m):];
             constexpr auto opt = opt_of(m);
             constexpr bool named = is_named_option<T>(m);
-            const bool match = (named && (name == std::meta::identifier_of(m) || matches_alias<m>(name))) || (
-                                   is_short && name.size() == 1 && opt.has_value() && name[0] == opt->short_name);
+            const bool match = named && does_match_name<m>(name, opt, settings, is_short);
             if (match) takes = !is_flag_type(^^M);
         }
         return takes;

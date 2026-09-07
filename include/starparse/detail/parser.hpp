@@ -287,47 +287,21 @@ namespace StarParse::detail::Parser {
                     }
                     continue;
                 }
-                if (Utilities::option_takes_value<T>(a.name.substr(0, 1), true)) {
+                if (Utilities::option_takes_value<T>(a.name.substr(0, 1), true, settings)) {
                     // try attached value split (e.g., -ofile for -o file)
                     a.value = a.name.substr(1, a.name.size() - 1);
                     a.name = a.name.substr(0, 1);
                     a.has_value = true;
                 }
             }
-            if ((a.dashed || a.double_dashed) && !a.has_value && Utilities::option_takes_value<T>(a.name, a.dashed) && i
-                + 1 <
-                argc) {
+            if ((a.dashed || a.double_dashed) && !a.has_value && Utilities::option_takes_value<T>(
+                    a.name, a.dashed, settings) && i + 1 < argc) {
                 a.value = argv[++i];
                 a.has_value = true;
             }
             attr_array.push_back(a);
         }
         return attr_array;
-    }
-
-    template<std::meta::info M>
-    inline constexpr std::string_view snake_name_v = std::meta::identifier_of(M);
-
-    template<std::meta::info M>
-    inline constexpr std::string_view kebab_name_v = [] {
-        std::string s(std::meta::identifier_of(M));
-        std::ranges::replace(s, '_', '-');
-        return std::string_view(std::define_static_string(s), s.size());
-    }();
-
-    template<std::meta::info M>
-    constexpr bool does_match_name(std::string_view name,
-                                   const std::optional<Opt> &opt,
-                                   const Settings &settings) {
-        if (name.size() == 1 && opt.has_value() && name[0] == opt->short_name)
-            return true;
-        if (name == snake_name_v<M>)
-            return true;
-        if (settings.allow_kebab_casing && name == kebab_name_v<M>)
-            return true;
-        if (settings.allow_aliases && Utilities::matches_alias<M>(name))
-            return true;
-        return false;
     }
 
     template<typename T>
