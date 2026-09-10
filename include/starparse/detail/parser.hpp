@@ -29,8 +29,8 @@ namespace StarParse::detail::Parser {
         std::string_view name{};
         std::string_view value{};
 
-        explicit ArgAttributes(std::string_view argument, const int index) : argv_index(index) {
-            if (!argument.starts_with('-')) {
+        explicit ArgAttributes(std::string_view argument, const int index, const bool separator_seen) : argv_index(index) {
+            if (separator_seen || !argument.starts_with('-')) {
                 is_positional = true;
                 name = argument;
                 return;
@@ -270,7 +270,7 @@ namespace StarParse::detail::Parser {
         attr_array.reserve(argc - 1);
         bool separator_seen{false};
         for (int i{1}; i < argc; ++i) {
-            ArgAttributes a{argv[i], i};
+            ArgAttributes a{argv[i], i, separator_seen};
             if (a.is_separator) {
                 separator_seen = true;
                 continue;
