@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <ranges>
 #include <expected>
+#include <print>
+#include <cstdlib>
 
 #include <starparse/detail/parser.hpp>
 #include <starparse/detail/settings.hpp>

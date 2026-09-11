@@ -29,8 +29,10 @@ namespace StarParse::detail::Parser {
         std::string_view name{};
         std::string_view value{};
 
-        explicit ArgAttributes(std::string_view argument, const int index) : argv_index(index) {
-            if (!argument.starts_with('-')) {
+        explicit ArgAttributes(std::string_view argument,
+                               const int index,
+                               const bool separator_seen) : argv_index(index) {
+            if (separator_seen || !argument.starts_with('-') || (argument.starts_with('-') && argument.size() == 1)) {
                 is_positional = true;
                 name = argument;
                 return;
@@ -64,13 +66,13 @@ namespace StarParse::detail::Parser {
     };
 
     template<typename T>
-    bool matches_full_name(std::string_view name) {
+    bool matches_full_name(std::string_view name, const Settings &settings) {
         static constexpr auto members = std::define_static_array(
             std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
         bool found{false};
         template for (constexpr auto m : members) {
             constexpr bool named = is_named_option<T>(m);
-            if (named && (name == std::meta::identifier_of(m) || Utilities::matches_alias<m>(name))) {
+            if (named && does_match_name<m>(name, opt_of(m), settings)) {
                 found = true;
             }
         }
@@ -119,18 +121,7 @@ namespace StarParse::detail::Parser {
         ParsedArgs(T out, const bool show_help, const bool show_version,
                    std::vector<ParseError> &errors) : out_(std::move(out)),
                                                       show_help_(show_help), show_version_(show_version),
-                                                      errors_(std::move(errors)) {}
-
-        explicit operator bool() const {
-            return out_ == T{};
-        }
-
-        T &operator*() {
-            return out_;
-        }
-
-        const T &operator*() const {
-            return out_;
+                                                      errors_(std::move(errors)) {
         }
 
         T &&value() && {
@@ -270,7 +261,7 @@ namespace StarParse::detail::Parser {
         attr_array.reserve(argc - 1);
         bool separator_seen{false};
         for (int i{1}; i < argc; ++i) {
-            ArgAttributes a{argv[i], i};
+            ArgAttributes a{argv[i], i, separator_seen};
             if (a.is_separator) {
                 separator_seen = true;
                 continue;
@@ -278,9 +269,9 @@ namespace StarParse::detail::Parser {
             if (separator_seen) {
                 // post-separator, all args are positional
                 a.is_positional = true;
-            } else if (a.dashed && !a.has_value && a.name.size() > 1 && !matches_full_name<T>(a.name)) {
+            } else if (a.dashed && !a.has_value && a.name.size() > 1 && !matches_full_name<T>(a.name, settings)) {
                 if (is_flag_bundle<T>(a.name)) {
-                    for (size_t f{0}; f < a.name.size(); ++f) {
+                    for (auto f{0uz}; f < a.name.size(); ++f) {
                         ArgAttributes flag{a};
                         flag.name = a.name.substr(f, 1);
                         attr_array.push_back(flag);
@@ -310,6 +301,10 @@ namespace StarParse::detail::Parser {
                       "cannot use Positional in combination with a container");
         static_assert(Utilities::no_required_optionals<T>(),
                       "a Required field cannot have a std::optional type; drop one of the two");
+        if (argc == 0) {
+            std::vector<ParseError> errors;
+            return ParsedArgs<T>{initial, false, false, errors};
+        }
         T out{std::move(initial)};
         bool help_requested{}, version_requested{};
         std::vector<ParseError> errors{};

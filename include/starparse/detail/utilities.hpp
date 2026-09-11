@@ -71,9 +71,22 @@ namespace StarParse::detail::Utilities {
     consteval bool is_array(const std::meta::info r) { return is_specialization_of(r, ^^std::array); }
     consteval bool is_container(const std::meta::info m) { return is_vector(m) || is_array(m); }
 
-    constexpr bool bool_from_string(const std::string_view s) {
-        if (s.size() == 1) return s[0] == 'T' || s[0] == 't';
-        return s == "True" || s == "true";
+    constexpr std::expected<bool, ParseError> bool_from_string(const std::string_view s) {
+        static auto iequals = [](auto a, auto b) {
+            if (a.length() != b.length()) {
+                return false;
+            }
+            return std::equal(a.begin(), a.end(), b.begin(), [](const unsigned char ac, const unsigned char bc) {
+                return std::tolower(ac) == std::tolower(bc);
+            });
+        };
+
+        using namespace std::literals;
+        constexpr std::array true_values{"yes"sv, "1"sv, "on"sv, "true"sv, "t"sv};
+        constexpr std::array false_values{"no"sv, "0"sv, "off"sv, "false"sv, "f"sv};
+        if (std::ranges::any_of(true_values, [&](auto value) { return iequals(s, value); })) return true;
+        if (std::ranges::any_of(false_values, [&](auto value) { return iequals(s, value); })) return false;
+        return std::unexpected(ParseError{.kind = ErrorKind::INVALID_VALUE, .token = s});
     }
 
     template<typename T>
@@ -96,7 +109,8 @@ namespace StarParse::detail::Utilities {
             if (auto result = from_string<T>(s, index)) return M{*result};
             else return std::unexpected(result.error());
         } else if constexpr (std::same_as<M, bool>) {
-            return M{bool_from_string(s)};
+            if (auto result = bool_from_string(s)) return M{*result};
+            else return std::unexpected(result.error());
         } else if constexpr (std::constructible_from<M, std::string_view>) {
             return M{s};
         } else if constexpr (std::is_arithmetic_v<M>) {
@@ -166,7 +180,7 @@ namespace StarParse::detail::Utilities {
     }
 
     template<typename T>
-    consteval bool is_named_option(std::meta::info m) {
+    consteval bool is_named_option(const std::meta::info m) {
         return opt_of(m).has_value() || positional_of(m).has_value() || is_bare<T>();
     }
 
