@@ -301,6 +301,10 @@ namespace StarParse::detail::Parser {
                       "cannot use Positional in combination with a container");
         static_assert(Utilities::no_required_optionals<T>(),
                       "a Required field cannot have a std::optional type; drop one of the two");
+        if (argc == 0) {
+            std::vector<ParseError> errors;
+            return ParsedArgs<T>{initial, false, false, errors};
+        }
         T out{std::move(initial)};
         bool help_requested{}, version_requested{};
         std::vector<ParseError> errors{};
