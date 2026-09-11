@@ -66,13 +66,13 @@ namespace StarParse::detail::Parser {
     };
 
     template<typename T>
-    bool matches_full_name(std::string_view name) {
+    bool matches_full_name(std::string_view name, const Settings &settings) {
         static constexpr auto members = std::define_static_array(
             std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
         bool found{false};
         template for (constexpr auto m : members) {
             constexpr bool named = is_named_option<T>(m);
-            if (named && (name == std::meta::identifier_of(m) || Utilities::matches_alias<m>(name))) {
+            if (named && does_match_name<m>(name, opt_of(m), settings)) {
                 found = true;
             }
         }
@@ -269,9 +269,9 @@ namespace StarParse::detail::Parser {
             if (separator_seen) {
                 // post-separator, all args are positional
                 a.is_positional = true;
-            } else if (a.dashed && !a.has_value && a.name.size() > 1 && !matches_full_name<T>(a.name)) {
+            } else if (a.dashed && !a.has_value && a.name.size() > 1 && !matches_full_name<T>(a.name, settings)) {
                 if (is_flag_bundle<T>(a.name)) {
-                    for (size_t f{0}; f < a.name.size(); ++f) {
+                    for (auto f{0uz}; f < a.name.size(); ++f) {
                         ArgAttributes flag{a};
                         flag.name = a.name.substr(f, 1);
                         attr_array.push_back(flag);

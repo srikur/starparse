@@ -180,7 +180,7 @@ namespace StarParse::detail::Utilities {
     }
 
     template<typename T>
-    consteval bool is_named_option(std::meta::info m) {
+    consteval bool is_named_option(const std::meta::info m) {
         return opt_of(m).has_value() || positional_of(m).has_value() || is_bare<T>();
     }
 
