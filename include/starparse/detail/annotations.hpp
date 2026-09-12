@@ -35,6 +35,12 @@ namespace StarParse::inline annotations {
 
     struct Required final {};
 
+    struct Separator final {
+        const char *value{};
+
+        explicit consteval Separator(std::string_view s) : value(std::define_static_string(s)) {}
+    };
+
     struct Alias final {
         const char *const*names_{};
         size_t count_{};

@@ -17,6 +17,7 @@ starparse_test_executable(test_enum)
 starparse_test_executable(test_try_parse)
 starparse_test_executable(test_kebab)
 starparse_test_executable(test_separator)
+starparse_test_executable(test_container)
 
 # starparse_case(<test name> <target> <expected output regex> [args...])
 function(starparse_case name target expected)
@@ -79,3 +80,6 @@ starparse_case(kebab.with_value     test_kebab "dry run: 42" --dry-run 42)
 
 # -- separator
 starparse_case(separator.dashed_positional    test_separator "positional: --foo=bar" -- --foo=bar)
+
+# containers
+starparse_case(container.basic_vector    test_container "positional: --foo=bar" -- --foo=bar)

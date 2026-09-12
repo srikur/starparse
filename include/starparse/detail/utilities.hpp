@@ -12,6 +12,7 @@
 #include <span>
 #include <vector>
 
+#include <starparse/detail/settings.hpp>
 #include <starparse/detail/annotations.hpp>
 #include <starparse/detail/errors.hpp>
 
@@ -168,6 +169,15 @@ namespace StarParse::detail::Utilities {
         return std::nullopt;
     }
 
+    consteval std::optional<Separator> separator_of(const std::meta::info m) {
+        for (const std::meta::info a : std::meta::annotations_of(m)) {
+            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^Separator)) {
+                return std::meta::extract<Separator>(a);
+            }
+        }
+        return std::nullopt;
+    }
+
     template<typename T>
     consteval bool is_bare() {
         for (const std::meta::info m :
@@ -284,17 +294,54 @@ namespace StarParse::detail::Utilities {
         return true;
     }
 
-    template<typename M>
-    void assign_from_string(M &field, const std::string_view s, const int index, const bool first_occurrence,
-                            auto &errors) {
+    template<typename F>
+    void for_each_value(std::string_view s, const std::string_view separator, F &&f) {
+        if (separator.empty()) {
+            f(s);
+            return;
+        }
+        auto pos{0uz};
+        while ((pos = s.find(separator)) != std::string_view::npos) {
+            f(s.substr(0, pos));
+            s.remove_prefix(pos + separator.size());
+        }
+        f(s);
+    }
+
+    template<std::meta::info Mem, typename M>
+    void assign_from_string(M &field, const std::string_view s, const int index, size_t &count,
+                            std::vector<ParseError> &errors, const Settings &settings) {
+        constexpr auto annotated = separator_of(Mem);
+        const std::string_view separator = annotated.has_value()
+                                               ? std::string_view{annotated->value}
+                                               : settings.value_separator;
         if constexpr (is_vector(std::meta::remove_cv(^^M))) {
             using E = [:value_type_of(^^M):];
-            if (first_occurrence) field.clear();
-            if (auto result = from_string<E>(s, index)) field.push_back(*result);
-            else errors.push_back(result.error());
+            if (count == 0) field.clear();
+            for_each_value(s, separator, [&](auto piece) {
+                if (auto result = from_string<E>(piece, index)) {
+                    field.push_back(*result);
+                } else errors.push_back(result.error());
+                count++;
+            });
+        } else if constexpr (is_array(std::meta::remove_cv(^^M))) {
+            using E = [:value_type_of(^^M):];
+            for_each_value(s, separator, [&](auto piece) {
+                if (count >= std::tuple_size_v<M>) {
+                    errors.push_back(ParseError{
+                        .kind = ErrorKind::DUPLICATE_OPTION, .token = piece, .option = std::meta::identifier_of(Mem),
+                        .argv_index = index
+                    });
+                } else if (auto result = from_string<E>(piece, index)) {
+                    field[count] = *result;
+                } else errors.push_back(result.error());
+                count++;
+            });
         } else {
-            if (auto result = from_string<M>(s, index)) field = *result;
-            else errors.push_back(result.error());
+            if (auto result = from_string<M>(s, index)) {
+                field = *result;
+            } else errors.push_back(result.error());
+            count++;
         }
     }
 }
