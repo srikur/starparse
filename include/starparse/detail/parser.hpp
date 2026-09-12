@@ -121,8 +121,7 @@ namespace StarParse::detail::Parser {
         ParsedArgs(T out, const bool show_help, const bool show_version,
                    std::vector<ParseError> &errors) : out_(std::move(out)),
                                                       show_help_(show_help), show_version_(show_version),
-                                                      errors_(std::move(errors)) {
-        }
+                                                      errors_(std::move(errors)) {}
 
         T &&value() && {
             return std::move(out_);
@@ -313,7 +312,7 @@ namespace StarParse::detail::Parser {
         size_t next_positional{0};
         ArgContext ctx{};
         const auto attr_array = get_arg_attrs<T>(argc, argv, settings);
-        std::array<bool, members.size()> fields_set{};
+        std::array<size_t, members.size()> fields_set{};
 
         for (const auto &attrs : attr_array) {
             bool matched{false};
@@ -334,8 +333,7 @@ namespace StarParse::detail::Parser {
                         if (!matched && next_positional == *pos) {
                             matched = true;
                             next_positional++;
-                            assign_from_string(out.[:m:], attrs.name, attrs.argv_index, !fields_set[idx], errors);
-                            fields_set[idx] = true;
+                            assign_from_string<m>(out.[:m:], attrs.name, attrs.argv_index, fields_set[idx], errors, settings);
                         }
                     }
                 } else if (attrs.is_separator) {
@@ -348,11 +346,11 @@ namespace StarParse::detail::Parser {
                         matched = true;
                         if constexpr (is_flag_type(^^M)) {
                             if (attrs.has_value) {
-                                assign_from_string(out.[:m:], attrs.value, attrs.argv_index, !fields_set[idx], errors);
+                                assign_from_string<m>(out.[:m:], attrs.value, attrs.argv_index, fields_set[idx], errors, settings);
                             } else {
                                 out.[:m:] = true;
                             }
-                            fields_set[idx] = true;
+                            fields_set[idx] = 1;
                         } else {
                             if (!attrs.has_value) {
                                 errors.push_back({
@@ -361,8 +359,7 @@ namespace StarParse::detail::Parser {
                                 });
                                 continue;
                             }
-                            assign_from_string(out.[:m:], attrs.value, attrs.argv_index, !fields_set[idx], errors);
-                            fields_set[idx] = true;
+                            assign_from_string<m>(out.[:m:], attrs.value, attrs.argv_index, fields_set[idx], errors, settings);
                         }
                     }
                 }
@@ -377,12 +374,21 @@ namespace StarParse::detail::Parser {
 
         std::vector<std::string_view> missing_fields;
         template for (constexpr auto m : members) {
+            const size_t index = member_index_of<T>(m);
             if constexpr (is_required(m)) {
-                const size_t index = member_index_of<T>(m);
-                if (!fields_set[index]) {
+
+                if (fields_set[index] == 0) {
                     const auto field_name = std::string_view{std::meta::identifier_of(m)};
                     errors.push_back({
                         .kind = ErrorKind::MISSING_REQUIRED, .token{}, .option = field_name,
+                        .argv_index = index
+                    });
+                }
+            } else if constexpr (is_array(m)) {
+                if (fields_set[index] < std::meta::tuple_size(m)) {
+                    const auto field_name = std::string_view{std::meta::identifier_of(m)};
+                    errors.push_back({
+                        .kind = ErrorKind::MISSING_VALUE, .token{}, .option = field_name,
                         .argv_index = index
                     });
                 }
