@@ -17,7 +17,7 @@ struct Args {
 auto main(int argc, char** argv) -> int {
     try {
         const auto args{StarParse::parse_or_throw<Args>(argc, argv)};
-        std::println("mode: {}, input: {}", std::to_underlying(args.mode), args.input);
+        std::println("mode: {}, input: {}", std::to_underlying(args->mode), args->input);
     } catch (const std::exception& e) {
         std::println("error: {}", e.what());
     }

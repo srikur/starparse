@@ -7,9 +7,9 @@ struct Args {
 
 int main(const int argc, char **argv) {
     const auto args{StarParse::parse<Args>(argc, argv)};
-    if (args.has_value()) {
+    if (args) {
         std::println("dry run: {}", args->dry_run);
     } else {
-        std::println("errors: {}", args.error());
+        std::println("errors: {}", args.errors());
     }
 }

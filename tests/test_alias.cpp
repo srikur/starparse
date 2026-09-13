@@ -11,5 +11,5 @@ struct Args {
 
 auto main(int argc, char **argv) -> int {
     const auto args{StarParse::parse_or_throw<Args>(argc, argv)};
-    std::println("input: {}, verbose: {}, keep: {}, arg2: {}", args.input, args.verbose, args.keep, args.arg2);
+    std::println("input: {}, verbose: {}, keep: {}, arg2: {}", args->input, args->verbose, args->keep, args->arg2);
 }

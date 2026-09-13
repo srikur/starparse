@@ -8,6 +8,7 @@
 #include <string>
 #include <array>
 #include <vector>
+#include <memory>
 
 #include <starparse/detail/annotations.hpp>
 #include <starparse/detail/settings.hpp>
@@ -125,6 +126,22 @@ namespace StarParse::detail::Parser {
 
         T &&value() && {
             return std::move(out_);
+        }
+
+        explicit operator bool() const {
+            return errors_.empty();
+        }
+
+        T &operator*() {
+            return out_;
+        }
+
+        const T &operator*() const {
+            return out_;
+        }
+
+        [[nodiscard]] auto operator->(this auto &self) noexcept {
+            return std::addressof(self.out_);
         }
 
         [[nodiscard]] std::span<const ParseError> errors() const {
@@ -333,7 +350,8 @@ namespace StarParse::detail::Parser {
                         if (!matched && next_positional == *pos) {
                             matched = true;
                             next_positional++;
-                            assign_from_string<m>(out.[:m:], attrs.name, attrs.argv_index, fields_set[idx], errors, settings);
+                            assign_from_string<m>(out.[:m:], attrs.name, attrs.argv_index, fields_set[idx], errors,
+                                                  settings);
                         }
                     }
                 } else if (attrs.is_separator) {
@@ -346,7 +364,8 @@ namespace StarParse::detail::Parser {
                         matched = true;
                         if constexpr (is_flag_type(^^M)) {
                             if (attrs.has_value) {
-                                assign_from_string<m>(out.[:m:], attrs.value, attrs.argv_index, fields_set[idx], errors, settings);
+                                assign_from_string<m>(out.[:m:], attrs.value, attrs.argv_index, fields_set[idx], errors,
+                                                      settings);
                             } else {
                                 out.[:m:] = true;
                             }
@@ -359,7 +378,8 @@ namespace StarParse::detail::Parser {
                                 });
                                 continue;
                             }
-                            assign_from_string<m>(out.[:m:], attrs.value, attrs.argv_index, fields_set[idx], errors, settings);
+                            assign_from_string<m>(out.[:m:], attrs.value, attrs.argv_index, fields_set[idx], errors,
+                                                  settings);
                         }
                     }
                 }
@@ -376,7 +396,6 @@ namespace StarParse::detail::Parser {
         template for (constexpr auto m : members) {
             const size_t index = member_index_of<T>(m);
             if constexpr (is_required(m)) {
-
                 if (fields_set[index] == 0) {
                     const auto field_name = std::string_view{std::meta::identifier_of(m)};
                     errors.push_back({

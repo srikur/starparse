@@ -10,5 +10,5 @@ struct Args {
 
 auto main(int argc, char** argv) -> int {
     const auto args{StarParse::parse_or_throw<Args>(argc, argv)};
-    std::println("Args arg1: {}, verbose: {}, arg2: {}", args.arg1, args.verbose, args.arg2);
+    std::println("Args arg1: {}, verbose: {}, arg2: {}", args->arg1, args->verbose, args->arg2);
 }

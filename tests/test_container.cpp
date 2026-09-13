@@ -12,6 +12,6 @@ auto main(int argc, char **argv) -> int {
     if (args) {
         std::println("vector: {}, array: {}", args->vec, args->arr);
     } else {
-        std::println("parse error(s): {}", args.error());
+        std::println("parse error(s): {}", args.errors());
     }
 }
