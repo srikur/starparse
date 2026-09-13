@@ -8,13 +8,46 @@ permissions:
   contents: write
 
 jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    container: gcc:16
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install CMake
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends cmake
+
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build -j
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
   release:
+    needs: build-and-test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Create GitHub release with the single header attached
+      - name: Create source archives
+        run: |
+          for format in tar.gz zip; do
+            git archive HEAD \
+              --format="$format" \
+              --prefix="starparse-${GITHUB_REF_NAME}/" \
+              --output="starparse-${GITHUB_REF_NAME}.$format" \
+              include cmake CMakeLists.txt LICENSE README.md
+          done
+
+      - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          files: include/starparse/starparse.hpp
+          files: |
+            starparse-*.tar.gz
+            starparse-*.zip
           generate_release_notes: true

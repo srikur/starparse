@@ -10,12 +10,7 @@ option(STARPARSE_BUILD_TESTS "Build the starparse tests" ${PROJECT_IS_TOP_LEVEL}
 option(STARPARSE_BUILD_EXAMPLES "Build the starparse examples" ${PROJECT_IS_TOP_LEVEL})
 option(STARPARSE_INSTALL "Generate install rules for starparse" ${PROJECT_IS_TOP_LEVEL})
 
-add_library(starparse INTERFACE
-        include/starparse/detail/annotations.hpp
-        include/starparse/detail/settings.hpp
-        include/starparse/detail/utilities.hpp
-        include/starparse/detail/parser.hpp
-        include/starparse/detail/errors.hpp)
+add_library(starparse INTERFACE)
 add_library(starparse::starparse ALIAS starparse)
 
 target_compile_features(starparse INTERFACE cxx_std_26)
@@ -24,7 +19,13 @@ target_compile_options(starparse INTERFACE $<$<CXX_COMPILER_ID:GNU>:-freflection
 target_sources(starparse INTERFACE
     FILE_SET HEADERS
     BASE_DIRS include
-    FILES include/starparse/starparse.hpp)
+    FILES
+        include/starparse/starparse.hpp
+        include/starparse/detail/annotations.hpp
+        include/starparse/detail/errors.hpp
+        include/starparse/detail/parser.hpp
+        include/starparse/detail/settings.hpp
+        include/starparse/detail/utilities.hpp)
 
 if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_VERSION VERSION_LESS 16)
     message(WARNING
@@ -33,12 +34,12 @@ if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_VERSION VERSIO
         "targets that include starparse will likely fail to compile.")
 endif()
 
-if(STARPARSE_BUILD_TESTS)
+if(STARPARSE_BUILD_TESTS AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/CMakeLists.txt")
     enable_testing()
     add_subdirectory(tests)
 endif()
 
-if(STARPARSE_BUILD_EXAMPLES)
+if(STARPARSE_BUILD_EXAMPLES AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/examples/CMakeLists.txt")
     add_subdirectory(examples)
 endif()
 

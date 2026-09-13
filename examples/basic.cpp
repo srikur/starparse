@@ -14,11 +14,11 @@ struct Options {
 auto main(int argc, char** argv) -> int {
     // Fields not mentioned on the command line keep these values
     Options defaults{.output = "archive.out", .jobs = 1};
-    const auto opts{StarParse::force_parse(argc, argv, defaults)};
+    const auto opts{StarParse::parse_or_throw(argc, argv, defaults)};
 
-    std::println("input:   {}", opts.input);
-    std::println("output:  {}", opts.output);
-    std::println("verbose: {}", opts.verbose);
-    std::println("force:   {}", opts.force);
-    std::println("jobs:    {}", opts.jobs);
+    std::println("input:   {}", opts->input);
+    std::println("output:  {}", opts->output);
+    std::println("verbose: {}", opts->verbose);
+    std::println("force:   {}", opts->force);
+    std::println("jobs:    {}", opts->jobs);
 }

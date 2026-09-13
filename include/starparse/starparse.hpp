@@ -2,7 +2,7 @@
 
 #include <algorithm>
 #include <ranges>
-#include <expected>
+#include <initializer_list>
 #include <print>
 #include <cstdlib>
 
@@ -10,56 +10,52 @@
 #include <starparse/detail/settings.hpp>
 
 namespace StarParse {
+    using detail::Parser::ParsedArgs;
+
     template<typename T>
-    std::expected<T, std::vector<detail::ParseError> > try_parse(const int argc, char **argv, T initial = {},
-                                                                 const detail::Settings settings = {}) {
-        auto result = detail::Parser::parse<T>(argc, argv, std::move(initial), settings);
-        if (result.help_requested()) {
-            std::print("{}", result.help());
-            std::exit(EXIT_SUCCESS);
+    ParsedArgs<T> parse(const int argc, const char *const*argv, T initial = {},
+                        const Settings settings = {}) {
+        std::vector<std::string_view> args;
+        if (argc > 1) {
+            args.assign(argv + 1, argv + argc);
         }
-        if (result.version_requested()) {
-            std::print("{}", result.version());
-            std::exit(EXIT_SUCCESS);
-        }
-        if (result.errors().empty()) {
-            return std::move(result).value();
-        }
-        return std::unexpected(std::vector<detail::ParseError>(result.errors().begin(), result.errors().end()));
+        auto result = detail::Parser::parse<T>(args, std::move(initial), settings);
+        return std::move(result);
     }
 
     template<typename T>
-    T parse_or_exit(const int argc, char **argv, T initial = {}, const detail::Settings settings = {}) {
-        auto result = detail::Parser::parse<T>(argc, argv, std::move(initial), settings);
-        if (result.help_requested()) {
-            std::print("{}", result.help());
-            std::exit(EXIT_SUCCESS);
+    ParsedArgs<T> parse_or_exit(const int argc, const char *const*argv, T initial = {}, const Settings settings = {}) {
+        std::vector<std::string_view> args;
+        if (argc > 1) {
+            args.assign(argv + 1, argv + argc);
         }
-        if (result.version_requested()) {
-            std::print("{}", result.version());
-            std::exit(EXIT_SUCCESS);
-        }
+        auto result = detail::Parser::parse<T>(args, std::move(initial), settings);
         if (!result.errors().empty()) {
-            std::println("Error: {}", result.errors()[0]);
+            for (const auto &error : result.errors()) {
+                std::println(stderr, "Error: {}", error.to_string());
+            }
             std::exit(EXIT_FAILURE);
         }
-        return std::move(result).value();
+        return std::move(result);
     }
 
     template<typename T>
-    T force_parse(const int argc, char **argv, T initial = {}, const detail::Settings settings = {}) {
-        auto result = detail::Parser::parse<T>(argc, argv, std::move(initial), settings);
-        if (result.help_requested()) {
-            std::print("{}", result.help());
-            std::exit(EXIT_SUCCESS);
+    ParsedArgs<T> parse_or_throw(const int argc, const char *const*argv, T initial = {},
+                                 const Settings settings = {}) {
+        std::vector<std::string_view> args;
+        if (argc > 1) {
+            args.assign(argv + 1, argv + argc);
         }
-        if (result.version_requested()) {
-            std::print("{}", result.version());
-            std::exit(EXIT_SUCCESS);
-        }
+        auto result = detail::Parser::parse<T>(args, std::move(initial), settings);
         if (!result.errors().empty()) {
             throw std::invalid_argument(result.errors()[0].to_string());
         }
-        return std::move(result).value();
+        return std::move(result);
+    }
+
+    template<typename T>
+    ParsedArgs<T> parse_from(std::initializer_list<std::string_view> args, T initial = {},
+                             const Settings settings = {}) {
+        return detail::Parser::parse<T>(std::span{args.begin(), args.size()}, std::move(initial), settings);
     }
 }

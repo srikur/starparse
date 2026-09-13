@@ -9,8 +9,8 @@ struct Args {
 
 auto main(int argc, char** argv) -> int {
     try {
-        const auto args{StarParse::force_parse<Args>(argc, argv)};
-        std::println("parsed verbose: {}, arg1: {}", args.verbose, args.arg1);
+        const auto args{StarParse::parse_or_throw<Args>(argc, argv)};
+        std::println("parsed verbose: {}, arg1: {}", args->verbose, args->arg1);
     } catch (const std::exception& e) {
         std::println("error: {}", e.what());
     }
