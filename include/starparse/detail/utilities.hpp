@@ -6,6 +6,7 @@
 #include <meta>
 #include <string>
 #include <stdexcept>
+#include <expected>
 #include <charconv>
 #include <type_traits>
 #include <array>

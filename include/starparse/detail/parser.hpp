@@ -272,12 +272,12 @@ namespace StarParse::detail::Parser {
     };
 
     template<typename T>
-    std::vector<ArgAttributes> get_arg_attrs(const int argc, char **argv, const Settings &settings) {
+    std::vector<ArgAttributes> get_arg_attrs(std::span<const std::string_view> args, const Settings &settings) {
         std::vector<ArgAttributes> attr_array;
-        attr_array.reserve(argc - 1);
+        attr_array.reserve(args.size());
         bool separator_seen{false};
-        for (int i{1}; i < argc; ++i) {
-            ArgAttributes a{argv[i], i, separator_seen};
+        for (auto i{0uz}; i < args.size(); ++i) {
+            ArgAttributes a{args[i], static_cast<int>(i + 1), separator_seen};
             if (a.is_separator) {
                 separator_seen = true;
                 continue;
@@ -302,8 +302,8 @@ namespace StarParse::detail::Parser {
                 }
             }
             if ((a.dashed || a.double_dashed) && !a.has_value && Utilities::option_takes_value<T>(
-                    a.name, a.dashed, settings) && i + 1 < argc) {
-                a.value = argv[++i];
+                    a.name, a.dashed, settings) && i + 1 < args.size()) {
+                a.value = args[++i];
                 a.has_value = true;
             }
             attr_array.push_back(a);
@@ -312,15 +312,11 @@ namespace StarParse::detail::Parser {
     }
 
     template<typename T>
-    ParsedArgs<T> parse(int argc, char **argv, T initial = {}, Settings settings = {}) {
+    ParsedArgs<T> parse(std::span<const std::string_view> args, T initial = {}, Settings settings = {}) {
         static_assert(Utilities::no_positional_containers<T>(),
                       "cannot use Positional in combination with a container");
         static_assert(Utilities::no_required_optionals<T>(),
                       "a Required field cannot have a std::optional type; drop one of the two");
-        if (argc == 0) {
-            std::vector<ParseError> errors;
-            return ParsedArgs<T>{initial, false, false, errors};
-        }
         T out{std::move(initial)};
         bool help_requested{}, version_requested{};
         std::vector<ParseError> errors{};
@@ -328,7 +324,7 @@ namespace StarParse::detail::Parser {
             std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
         size_t next_positional{0};
         ArgContext ctx{};
-        const auto attr_array = get_arg_attrs<T>(argc, argv, settings);
+        const auto attr_array = get_arg_attrs<T>(args, settings);
         std::array<size_t, members.size()> fields_set{};
 
         for (const auto &attrs : attr_array) {
