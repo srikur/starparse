@@ -1,6 +1,6 @@
 # starparse
 
-A single-header command line argument parser built using C++26's reflection. Describe your arguments as a plain struct, annotate the fields (or don't), and parse.
+A header-only command line argument parser built using C++26's reflection. Describe your arguments as a plain struct, annotate the fields (or don't), and parse.
 
 ```cpp
 #include <starparse/starparse.hpp>
@@ -27,7 +27,7 @@ auto main(int argc, char** argv) -> int {
 ## Requirements
 
 - A compiler with C++26 reflection support.
-- CMake >= 3.25 to build the tests/examples or install the package. The header itself has no dependencies beyond the standard library.
+- CMake >= 3.25 to build the tests/examples or install the package. The headers themselves have no dependencies beyond the standard library.
 
 ## Building and testing
 
@@ -78,7 +78,7 @@ target_link_libraries(your_app PRIVATE starparse::starparse)
 
 ### No CMake at all
 
-Copy `include/starparse/starparse.hpp` and compile with:
+Copy the `include/starparse/` directory (or download a `starparse-<version>` archive from the [releases page](https://github.com/srikur/starparse/releases)) and compile with:
 
 ```sh
 g++ -std=c++26 -freflection -I<path-to>/include your_app.cpp
