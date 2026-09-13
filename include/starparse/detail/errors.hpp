@@ -3,15 +3,15 @@
 #include <string_view>
 #include <format>
 
-namespace StarParse::detail {
+namespace StarParse {
     enum class ErrorKind {
         UNKNOWN_OPTION, MISSING_VALUE, INVALID_VALUE, UNEXPECTED_POSITIONAL, MISSING_REQUIRED, DUPLICATE_OPTION,
         EXCEPTION
     };
 
-    constexpr std::string_view error_kind_string(const StarParse::detail::ErrorKind k) {
+    constexpr std::string_view error_kind_string(const ErrorKind k) {
         switch (k) {
-                using StarParse::detail::ErrorKind;
+                using StarParse::ErrorKind;
             case ErrorKind::UNKNOWN_OPTION: return "Unknown option";
             case ErrorKind::MISSING_VALUE: return "Missing value";
             case ErrorKind::INVALID_VALUE: return "Invalid value";
@@ -25,13 +25,13 @@ namespace StarParse::detail {
 }
 
 template<>
-struct std::formatter<StarParse::detail::ErrorKind> : std::formatter<std::string_view> {
-    auto format(const StarParse::detail::ErrorKind k, std::format_context &ctx) const {
+struct std::formatter<StarParse::ErrorKind> : std::formatter<std::string_view> {
+    auto format(const StarParse::ErrorKind k, std::format_context &ctx) const {
         return std::formatter<std::string_view>::format(error_kind_string(k), ctx);
     }
 };
 
-namespace StarParse::detail {
+namespace StarParse {
     struct ParseError {
         ErrorKind kind;
         std::string_view token;
@@ -46,9 +46,9 @@ namespace StarParse::detail {
 }
 
 template<>
-struct std::formatter<StarParse::detail::ParseError> : std::formatter<std::string> {
+struct std::formatter<StarParse::ParseError> : std::formatter<std::string> {
     template<typename FormatContext>
-    auto format(const StarParse::detail::ParseError &e, FormatContext &ctx) const {
+    auto format(const StarParse::ParseError &e, FormatContext &ctx) const {
         return std::formatter<std::string>::format(e.to_string(), ctx);
     }
 };

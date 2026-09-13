@@ -11,8 +11,8 @@
 
 namespace StarParse {
     template<typename T>
-    std::expected<T, std::vector<detail::ParseError> > try_parse(const int argc, char **argv, T initial = {},
-                                                                 const detail::Settings settings = {}) {
+    std::expected<T, std::vector<ParseError> > parse(const int argc, char **argv, T initial = {},
+                                                                 const Settings settings = {}) {
         auto result = detail::Parser::parse<T>(argc, argv, std::move(initial), settings);
         if (result.help_requested()) {
             std::print("{}", result.help());
@@ -25,11 +25,11 @@ namespace StarParse {
         if (result.errors().empty()) {
             return std::move(result).value();
         }
-        return std::unexpected(std::vector<detail::ParseError>(result.errors().begin(), result.errors().end()));
+        return std::unexpected(std::vector<ParseError>(result.errors().begin(), result.errors().end()));
     }
 
     template<typename T>
-    T parse_or_exit(const int argc, char **argv, T initial = {}, const detail::Settings settings = {}) {
+    T parse_or_exit(const int argc, char **argv, T initial = {}, const Settings settings = {}) {
         auto result = detail::Parser::parse<T>(argc, argv, std::move(initial), settings);
         if (result.help_requested()) {
             std::print("{}", result.help());
@@ -47,7 +47,7 @@ namespace StarParse {
     }
 
     template<typename T>
-    T force_parse(const int argc, char **argv, T initial = {}, const detail::Settings settings = {}) {
+    T parse_or_throw(const int argc, char **argv, T initial = {}, const Settings settings = {}) {
         auto result = detail::Parser::parse<T>(argc, argv, std::move(initial), settings);
         if (result.help_requested()) {
             std::print("{}", result.help());

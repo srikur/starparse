@@ -8,7 +8,7 @@ struct Args {
 };
 
 auto main(int argc, char **argv) -> int {
-    const auto args{StarParse::try_parse<Args>(argc, argv)};
+    const auto args{StarParse::parse<Args>(argc, argv)};
     if (args) {
         std::println("verbose: {}, arg1: {}", args->verbose, args->arg1);
     } else {

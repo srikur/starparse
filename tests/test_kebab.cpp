@@ -6,7 +6,7 @@ struct Args {
 };
 
 int main(const int argc, char **argv) {
-    const auto args{StarParse::try_parse<Args>(argc, argv)};
+    const auto args{StarParse::parse<Args>(argc, argv)};
     if (args.has_value()) {
         std::println("dry run: {}", args->dry_run);
     } else {

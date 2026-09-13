@@ -2,20 +2,14 @@
 
 #include <string_view>
 
-namespace StarParse::detail {
+namespace StarParse {
     struct Settings {
         bool allow_kebab_casing{true};
-        bool allow_upper_casing{true};
         bool allow_aliases{true};
         std::string_view value_separator{","};
 
         Settings &setAllowKebabCasing(const bool value) {
             allow_kebab_casing = value;
-            return *this;
-        }
-
-        Settings &setAllowUpperCasing(const bool value) {
-            allow_upper_casing = value;
             return *this;
         }
 
