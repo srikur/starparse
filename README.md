@@ -14,15 +14,15 @@ struct Options {
 
 auto main(int argc, char** argv) -> int {
     Options defaults{.output = "archive.out", .jobs = 1};
-    const auto opts{StarParse::immediate_parse(argc, argv, defaults)};
-    // opts.input, opts.output, opts.verbose, opts.jobs
+    const auto opts{StarParse::parse(argc, argv, defaults)};
+    // opts->input, opts->output, opts->verbose, opts->jobs
 }
 ```
 
 - Annotated fields are addressable by full name (`--jobs 4`, `--jobs=4`, `-jobs 4`); `Opt` adds a one-char short name (`-j 4`) and bool flags support bundling (`-kvf`).
 - `Positional{n}` fields also fill by position, and remain addressable by name.
 - A struct with **no** annotations is "bare": every field is addressable by name, and non-bool fields fill positionally in declaration order.
-- Pass an existing object as the third argument to `parse`/`immediate_parse` and only the fields mentioned on the command line are overwritten.
+- Pass an existing object as the third argument to `parse` or its siblings and only the fields mentioned on the command line are overwritten.
 
 ## Requirements
 
