@@ -32,11 +32,21 @@ namespace StarParse::detail::Utilities {
         return names;
     }
 
+    inline bool iequals(const std::string_view a, const std::string_view b) {
+        if (a.length() != b.length()) {
+            return false;
+        }
+        return std::equal(a.begin(), a.end(), b.begin(), [](const unsigned char ac, const unsigned char bc) {
+            return std::tolower(ac) == std::tolower(bc);
+        });
+    }
+
     template<std::meta::info M>
-    bool matches_alias(const std::string_view name) {
+    bool matches_alias(const std::string_view name, bool allow_case_insensitivity = false) {
         static constexpr auto aliases = std::define_static_array(alias_name_list(M));
         for (const char *alias : aliases) {
-            if (name == std::string_view{alias}) return true;
+            if (name == std::string_view{alias} || (allow_case_insensitivity && iequals(name, std::string_view{alias})))
+                return true;
         }
         return false;
     }
@@ -64,6 +74,33 @@ namespace StarParse::detail::Utilities {
         return r == std::meta::dealias(^^bool);
     }
 
+    template<std::meta::info M>
+    inline constexpr std::string_view snake_name_v = std::meta::identifier_of(M);
+
+    template<std::meta::info M>
+    inline constexpr std::string_view kebab_name_v = [] {
+        std::string s(std::meta::identifier_of(M));
+        std::ranges::replace(s, '_', '-');
+        return std::string_view(std::define_static_string(s), s.size());
+    }();
+
+    template<std::meta::info M>
+    constexpr bool does_match_name(std::string_view name,
+                                   const std::optional<Opt> &opt,
+                                   const Settings &settings,
+                                   const bool allow_short = true) {
+        if (allow_short && name.size() == 1 && opt.has_value() && name[0] == opt->short_name)
+            return true;
+        if (name == snake_name_v<M> || (settings.allow_case_insensitivity && iequals(name, snake_name_v<M>)))
+            return true;
+        if (settings.allow_kebab_casing &&
+            (name == kebab_name_v<M> || (settings.allow_case_insensitivity && iequals(name, kebab_name_v<M>))))
+            return true;
+        if (settings.allow_aliases && Utilities::matches_alias<M>(name, settings.allow_case_insensitivity))
+            return true;
+        return false;
+    }
+
     consteval bool is_specialization_of(std::meta::info type, const std::meta::info templ) {
         type = std::meta::dealias(type);
         return std::meta::has_template_arguments(type) && std::meta::template_of(type) == templ;
@@ -74,15 +111,6 @@ namespace StarParse::detail::Utilities {
     consteval bool is_container(const std::meta::info m) { return is_vector(m) || is_array(m); }
 
     constexpr std::expected<bool, ParseError> bool_from_string(const std::string_view s) {
-        static auto iequals = [](auto a, auto b) {
-            if (a.length() != b.length()) {
-                return false;
-            }
-            return std::equal(a.begin(), a.end(), b.begin(), [](const unsigned char ac, const unsigned char bc) {
-                return std::tolower(ac) == std::tolower(bc);
-            });
-        };
-
         using namespace std::literals;
         constexpr std::array true_values{"yes"sv, "1"sv, "on"sv, "true"sv, "t"sv};
         constexpr std::array false_values{"no"sv, "0"sv, "off"sv, "false"sv, "f"sv};
@@ -105,10 +133,10 @@ namespace StarParse::detail::Utilities {
     }
 
     template<typename M>
-    std::expected<M, ParseError> from_string(std::string_view s, const int index) {
+    std::expected<M, ParseError> from_string(std::string_view s, const int index, const Settings &settings) {
         if constexpr (is_optional(^^M)) {
             using T = [:value_type_of(^^M):];
-            if (auto result = from_string<T>(s, index)) return M{*result};
+            if (auto result = from_string<T>(s, index, settings)) return M{*result};
             else return std::unexpected(result.error());
         } else if constexpr (std::same_as<M, bool>) {
             if (auto result = bool_from_string(s)) return M{*result};
@@ -128,7 +156,7 @@ namespace StarParse::detail::Utilities {
         } else if constexpr (std::is_enum_v<M>) {
             std::optional<M> parsed;
             template for (constexpr auto e : std::define_static_array(std::meta::enumerators_of(^^M))) {
-                if (!parsed.has_value() && (s == std::meta::identifier_of(e) || matches_alias<e>(s))) {
+                if (!parsed.has_value() && does_match_name<e>(s, std::nullopt, settings)) {
                     parsed = [:e:];
                 }
             }
@@ -216,32 +244,6 @@ namespace StarParse::detail::Utilities {
         return std::nullopt;
     }
 
-    template<std::meta::info M>
-    inline constexpr std::string_view snake_name_v = std::meta::identifier_of(M);
-
-    template<std::meta::info M>
-    inline constexpr std::string_view kebab_name_v = [] {
-        std::string s(std::meta::identifier_of(M));
-        std::ranges::replace(s, '_', '-');
-        return std::string_view(std::define_static_string(s), s.size());
-    }();
-
-    template<std::meta::info M>
-    constexpr bool does_match_name(std::string_view name,
-                                   const std::optional<Opt> &opt,
-                                   const Settings &settings,
-                                   const bool allow_short = true) {
-        if (allow_short && name.size() == 1 && opt.has_value() && name[0] == opt->short_name)
-            return true;
-        if (name == snake_name_v<M>)
-            return true;
-        if (settings.allow_kebab_casing && name == kebab_name_v<M>)
-            return true;
-        if (settings.allow_aliases && Utilities::matches_alias<M>(name))
-            return true;
-        return false;
-    }
-
     template<typename T>
     bool option_takes_value(std::string_view name, bool is_short, const Settings &settings) {
         static constexpr auto members = std::define_static_array(
@@ -320,7 +322,7 @@ namespace StarParse::detail::Utilities {
             using E = [:value_type_of(^^M):];
             if (count == 0) field.clear();
             for_each_value(s, separator, [&](auto piece) {
-                if (auto result = from_string<E>(piece, index)) {
+                if (auto result = from_string<E>(piece, index, settings)) {
                     field.push_back(*result);
                 } else errors.push_back(result.error());
                 count++;
@@ -333,13 +335,13 @@ namespace StarParse::detail::Utilities {
                         .kind = ErrorKind::DUPLICATE_OPTION, .token = piece, .option = std::meta::identifier_of(Mem),
                         .argv_index = index
                     });
-                } else if (auto result = from_string<E>(piece, index)) {
+                } else if (auto result = from_string<E>(piece, index, settings)) {
                     field[count] = *result;
                 } else errors.push_back(result.error());
                 count++;
             });
         } else {
-            if (auto result = from_string<M>(s, index)) {
+            if (auto result = from_string<M>(s, index, settings)) {
                 field = *result;
             } else errors.push_back(result.error());
             count++;
