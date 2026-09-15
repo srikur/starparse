@@ -28,6 +28,11 @@ namespace StarParse {
     }
 
     template<typename T>
+    ParsedArgs<T> parse_or_exit(const int argc, const char *const*argv, const Settings settings = {}) {
+        return parse_or_exit<T>(argc, argv, T{}, settings);
+    }
+
+    template<typename T>
     ParsedArgs<T> parse_or_exit(const int argc, const char *const*argv, T initial = {}, const Settings settings = {}) {
         std::vector<std::string_view> args;
         if (argc > 1) {
@@ -41,6 +46,11 @@ namespace StarParse {
             std::exit(EXIT_FAILURE);
         }
         return result;
+    }
+
+    template<typename T>
+    ParsedArgs<T> parse_or_throw(const int argc, const char *const*argv, const Settings settings = {}) {
+        return parse_or_throw<T>(argc, argv, T{}, settings);
     }
 
     template<typename T>
@@ -58,7 +68,12 @@ namespace StarParse {
     }
 
     template<typename T>
-    ParsedArgs<T> parse_from(std::initializer_list<std::string_view> args, T initial = {},
+    ParsedArgs<T> parse_from(const std::initializer_list<std::string_view> args, const Settings settings = {}) {
+        return parse_from<T>(args, T{}, settings);
+    }
+
+    template<typename T>
+    ParsedArgs<T> parse_from(const std::initializer_list<std::string_view> args, T initial = {},
                              const Settings settings = {}) {
         return detail::Parser::parse<T>(std::span{args.begin(), args.size()}, std::move(initial), settings);
     }
