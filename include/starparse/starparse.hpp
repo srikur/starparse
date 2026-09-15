@@ -13,14 +13,18 @@ namespace StarParse {
     using detail::Parser::ParsedArgs;
 
     template<typename T>
+    ParsedArgs<T> parse(const int argc, const char *const*argv, const Settings settings) {
+        return parse<T>(argc, argv, T{}, settings);
+    }
+
+    template<typename T>
     ParsedArgs<T> parse(const int argc, const char *const*argv, T initial = {},
                         const Settings settings = {}) {
         std::vector<std::string_view> args;
         if (argc > 1) {
             args.assign(argv + 1, argv + argc);
         }
-        auto result = detail::Parser::parse<T>(args, std::move(initial), settings);
-        return std::move(result);
+        return detail::Parser::parse<T>(args, std::move(initial), settings);
     }
 
     template<typename T>
@@ -36,7 +40,7 @@ namespace StarParse {
             }
             std::exit(EXIT_FAILURE);
         }
-        return std::move(result);
+        return result;
     }
 
     template<typename T>
@@ -50,7 +54,7 @@ namespace StarParse {
         if (!result.errors().empty()) {
             throw std::invalid_argument(result.errors()[0].to_string());
         }
-        return std::move(result);
+        return result;
     }
 
     template<typename T>
