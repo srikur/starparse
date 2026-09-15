@@ -18,6 +18,7 @@ starparse_test_executable(test_try_parse)
 starparse_test_executable(test_kebab)
 starparse_test_executable(test_separator)
 starparse_test_executable(test_container)
+starparse_test_executable(test_settings)
 
 # starparse_case(<test name> <target> <expected output regex> [args...])
 function(starparse_case name target expected)
@@ -83,3 +84,6 @@ starparse_case(separator.dashed_positional test_separator "positional: --foo=bar
 
 # containers
 starparse_case(container.basic test_container "vector: \\[\"1\", \"2\", \"3\", \"4\"\\], array: \\[\"1\", \"2\", \"3\", \"4\"\\]" --vec=1,2,3,4 --arr=1,2,3,4)
+
+# settings
+starparse_case(settings.case_insensitivity_true test_settings "model: 8" --model=cgb0)
