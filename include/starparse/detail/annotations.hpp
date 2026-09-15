@@ -5,6 +5,7 @@
 #include <meta>
 #include <string>
 #include <array>
+#include <type_traits>
 
 namespace StarParse::inline annotations {
     namespace detail {
@@ -92,16 +93,28 @@ namespace StarParse::inline annotations {
         const char *version{};
     };
 
-    struct Min final {
-        double value{};
+    template<typename T>
+    concept Numeric = std::integral<T> || std::floating_point<T>;
 
-        explicit consteval Min(const double v) : value(v) {}
+    template<Numeric T>
+    struct Min final {
+        T value{};
+
+        explicit consteval Min(const T v) : value(v) {}
     };
 
+    template<Numeric T>
     struct Max final {
-        double value{};
+        T value{};
 
-        explicit consteval Max(const double v) : value(v) {}
+        explicit consteval Max(const T v) : value(v) {}
+    };
+
+    template<Numeric T>
+    struct Range final {
+        T min{};
+        T max{};
+        explicit consteval Range(const T mi, const T ma) : min(mi), max(ma) {}
     };
 
     struct Choices final {
