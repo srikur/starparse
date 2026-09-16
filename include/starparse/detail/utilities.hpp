@@ -422,10 +422,12 @@ namespace StarParse::detail::Utilities {
                 return false;
             }
         } else if constexpr (choice_annotation.has_value()) {
+            static constexpr auto choices = std::define_static_array(choices_string_list(Mem));
             if (!matches_choice<Mem>(value, settings.allow_case_insensitivity)) {
                 errors.push_back({
                     .kind = ErrorKind::INVALID_CHOICE,
                     .input_value = input,
+                    .detail = std::format("{}", choices),
                     .current_argument = std::meta::identifier_of(Mem),
                     .argv_index = index
                 });

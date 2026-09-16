@@ -37,9 +37,9 @@ namespace StarParse {
                 case ErrorKind::EXCEPTION:
                     return std::format("Exception thrown while validating input '{}': {}", input_value, detail);
                 case ErrorKind::OUT_OF_RANGE:
-                    return std::format("Value {} is out of range for argument '{}'", input_value, option);
+                    return std::format("Value {} is out of range for argument '{}'; {}", input_value, option, detail);
                 case ErrorKind::INVALID_CHOICE:
-                    return std::format("Invalid choice '{}' for argument '{}'", input_value, option);
+                    return std::format("Invalid choice '{}' for argument '{}'; allowed choices are {}", input_value, option, detail);
                 case ErrorKind::VALIDATION_FAILED:
                     return std::format("Validation failed for input '{}': {}", input_value, detail);
                 default:
