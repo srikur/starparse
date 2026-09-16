@@ -12,6 +12,7 @@
 #include <array>
 #include <span>
 #include <vector>
+#include <utility>
 
 #include <starparse/detail/settings.hpp>
 #include <starparse/detail/annotations.hpp>
@@ -389,6 +390,12 @@ namespace StarParse::detail::Utilities {
         f(s);
     }
 
+    template<Numeric A, Numeric B>
+    constexpr bool numeric_less(const A a, const B b) {
+        constexpr bool both_integral = std::is_integral_v<A> && std::is_integral_v<B>;
+        return both_integral ? std::cmp_less(a, b) : a < b;
+    }
+
     template<std::meta::info Mem, typename M>
     bool validate(const M &value, const std::string_view input, const size_t index, std::vector<ParseError> &errors,
                   const Settings &settings) {
@@ -396,6 +403,7 @@ namespace StarParse::detail::Utilities {
         constexpr auto choice_annotation = choices_of(Mem);
         constexpr auto min_annotation = min_of(Mem);
         constexpr auto max_annotation = max_of(Mem);
+        constexpr auto range_annotation = range_of(Mem);
 
         if constexpr (validator_annotation.has_value()) {
             using V = [:std::meta::remove_cv(std::meta::type_of(*validator_annotation)):];
@@ -422,7 +430,49 @@ namespace StarParse::detail::Utilities {
                     .argv_index = index
                 });
             }
-        } else if constexpr (min_annotation.has_value()) {} else if constexpr (max_annotation.has_value()) {}
+        } else if constexpr (min_annotation.has_value()) {
+            using A = [:std::meta::remove_cv(std::meta::type_of(*min_annotation)):];
+            constexpr auto mn = std::meta::extract<A>(*min_annotation);
+
+            if (numeric_less(value, mn.value)) {
+                errors.push_back({
+                    .kind = ErrorKind::OUT_OF_RANGE,
+                    .input_value = input,
+                    .detail = std::format("minimum is {}", mn.value),
+                    .current_argument = std::meta::identifier_of(Mem),
+                    .argv_index = index
+                });
+                return false;
+            }
+        } else if constexpr (max_annotation.has_value()) {
+            using A = [:std::meta::remove_cv(std::meta::type_of(*max_annotation)):];
+            constexpr auto mx = std::meta::extract<A>(*max_annotation);
+
+            if (numeric_less(value, mx.value)) {
+                errors.push_back({
+                    .kind = ErrorKind::OUT_OF_RANGE,
+                    .input_value = input,
+                    .detail = std::format("maximum is {}", mx.value),
+                    .current_argument = std::meta::identifier_of(Mem),
+                    .argv_index = index
+                });
+                return false;
+            }
+        } else if constexpr (range_annotation.has_value()) {
+            using A = [:std::meta::remove_cv(std::meta::type_of(*range_annotation)):];
+            constexpr auto range = std::meta::extract<A>(*range_annotation);
+
+            if (numeric_less(value, range.min) || numeric_less(range.max, value)) {
+                errors.push_back({
+                    .kind = ErrorKind::OUT_OF_RANGE,
+                    .input_value = input,
+                    .detail = std::format("allowed range is [{}, {}]", range.min, range.max),
+                    .current_argument = std::meta::identifier_of(Mem),
+                    .argv_index = index
+                });
+                return false;
+            }
+        }
         return true;
     }
 
