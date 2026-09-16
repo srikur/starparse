@@ -1,5 +1,6 @@
 #pragma once
 
+#include <ranges>
 #include <algorithm>
 #include <format>
 #include <optional>
@@ -9,6 +10,7 @@
 #include <array>
 #include <vector>
 #include <memory>
+#include <numeric>
 
 #include <starparse/detail/annotations.hpp>
 #include <starparse/detail/settings.hpp>
@@ -19,7 +21,7 @@ namespace StarParse::detail::Parser {
     using namespace StarParse::detail::Utilities;
 
     struct ArgAttributes {
-        int argv_index{};
+        size_t argv_index{};
         bool dashed{};
         bool double_dashed{};
         bool is_help{};
@@ -31,7 +33,7 @@ namespace StarParse::detail::Parser {
         std::string_view value{};
 
         explicit ArgAttributes(std::string_view argument,
-                               const int index,
+                               const size_t index,
                                const bool separator_seen) : argv_index(index) {
             if (separator_seen || !argument.starts_with('-') || (argument.starts_with('-') && argument.size() == 1)) {
                 is_positional = true;
@@ -264,6 +266,18 @@ namespace StarParse::detail::Parser {
             return text;
         }
 
+        [[nodiscard]] std::string error_message() const {
+            if (errors_.empty()) { return ""; }
+            const auto error_strings = errors_
+                                       | std::views::transform(
+                                           [](const ParseError &error) { return error.to_string(); })
+                                       | std::ranges::to<std::vector<std::string> >();
+            return std::accumulate(error_strings.begin() + 1, error_strings.end(), error_strings[0],
+                                   [](std::string a, const std::string &b) {
+                                       return std::move(a) + '\n' + b;
+                                   });
+        }
+
     private:
         T out_{};
         bool show_help_{};
@@ -277,7 +291,7 @@ namespace StarParse::detail::Parser {
         attr_array.reserve(args.size());
         bool separator_seen{false};
         for (auto i{0uz}; i < args.size(); ++i) {
-            ArgAttributes a{args[i], static_cast<int>(i + 1), separator_seen};
+            ArgAttributes a{args[i], i + 1, separator_seen};
             if (a.is_separator) {
                 separator_seen = true;
                 continue;
@@ -312,16 +326,24 @@ namespace StarParse::detail::Parser {
     }
 
     template<typename T>
-    ParsedArgs<T> parse(std::span<const std::string_view> args, T initial = {}, Settings settings = {}) {
+    void check_assertions() {
         static_assert(Utilities::no_positional_containers<T>(),
                       "cannot use Positional in combination with a container");
         static_assert(Utilities::no_required_optionals<T>(),
                       "a Required field cannot have a std::optional type; drop one of the two");
+    }
+
+    template<typename T>
+    ParsedArgs<T> parse(std::span<const std::string_view> args, T initial = {}, Settings settings = {}) {
+        static constexpr auto members = std::define_static_array(
+            std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
+
+        // 1. Check annotation constraints
+        check_assertions<T>();
+
         T out{std::move(initial)};
         bool help_requested{}, version_requested{};
         std::vector<ParseError> errors{};
-        static constexpr auto members = std::define_static_array(
-            std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
         size_t next_positional{0};
         ArgContext ctx{};
         const auto attr_array = get_arg_attrs<T>(args, settings);
@@ -369,7 +391,7 @@ namespace StarParse::detail::Parser {
                         } else {
                             if (!attrs.has_value) {
                                 errors.push_back({
-                                    .kind = ErrorKind::MISSING_VALUE, .token{}, .option = attrs.name,
+                                    .kind = ErrorKind::MISSING_VALUE, .current_argument = attrs.name,
                                     .argv_index = attrs.argv_index
                                 });
                                 continue;
@@ -382,20 +404,20 @@ namespace StarParse::detail::Parser {
             }
             if (!matched) {
                 errors.push_back({
-                    .kind = ErrorKind::UNKNOWN_OPTION, .token = attrs.name, .option{},
+                    .kind = ErrorKind::UNKNOWN_OPTION, .input_value = attrs.name,
                     .argv_index = attrs.argv_index
                 });
             }
         }
 
-        std::vector<std::string_view> missing_fields;
         template for (constexpr auto m : members) {
             const size_t index = member_index_of<T>(m);
             if constexpr (is_required(m)) {
                 if (fields_set[index] == 0) {
                     const auto field_name = std::string_view{std::meta::identifier_of(m)};
                     errors.push_back({
-                        .kind = ErrorKind::MISSING_REQUIRED, .token{}, .option = field_name,
+                        .kind = ErrorKind::MISSING_REQUIRED,
+                        .current_argument = std::optional{field_name},
                         .argv_index = index
                     });
                 }
@@ -403,7 +425,8 @@ namespace StarParse::detail::Parser {
                 if (fields_set[index] < std::meta::tuple_size(m)) {
                     const auto field_name = std::string_view{std::meta::identifier_of(m)};
                     errors.push_back({
-                        .kind = ErrorKind::MISSING_VALUE, .token{}, .option = field_name,
+                        .kind = ErrorKind::MISSING_VALUE,
+                        .current_argument = std::optional{field_name},
                         .argv_index = index
                     });
                 }

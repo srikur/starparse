@@ -13,6 +13,6 @@ auto main(int argc, char **argv) -> int {
         std::println("positional: {}, dry run: {}, super dry: {}", args->positional, args->dry_run,
                      args->super_dry_run);
     } else {
-        std::println("parse error(s): {}", args.errors());
+        std::println("{}", args.error_message());
     }
 }

@@ -12,6 +12,7 @@
 #include <array>
 #include <span>
 #include <vector>
+#include <utility>
 
 #include <starparse/detail/settings.hpp>
 #include <starparse/detail/annotations.hpp>
@@ -116,7 +117,7 @@ namespace StarParse::detail::Utilities {
         constexpr std::array false_values{"no"sv, "0"sv, "off"sv, "false"sv, "f"sv};
         if (std::ranges::any_of(true_values, [&](auto value) { return iequals(s, value); })) return true;
         if (std::ranges::any_of(false_values, [&](auto value) { return iequals(s, value); })) return false;
-        return std::unexpected(ParseError{.kind = ErrorKind::INVALID_VALUE, .token = s});
+        return std::unexpected(ParseError{.kind = ErrorKind::INVALID_VALUE, .input_value = s});
     }
 
     template<typename T>
@@ -133,7 +134,7 @@ namespace StarParse::detail::Utilities {
     }
 
     template<typename M>
-    std::expected<M, ParseError> from_string(std::string_view s, const int index, const Settings &settings) {
+    std::expected<M, ParseError> from_string(std::string_view s, const size_t index, const Settings &settings) {
         if constexpr (is_optional(^^M)) {
             using T = [:value_type_of(^^M):];
             if (auto result = from_string<T>(s, index, settings)) return M{*result};
@@ -148,7 +149,9 @@ namespace StarParse::detail::Utilities {
             auto [pointer, error_code] = std::from_chars(s.data(), s.data() + s.size(), v);
             if (error_code != std::errc{} || pointer != s.data() + s.size()) {
                 return std::unexpected(ParseError{
-                    .kind = ErrorKind::INVALID_VALUE, .token = s, .option = std::meta::display_string_of(^^M),
+                    .kind = ErrorKind::INVALID_VALUE,
+                    .input_value = s,
+                    .current_argument = std::optional{std::meta::display_string_of(^^M)},
                     .argv_index = index
                 });
             }
@@ -162,7 +165,9 @@ namespace StarParse::detail::Utilities {
             }
             if (!parsed)
                 return std::unexpected(ParseError{
-                    .kind = ErrorKind::INVALID_VALUE, .token = s, .option = std::meta::display_string_of(^^M),
+                    .kind = ErrorKind::INVALID_VALUE,
+                    .input_value = s,
+                    .current_argument = std::optional{std::meta::display_string_of(^^M)},
                     .argv_index = index
                 });
             return *parsed;
@@ -205,6 +210,80 @@ namespace StarParse::detail::Utilities {
             }
         }
         return std::nullopt;
+    }
+
+    consteval std::optional<std::meta::info> validator_of(const std::meta::info m) {
+        for (const std::meta::info a : std::meta::annotations_of(m)) {
+            auto type = std::meta::remove_cv(std::meta::type_of(a));
+            if (is_specialization_of(type, ^^Validator)) {
+                return a;
+            }
+        }
+        return std::nullopt;
+    }
+
+    consteval std::optional<std::meta::info> min_of(const std::meta::info m) {
+        for (const std::meta::info a : std::meta::annotations_of(m)) {
+            auto type = std::meta::remove_cv(std::meta::type_of(a));
+            if (is_specialization_of(type, ^^Min)) {
+                return a;
+            }
+        }
+        return std::nullopt;
+    }
+
+    consteval std::optional<std::meta::info> max_of(const std::meta::info m) {
+        for (const std::meta::info a : std::meta::annotations_of(m)) {
+            auto type = std::meta::remove_cv(std::meta::type_of(a));
+            if (is_specialization_of(type, ^^Max)) {
+                return a;
+            }
+        }
+        return std::nullopt;
+    }
+
+    consteval std::optional<std::meta::info> range_of(const std::meta::info m) {
+        for (const std::meta::info a : std::meta::annotations_of(m)) {
+            auto type = std::meta::remove_cv(std::meta::type_of(a));
+            if (is_specialization_of(type, ^^Range)) {
+                return a;
+            }
+        }
+        return std::nullopt;
+    }
+
+    consteval std::optional<Choices> choices_of(const std::meta::info m) {
+        for (const std::meta::info a : std::meta::annotations_of(m)) {
+            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^Choices)) {
+                return std::meta::extract<Choices>(a);
+            }
+        }
+        return std::nullopt;
+    }
+
+    consteval std::vector<const char *> choices_string_list(const std::meta::info m) {
+        std::vector<const char *> names{};
+        for (const std::meta::info a : std::meta::annotations_of(m)) {
+            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) != std::meta::dealias(^^Choices)) {
+                continue;
+            }
+            const auto choice = std::meta::extract<Choices>(a);
+            for (size_t i{0}; i < choice.count_; i++) {
+                names.push_back(choice.names_[i]);
+            }
+        }
+        return names;
+    }
+
+    template<std::meta::info M>
+    bool matches_choice(const std::string_view name, const bool allow_case_insensitivity = false) {
+        static constexpr auto choices = std::define_static_array(choices_string_list(M));
+        for (const char *choice : choices) {
+            if (name == std::string_view{choice} || (
+                    allow_case_insensitivity && iequals(name, std::string_view{choice})))
+                return true;
+        }
+        return false;
     }
 
     template<typename T>
@@ -311,8 +390,99 @@ namespace StarParse::detail::Utilities {
         f(s);
     }
 
+    template<Numeric A, Numeric B>
+    constexpr bool numeric_less(const A a, const B b) {
+        constexpr bool both_integral = std::is_integral_v<A> && std::is_integral_v<B>;
+        return both_integral ? std::cmp_less(a, b) : a < b;
+    }
+
     template<std::meta::info Mem, typename M>
-    void assign_from_string(M &field, const std::string_view s, const int index, size_t &count,
+    bool validate(const M &value, const std::string_view input, const size_t index, std::vector<ParseError> &errors,
+                  const Settings &settings) {
+        constexpr auto validator_annotation = validator_of(Mem);
+        constexpr auto choice_annotation = choices_of(Mem);
+        constexpr auto min_annotation = min_of(Mem);
+        constexpr auto max_annotation = max_of(Mem);
+        constexpr auto range_annotation = range_of(Mem);
+
+        if constexpr (validator_annotation.has_value()) {
+            using V = [:std::meta::remove_cv(std::meta::type_of(*validator_annotation)):];
+            constexpr auto validator = std::meta::extract<V>(*validator_annotation);
+
+            static_assert(std::is_invocable_r_v<std::expected<void, std::string>, const V &, const M &>,
+                          "Validator must accept the parsed value type");
+
+            if (auto result = validator(value); !result) {
+                errors.push_back({
+                    .kind = ErrorKind::VALIDATION_FAILED,
+                    .input_value = input,
+                    .detail = result.error().empty()
+                                  ? std::string{"validator returned false"}
+                                  : std::move(result.error()),
+                    .current_argument = std::meta::identifier_of(Mem),
+                    .argv_index = index
+                });
+                return false;
+            }
+        } else if constexpr (choice_annotation.has_value()) {
+            static constexpr auto choices = std::define_static_array(choices_string_list(Mem));
+            if (!matches_choice<Mem>(value, settings.allow_case_insensitivity)) {
+                errors.push_back({
+                    .kind = ErrorKind::INVALID_CHOICE,
+                    .input_value = input,
+                    .detail = std::format("{}", choices),
+                    .current_argument = std::meta::identifier_of(Mem),
+                    .argv_index = index
+                });
+            }
+        } else if constexpr (min_annotation.has_value()) {
+            using A = [:std::meta::remove_cv(std::meta::type_of(*min_annotation)):];
+            constexpr auto mn = std::meta::extract<A>(*min_annotation);
+
+            if (numeric_less(value, mn.value)) {
+                errors.push_back({
+                    .kind = ErrorKind::OUT_OF_RANGE,
+                    .input_value = input,
+                    .detail = std::format("minimum is {}", mn.value),
+                    .current_argument = std::meta::identifier_of(Mem),
+                    .argv_index = index
+                });
+                return false;
+            }
+        } else if constexpr (max_annotation.has_value()) {
+            using A = [:std::meta::remove_cv(std::meta::type_of(*max_annotation)):];
+            constexpr auto mx = std::meta::extract<A>(*max_annotation);
+
+            if (numeric_less(value, mx.value)) {
+                errors.push_back({
+                    .kind = ErrorKind::OUT_OF_RANGE,
+                    .input_value = input,
+                    .detail = std::format("maximum is {}", mx.value),
+                    .current_argument = std::meta::identifier_of(Mem),
+                    .argv_index = index
+                });
+                return false;
+            }
+        } else if constexpr (range_annotation.has_value()) {
+            using A = [:std::meta::remove_cv(std::meta::type_of(*range_annotation)):];
+            constexpr auto range = std::meta::extract<A>(*range_annotation);
+
+            if (numeric_less(value, range.min) || numeric_less(range.max, value)) {
+                errors.push_back({
+                    .kind = ErrorKind::OUT_OF_RANGE,
+                    .input_value = input,
+                    .detail = std::format("allowed range is [{}, {}]", range.min, range.max),
+                    .current_argument = std::meta::identifier_of(Mem),
+                    .argv_index = index
+                });
+                return false;
+            }
+        }
+        return true;
+    }
+
+    template<std::meta::info Mem, typename M>
+    void assign_from_string(M &field, const std::string_view s, const size_t index, size_t &count,
                             std::vector<ParseError> &errors, const Settings &settings) {
         constexpr auto annotated = separator_of(Mem);
         const std::string_view separator = annotated.has_value()
@@ -323,7 +493,9 @@ namespace StarParse::detail::Utilities {
             if (count == 0) field.clear();
             for_each_value(s, separator, [&](auto piece) {
                 if (auto result = from_string<E>(piece, index, settings)) {
-                    field.push_back(*result);
+                    if (validate<Mem>(*result, piece, index, errors, settings)) {
+                        field.push_back(*result);
+                    }
                 } else errors.push_back(result.error());
                 count++;
             });
@@ -332,17 +504,23 @@ namespace StarParse::detail::Utilities {
             for_each_value(s, separator, [&](auto piece) {
                 if (count >= std::tuple_size_v<M>) {
                     errors.push_back(ParseError{
-                        .kind = ErrorKind::DUPLICATE_OPTION, .token = piece, .option = std::meta::identifier_of(Mem),
+                        .kind = ErrorKind::DUPLICATE_OPTION,
+                        .input_value = piece,
+                        .current_argument = std::meta::identifier_of(Mem),
                         .argv_index = index
                     });
                 } else if (auto result = from_string<E>(piece, index, settings)) {
-                    field[count] = *result;
+                    if (validate<Mem>(*result, piece, index, errors, settings)) {
+                        field[count] = *result;
+                    }
                 } else errors.push_back(result.error());
                 count++;
             });
         } else {
             if (auto result = from_string<M>(s, index, settings)) {
-                field = *result;
+                if (validate<Mem>(*result, s, index, errors, settings)) {
+                    field = *result;
+                }
             } else errors.push_back(result.error());
             count++;
         }

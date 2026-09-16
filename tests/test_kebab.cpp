@@ -10,6 +10,6 @@ int main(const int argc, char **argv) {
     if (args) {
         std::println("dry run: {}", args->dry_run);
     } else {
-        std::println("errors: {}", args.errors());
+        std::println("{}", args.error_message());
     }
 }

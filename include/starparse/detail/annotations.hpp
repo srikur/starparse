@@ -5,8 +5,38 @@
 #include <meta>
 #include <string>
 #include <array>
+#include <expected>
+#include <type_traits>
 
 namespace StarParse::inline annotations {
+    namespace detail {
+        template<typename F>
+        struct first_arg : first_arg<decltype(&F::operator())> {};
+
+        template<typename R, typename C, typename A>
+        struct first_arg<R (C::*)(A) const> {
+            using type = std::remove_cvref_t<A>;
+        };
+
+        template<typename R, typename C, typename A>
+        struct first_arg<R (C::*)(A)> {
+            using type = std::remove_cvref_t<A>;
+        };
+
+        template<typename R, typename A>
+        struct first_arg<R (*)(A)> {
+            using type = std::remove_cvref_t<A>;
+        };
+
+        template<typename R, typename A>
+        struct first_arg<R (A)> {
+            using type = std::remove_cvref_t<A>;
+        };
+
+        template<typename F>
+        using first_arg_t = first_arg<std::remove_cvref_t<F> >::type;
+    }
+
     struct Opt final {
         char short_name{0};
         const char *help_{};
@@ -63,4 +93,70 @@ namespace StarParse::inline annotations {
         const char *description{};
         const char *version{};
     };
+
+    template<typename T>
+    concept Numeric = std::integral<T> || std::floating_point<T>;
+
+    template<Numeric T>
+    struct Min final {
+        T value{};
+
+        explicit consteval Min(const T v) : value(v) {}
+    };
+
+    template<Numeric T>
+    struct Max final {
+        T value{};
+
+        explicit consteval Max(const T v) : value(v) {}
+    };
+
+    template<Numeric T>
+    struct Range final {
+        T min{};
+        T max{};
+        explicit consteval Range(const T mi, const T ma) : min(mi), max(ma) {}
+    };
+
+    struct Choices final {
+        const char *const*names_{};
+        size_t count_{};
+
+        template<std::convertible_to<std::string_view>... Ts>
+            requires (sizeof...(Ts) > 0)
+        explicit consteval Choices(Ts... ns)
+            : names_(std::define_static_array(
+                  std::array{std::define_static_string(std::string_view{ns})...}).data()),
+              count_(sizeof...(ns)) {}
+    };
+
+    template<typename T>
+    struct Validator final {
+        using Result = std::expected<void, std::string>;
+        using BoolFn = bool (*)(const T &);
+        using CStrFn = const char *(*)(const T &);
+        using ExpectedFn = Result (*)(const T &);
+
+        BoolFn bool_fn{};
+        CStrFn cstr_fn{};
+        ExpectedFn expected_fn{};
+
+        explicit consteval Validator(const BoolFn f) : bool_fn(f) {}
+        explicit consteval Validator(const CStrFn f) : cstr_fn(f) {}
+        explicit consteval Validator(const ExpectedFn f) : expected_fn(f) {}
+
+        [[nodiscard]] constexpr Result operator()(const T &v) const {
+            if (expected_fn) return expected_fn(v);
+            if (cstr_fn) {
+                if (const char *msg = cstr_fn(v)) {
+                    return std::unexpected{std::string{msg}};
+                }
+            }
+            if (bool_fn(v)) return {};
+            return std::unexpected{std::string{}};
+        }
+    };
+
+    template<typename F>
+    Validator(F) -> Validator<detail::first_arg_t<F> >;
 }
