@@ -152,7 +152,7 @@ namespace StarParse::inline annotations {
                     return std::unexpected{std::string{msg}};
                 }
             }
-            if (bool_fn) return {};
+            if (bool_fn(v)) return {};
             return std::unexpected{std::string{}};
         }
     };
