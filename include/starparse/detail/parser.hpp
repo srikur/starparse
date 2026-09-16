@@ -312,16 +312,24 @@ namespace StarParse::detail::Parser {
     }
 
     template<typename T>
-    ParsedArgs<T> parse(std::span<const std::string_view> args, T initial = {}, Settings settings = {}) {
+    void check_assertions() {
         static_assert(Utilities::no_positional_containers<T>(),
                       "cannot use Positional in combination with a container");
         static_assert(Utilities::no_required_optionals<T>(),
                       "a Required field cannot have a std::optional type; drop one of the two");
+    }
+
+    template<typename T>
+    ParsedArgs<T> parse(std::span<const std::string_view> args, T initial = {}, Settings settings = {}) {
+        static constexpr auto members = std::define_static_array(
+            std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
+
+        // 1. Check annotation constraints
+        check_assertions<T>();
+
         T out{std::move(initial)};
         bool help_requested{}, version_requested{};
         std::vector<ParseError> errors{};
-        static constexpr auto members = std::define_static_array(
-            std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
         size_t next_positional{0};
         ArgContext ctx{};
         const auto attr_array = get_arg_attrs<T>(args, settings);
@@ -388,7 +396,6 @@ namespace StarParse::detail::Parser {
             }
         }
 
-        std::vector<std::string_view> missing_fields;
         template for (constexpr auto m : members) {
             const size_t index = member_index_of<T>(m);
             if constexpr (is_required(m)) {

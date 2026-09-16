@@ -28,7 +28,7 @@ namespace StarParse {
     }
 
     template<typename T>
-    ParsedArgs<T> parse_or_exit(const int argc, const char *const*argv, const Settings settings = {}) {
+    ParsedArgs<T> parse_or_exit(const int argc, const char *const*argv, const Settings settings) {
         return parse_or_exit<T>(argc, argv, T{}, settings);
     }
 
@@ -49,7 +49,7 @@ namespace StarParse {
     }
 
     template<typename T>
-    ParsedArgs<T> parse_or_throw(const int argc, const char *const*argv, const Settings settings = {}) {
+    ParsedArgs<T> parse_or_throw(const int argc, const char *const*argv, const Settings settings) {
         return parse_or_throw<T>(argc, argv, T{}, settings);
     }
 
@@ -68,7 +68,7 @@ namespace StarParse {
     }
 
     template<typename T>
-    ParsedArgs<T> parse_from(const std::initializer_list<std::string_view> args, const Settings settings = {}) {
+    ParsedArgs<T> parse_from(const std::initializer_list<std::string_view> args, const Settings settings) {
         return parse_from<T>(args, T{}, settings);
     }
 
