@@ -116,7 +116,7 @@ namespace StarParse::detail::Utilities {
         constexpr std::array false_values{"no"sv, "0"sv, "off"sv, "false"sv, "f"sv};
         if (std::ranges::any_of(true_values, [&](auto value) { return iequals(s, value); })) return true;
         if (std::ranges::any_of(false_values, [&](auto value) { return iequals(s, value); })) return false;
-        return std::unexpected(ParseError{.kind = ErrorKind::INVALID_VALUE, .token = s});
+        return std::unexpected(ParseError{.kind = ErrorKind::INVALID_VALUE, .input_value = s});
     }
 
     template<typename T>
@@ -133,7 +133,7 @@ namespace StarParse::detail::Utilities {
     }
 
     template<typename M>
-    std::expected<M, ParseError> from_string(std::string_view s, const int index, const Settings &settings) {
+    std::expected<M, ParseError> from_string(std::string_view s, const size_t index, const Settings &settings) {
         if constexpr (is_optional(^^M)) {
             using T = [:value_type_of(^^M):];
             if (auto result = from_string<T>(s, index, settings)) return M{*result};
@@ -148,7 +148,9 @@ namespace StarParse::detail::Utilities {
             auto [pointer, error_code] = std::from_chars(s.data(), s.data() + s.size(), v);
             if (error_code != std::errc{} || pointer != s.data() + s.size()) {
                 return std::unexpected(ParseError{
-                    .kind = ErrorKind::INVALID_VALUE, .token = s, .option = std::meta::display_string_of(^^M),
+                    .kind = ErrorKind::INVALID_VALUE,
+                    .input_value = s,
+                    .current_argument = std::optional{std::meta::display_string_of(^^M)},
                     .argv_index = index
                 });
             }
@@ -162,7 +164,9 @@ namespace StarParse::detail::Utilities {
             }
             if (!parsed)
                 return std::unexpected(ParseError{
-                    .kind = ErrorKind::INVALID_VALUE, .token = s, .option = std::meta::display_string_of(^^M),
+                    .kind = ErrorKind::INVALID_VALUE,
+                    .input_value = s,
+                    .current_argument = std::optional{std::meta::display_string_of(^^M)},
                     .argv_index = index
                 });
             return *parsed;
@@ -312,7 +316,7 @@ namespace StarParse::detail::Utilities {
     }
 
     template<std::meta::info Mem, typename M>
-    void assign_from_string(M &field, const std::string_view s, const int index, size_t &count,
+    void assign_from_string(M &field, const std::string_view s, const size_t index, size_t &count,
                             std::vector<ParseError> &errors, const Settings &settings) {
         constexpr auto annotated = separator_of(Mem);
         const std::string_view separator = annotated.has_value()
@@ -332,7 +336,9 @@ namespace StarParse::detail::Utilities {
             for_each_value(s, separator, [&](auto piece) {
                 if (count >= std::tuple_size_v<M>) {
                     errors.push_back(ParseError{
-                        .kind = ErrorKind::DUPLICATE_OPTION, .token = piece, .option = std::meta::identifier_of(Mem),
+                        .kind = ErrorKind::DUPLICATE_OPTION,
+                        .input_value = piece,
+                        .current_argument = std::meta::identifier_of(Mem),
                         .argv_index = index
                     });
                 } else if (auto result = from_string<E>(piece, index, settings)) {

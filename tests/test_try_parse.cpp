@@ -12,6 +12,6 @@ auto main(int argc, char **argv) -> int {
     if (args) {
         std::println("verbose: {}, arg1: {}", args->verbose, args->arg1);
     } else {
-        std::println("parse error(s): {}", args.errors());
+        std::println("{}", args.error_message());
     }
 }

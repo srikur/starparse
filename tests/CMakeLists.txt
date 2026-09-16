@@ -64,15 +64,15 @@ starparse_case(enum.by_name test_enum "mode: 1, input: hello" --mode=safe hello)
 starparse_case(enum.by_alias test_enum "mode: 0, input: hello" --mode quick hello)
 starparse_case(enum.alias_dry test_enum "mode: 2, input: hello" -m dry hello)
 starparse_case(enum.alias_short test_enum "mode: 2, input: hello" -m n hello)
-starparse_case(enum.bad_value test_enum "error: Invalid value supplied for argument Mode \\(value: slow\\) at position 1." --mode=slow hello)
+starparse_case(enum.bad_value test_enum "Could not parse input 'slow' for argument 'Mode'" --mode=slow hello)
 
-# force_parse() surfaces the first parse error as an exception.
-starparse_case(errors.unrecognized test_errors "error: Unknown option supplied for argument  \\(value: nope\\) at position 1." --nope)
-starparse_case(errors.missing_value test_errors "error: Missing value supplied for argument arg1 \\(value: none\\) at position 1." --arg1)
-starparse_case(errors.bad_value test_errors "error: Invalid value supplied for argument int \\(value: abc\\) at position 1." abc)
+# parse_or_throw() surfaces the first parse error as an exception.
+starparse_case(errors.unrecognized test_errors "Unknown option 'nope'" --nope)
+starparse_case(errors.missing_value test_errors "Missing value for argument 'arg1'" --arg1)
+starparse_case(errors.bad_value test_errors "Could not parse input 'abc' for argument 'int'" abc)
 
 # Specifically testing try_parse()
-starparse_case(try_parse.single_error test_try_parse "parse error\\(s\\): \\[\"Unknown option supplied for argument  \\(value: fake_arg\\) at position 1.\"\\]" --fake_arg)
+starparse_case(try_parse.single_error test_try_parse "Unknown option 'fake_arg'" --fake_arg)
 starparse_case(try_parse.successful_parse test_try_parse "verbose: true, arg1: 3" 3 --verbose)
 
 # Kebab casing
