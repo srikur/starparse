@@ -211,6 +211,80 @@ namespace StarParse::detail::Utilities {
         return std::nullopt;
     }
 
+    consteval std::optional<std::meta::info> validator_of(const std::meta::info m) {
+        for (const std::meta::info a : std::meta::annotations_of(m)) {
+            auto type = std::meta::remove_cv(std::meta::type_of(a));
+            if (is_specialization_of(type, ^^Validator)) {
+                return a;
+            }
+        }
+        return std::nullopt;
+    }
+
+    consteval std::optional<std::meta::info> min_of(const std::meta::info m) {
+        for (const std::meta::info a : std::meta::annotations_of(m)) {
+            auto type = std::meta::remove_cv(std::meta::type_of(a));
+            if (is_specialization_of(type, ^^Min)) {
+                return a;
+            }
+        }
+        return std::nullopt;
+    }
+
+    consteval std::optional<std::meta::info> max_of(const std::meta::info m) {
+        for (const std::meta::info a : std::meta::annotations_of(m)) {
+            auto type = std::meta::remove_cv(std::meta::type_of(a));
+            if (is_specialization_of(type, ^^Max)) {
+                return a;
+            }
+        }
+        return std::nullopt;
+    }
+
+    consteval std::optional<std::meta::info> range_of(const std::meta::info m) {
+        for (const std::meta::info a : std::meta::annotations_of(m)) {
+            auto type = std::meta::remove_cv(std::meta::type_of(a));
+            if (is_specialization_of(type, ^^Range)) {
+                return a;
+            }
+        }
+        return std::nullopt;
+    }
+
+    consteval std::optional<Choices> choices_of(const std::meta::info m) {
+        for (const std::meta::info a : std::meta::annotations_of(m)) {
+            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^Choices)) {
+                return std::meta::extract<Choices>(a);
+            }
+        }
+        return std::nullopt;
+    }
+
+    consteval std::vector<const char *> choices_string_list(const std::meta::info m) {
+        std::vector<const char *> names{};
+        for (const std::meta::info a : std::meta::annotations_of(m)) {
+            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) != std::meta::dealias(^^Choices)) {
+                continue;
+            }
+            const auto choice = std::meta::extract<Choices>(a);
+            for (size_t i{0}; i < choice.count_; i++) {
+                names.push_back(choice.names_[i]);
+            }
+        }
+        return names;
+    }
+
+    template<std::meta::info M>
+    bool matches_choice(const std::string_view name, const bool allow_case_insensitivity = false) {
+        static constexpr auto choices = std::define_static_array(choices_string_list(M));
+        for (const char *choice : choices) {
+            if (name == std::string_view{choice} || (
+                    allow_case_insensitivity && iequals(name, std::string_view{choice})))
+                return true;
+        }
+        return false;
+    }
+
     template<typename T>
     consteval bool is_bare() {
         for (const std::meta::info m :
@@ -316,6 +390,43 @@ namespace StarParse::detail::Utilities {
     }
 
     template<std::meta::info Mem, typename M>
+    bool validate(const M &value, const std::string_view input, const size_t index, std::vector<ParseError> &errors,
+                  const Settings &settings) {
+        constexpr auto validator_annotation = validator_of(Mem);
+        constexpr auto choice_annotation = choices_of(Mem);
+        constexpr auto min_annotation = min_of(Mem);
+        constexpr auto max_annotation = max_of(Mem);
+
+        if constexpr (validator_annotation.has_value()) {
+            using V = [:std::meta::remove_cv(std::meta::type_of(*validator_annotation)):];
+            constexpr auto validator = std::meta::extract<V>(*validator_annotation);
+
+            static_assert(std::predicate<V, const M &>, "Validator must accept the parsed value type");
+
+            if (!validator(value)) {
+                errors.push_back({
+                    .kind = ErrorKind::VALIDATION_FAILED,
+                    .input_value = input,
+                    .detail = "validator returned false", // TODO: Add return message option to Validators
+                    .current_argument = std::meta::identifier_of(Mem),
+                    .argv_index = index
+                });
+                return false;
+            }
+        } else if constexpr (choice_annotation.has_value()) {
+            if (!matches_choice<Mem>(value, settings.allow_case_insensitivity)) {
+                errors.push_back({
+                    .kind = ErrorKind::INVALID_CHOICE,
+                    .input_value = input,
+                    .current_argument = std::meta::identifier_of(Mem),
+                    .argv_index = index
+                });
+            }
+        } else if constexpr (min_annotation.has_value()) {} else if constexpr (max_annotation.has_value()) {}
+        return true;
+    }
+
+    template<std::meta::info Mem, typename M>
     void assign_from_string(M &field, const std::string_view s, const size_t index, size_t &count,
                             std::vector<ParseError> &errors, const Settings &settings) {
         constexpr auto annotated = separator_of(Mem);
@@ -327,7 +438,9 @@ namespace StarParse::detail::Utilities {
             if (count == 0) field.clear();
             for_each_value(s, separator, [&](auto piece) {
                 if (auto result = from_string<E>(piece, index, settings)) {
-                    field.push_back(*result);
+                    if (validate<Mem, M>(*result, piece, index, errors, settings)) {
+                        field.push_back(*result);
+                    }
                 } else errors.push_back(result.error());
                 count++;
             });
@@ -342,13 +455,17 @@ namespace StarParse::detail::Utilities {
                         .argv_index = index
                     });
                 } else if (auto result = from_string<E>(piece, index, settings)) {
-                    field[count] = *result;
+                    if (validate<Mem, M>(*result, piece, index, errors, settings)) {
+                        field[count] = *result;
+                    }
                 } else errors.push_back(result.error());
                 count++;
             });
         } else {
             if (auto result = from_string<M>(s, index, settings)) {
-                field = *result;
+                if (validate<Mem, M>(*result, s, index, errors, settings)) {
+                    field = *result;
+                }
             } else errors.push_back(result.error());
             count++;
         }
