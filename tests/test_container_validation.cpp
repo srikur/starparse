@@ -1,10 +1,13 @@
 #include <print>
 #include <starparse/starparse.hpp>
 
+bool is_valid(const std::string &value) {
+    return value == "hello" || value == "world";
+}
 
 struct Args {
-    [[=StarParse::Opt{'v', "Vector test"}]] std::vector<std::string> vec;
-    [[=StarParse::Opt{'a', "Array test"}, =StarParse::Separator{","}]] std::array<std::string, 4> arr;
+    [[=StarParse::Opt{'v'}, =StarParse::Validator{is_valid}]] std::vector<std::string> vec;
+    [[=StarParse::Opt{'a'}, =StarParse::Validator{is_valid}]] std::array<std::string, 2> arr;
 };
 
 auto main(int argc, char **argv) -> int {

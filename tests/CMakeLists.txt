@@ -18,6 +18,7 @@ starparse_test_executable(test_try_parse)
 starparse_test_executable(test_kebab)
 starparse_test_executable(test_separator)
 starparse_test_executable(test_container)
+starparse_test_executable(test_container_validation)
 starparse_test_executable(test_settings)
 
 # starparse_case(<test name> <target> <expected output regex> [args...])
@@ -84,6 +85,12 @@ starparse_case(separator.dashed_positional test_separator "positional: --foo=bar
 
 # containers
 starparse_case(container.basic test_container "vector: \\[\"1\", \"2\", \"3\", \"4\"\\], array: \\[\"1\", \"2\", \"3\", \"4\"\\]" --vec=1,2,3,4 --arr=1,2,3,4)
+
+# containers with validators
+starparse_case(container.validation_delimited test_container_validation "vector: \\[\"hello\", \"world\"\\], array: \\[\"hello\", \"world\"\\]" --vec=hello,world --arr=hello,world)
+starparse_case(container.validation_repeated test_container_validation "vector: \\[\"hello\", \"world\"\\], array: \\[\"hello\", \"world\"\\]" -v hello -v world -a hello -a world)
+starparse_case(container.validation_vector_rejected test_container_validation "Validation failed for input 'invalid': validator returned false" --vec=hello,invalid)
+starparse_case(container.validation_array_rejected test_container_validation "Validation failed for input 'invalid': validator returned false" --arr=hello,invalid)
 
 # settings
 starparse_case(settings.case_insensitivity_true test_settings "model: 8" --model=cgb0)

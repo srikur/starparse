@@ -493,7 +493,7 @@ namespace StarParse::detail::Utilities {
             if (count == 0) field.clear();
             for_each_value(s, separator, [&](auto piece) {
                 if (auto result = from_string<E>(piece, index, settings)) {
-                    if (validate<Mem, M>(*result, piece, index, errors, settings)) {
+                    if (validate<Mem>(*result, piece, index, errors, settings)) {
                         field.push_back(*result);
                     }
                 } else errors.push_back(result.error());
@@ -510,7 +510,7 @@ namespace StarParse::detail::Utilities {
                         .argv_index = index
                     });
                 } else if (auto result = from_string<E>(piece, index, settings)) {
-                    if (validate<Mem, M>(*result, piece, index, errors, settings)) {
+                    if (validate<Mem>(*result, piece, index, errors, settings)) {
                         field[count] = *result;
                     }
                 } else errors.push_back(result.error());
@@ -518,7 +518,7 @@ namespace StarParse::detail::Utilities {
             });
         } else {
             if (auto result = from_string<M>(s, index, settings)) {
-                if (validate<Mem, M>(*result, s, index, errors, settings)) {
+                if (validate<Mem>(*result, s, index, errors, settings)) {
                     field = *result;
                 }
             } else errors.push_back(result.error());
