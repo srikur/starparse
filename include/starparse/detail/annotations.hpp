@@ -5,6 +5,7 @@
 #include <meta>
 #include <string>
 #include <array>
+#include <expected>
 #include <type_traits>
 
 namespace StarParse::inline annotations {
@@ -131,15 +132,29 @@ namespace StarParse::inline annotations {
 
     template<typename T>
     struct Validator final {
-        using Fn = bool (*)(const T &);
-        Fn fn{};
+        using Result = std::expected<void, std::string>;
+        using BoolFn = bool (*)(const T &);
+        using CStrFn = const char *(*)(const T &);
+        using ExpectedFn = Result (*)(const T &);
 
-        explicit consteval Validator(const Fn f) : fn(f) {}
+        BoolFn bool_fn{};
+        CStrFn cstr_fn{};
+        ExpectedFn expected_fn{};
 
-        template<std::convertible_to<Fn> F>
-        explicit consteval Validator(F f) : fn(static_cast<Fn>(f)) {}
+        explicit consteval Validator(const BoolFn f) : bool_fn(f) {}
+        explicit consteval Validator(const CStrFn f) : cstr_fn(f) {}
+        explicit consteval Validator(const ExpectedFn f) : expected_fn(f) {}
 
-        [[nodiscard]] constexpr bool operator()(const T &v) const { return fn(v); }
+        [[nodiscard]] constexpr Result operator()(const T &v) const {
+            if (expected_fn) return expected_fn(v);
+            if (cstr_fn) {
+                if (const char *msg = cstr_fn(v)) {
+                    return std::unexpected{std::string{msg}};
+                }
+            }
+            if (bool_fn) return {};
+            return std::unexpected{std::string{}};
+        }
     };
 
     template<typename F>

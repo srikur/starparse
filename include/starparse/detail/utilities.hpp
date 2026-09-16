@@ -409,13 +409,16 @@ namespace StarParse::detail::Utilities {
             using V = [:std::meta::remove_cv(std::meta::type_of(*validator_annotation)):];
             constexpr auto validator = std::meta::extract<V>(*validator_annotation);
 
-            static_assert(std::predicate<V, const M &>, "Validator must accept the parsed value type");
+            static_assert(std::is_invocable_r_v<std::expected<void, std::string>, const V &, const M &>,
+                          "Validator must accept the parsed value type");
 
-            if (!validator(value)) {
+            if (auto result = validator(value); !result) {
                 errors.push_back({
                     .kind = ErrorKind::VALIDATION_FAILED,
                     .input_value = input,
-                    .detail = "validator returned false", // TODO: Add return message option to Validators
+                    .detail = result.error().empty()
+                                  ? std::string{"validator returned false"}
+                                  : std::move(result.error()),
                     .current_argument = std::meta::identifier_of(Mem),
                     .argv_index = index
                 });

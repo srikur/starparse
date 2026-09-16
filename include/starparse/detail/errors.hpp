@@ -20,7 +20,6 @@ namespace StarParse {
 
         [[nodiscard]] std::string to_string() const {
             const std::string_view option = current_argument.value_or("");
-            // TODO: Use the current arg reflection to add constraint info to msg
             switch (kind) {
                 case ErrorKind::UNKNOWN_OPTION:
                     return std::format("Unknown option '{}'", input_value);
