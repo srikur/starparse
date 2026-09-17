@@ -340,15 +340,11 @@ namespace StarParse::detail::Parser {
         static_assert(Assertions::no_duplicate_validators<T>(),
                       "only one annotation among Min, Max, Range, Choices, or Validator can be applied to a single field");
         static_assert(Assertions::no_scalar_separators<T>(), "the Separator annotation cannot be applied to scalar fields");
+        static_assert(Assertions::check_ranges<T>(), "invalid Range annotation for specified type");
         /* TODO
             3. alias collisions with field names (or with help/version)
             5. ambiguous option names: short names same, aliases same within or across fields, alias conflicts with field name, short name with field name
             6. field name or alias colliding with help/version
-            7. positional indices: duplicates, gaps, indices dont start at zero (reorder fields automatically?)
-            8. annotations only appear once: opt, positional, separator, program, min, max, range, validator
-            9. only one of: validator, choices, min, max, range at a time
-            10. min, max, range on non-numeric types
-            12. check Range bounds for reversals, indefinite values, no valid values e.g., 300-400 on uint8_t
             13. validator: function pointer must be non-null
             15. if a field contains opt/positional, fields that don't contain either cant have other annotations
             16. enums: check aliases colliding with other aliases or enumerator names
