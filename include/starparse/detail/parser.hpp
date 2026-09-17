@@ -17,8 +17,11 @@
 #include <starparse/detail/utilities.hpp>
 #include <starparse/detail/errors.hpp>
 
+#include "assertions.hpp"
+
 namespace StarParse::detail::Parser {
     using namespace StarParse::detail::Utilities;
+    using namespace StarParse::detail::Assertions;
 
     struct ArgAttributes {
         size_t argv_index{};
@@ -158,7 +161,7 @@ namespace StarParse::detail::Parser {
             return show_version_;
         }
 
-        [[nodiscard]] static std::string version() {
+        [[nodiscard]] std::string version() {
             constexpr auto program = program_of(^^T);
             if constexpr (program.has_value()) {
                 return std::format("{} version {}", program->name, program->version);
@@ -327,10 +330,30 @@ namespace StarParse::detail::Parser {
 
     template<typename T>
     void check_assertions() {
-        static_assert(Utilities::no_positional_containers<T>(),
+        static_assert(Assertions::check_annotation_placement<T>(),
+                      "misplaced annotation: Program belongs on the argument type; enum values only accept Alias");
+        static_assert(Assertions::no_annotations_on_ignored_fields<T>(),
+                      "annotated fields need Opt or Positional when another field uses Opt or Positional");
+        static_assert(Assertions::no_duplicate_annotations<T>(),
+                      "annotations other than Alias may only appear once on an entity");
+        static_assert(Assertions::check_name_values<T>(),
+                      "invalid option spelling: aliases must be nonempty, contain no whitespace or '=', and not start with '-'; "
+                      "short names cannot be whitespace, '-' or '='");
+        static_assert(Assertions::no_positional_containers<T>(),
                       "cannot use Positional in combination with a container");
-        static_assert(Utilities::no_required_optionals<T>(),
+        static_assert(Assertions::no_required_optionals<T>(),
                       "a Required field cannot have a std::optional type; drop one of the two");
+        static_assert(Assertions::no_duplicate_short_names<T>(), "two fields cannot have duplicate Opt short names");
+        static_assert(Assertions::check_positional_indices<T>(),
+                      "Positional indices must be unique, begin at 0, and increment contiguously");
+        static_assert(Assertions::no_duplicate_validators<T>(),
+                      "only one annotation among Min, Max, Range, Choices, or Validator can be applied to a single field");
+        static_assert(Assertions::no_scalar_separators<T>(), "the Separator annotation cannot be applied to scalar fields");
+        static_assert(Assertions::check_ranges<T>(), "invalid Range annotation for specified type");
+        static_assert(Assertions::check_alias_collisions<T>(),
+                      "option names, short names, or aliases collide, or use reserved help/version names (including case and kebab spellings)");
+        static_assert(Assertions::check_enum_alias_collisions<T>(),
+                      "enum aliases or enumerator names collide (including case and kebab spellings)");
     }
 
     template<typename T>

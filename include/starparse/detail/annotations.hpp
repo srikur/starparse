@@ -118,17 +118,28 @@ namespace StarParse::inline annotations {
         explicit consteval Range(const T mi, const T ma) : min(mi), max(ma) {}
     };
 
+    template<typename T>
     struct Choices final {
-        const char *const*names_{};
+        using value_type = std::conditional_t<std::convertible_to<T, std::string_view>, const char *, T>;
+        const value_type *values_{};
         size_t count_{};
 
         template<std::convertible_to<std::string_view>... Ts>
-            requires (sizeof...(Ts) > 0)
+            requires (sizeof...(Ts) > 0 && std::convertible_to<T, std::string_view>)
         explicit consteval Choices(Ts... ns)
-            : names_(std::define_static_array(
+            : values_(std::define_static_array(
                   std::array{std::define_static_string(std::string_view{ns})...}).data()),
               count_(sizeof...(ns)) {}
+
+        template<std::convertible_to<T>... Ts>
+            requires (sizeof...(Ts) > 0 && !std::convertible_to<T, std::string_view>)
+        explicit consteval Choices(Ts... ns)
+            : values_(std::define_static_array(std::array<T, sizeof...(Ts)>{T{ns}...}).data()),
+              count_(sizeof...(ns)) {}
     };
+
+    template<typename... Ts>
+    Choices(Ts...) -> Choices<std::common_type_t<Ts...> >;
 
     template<typename T>
     struct Validator final {

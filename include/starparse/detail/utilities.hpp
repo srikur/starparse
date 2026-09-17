@@ -252,36 +252,35 @@ namespace StarParse::detail::Utilities {
         return std::nullopt;
     }
 
-    consteval std::optional<Choices> choices_of(const std::meta::info m) {
+    consteval std::optional<std::meta::info> choices_of(const std::meta::info m) {
         for (const std::meta::info a : std::meta::annotations_of(m)) {
-            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^Choices)) {
-                return std::meta::extract<Choices>(a);
+            auto type = std::meta::remove_cv(std::meta::type_of(a));
+            if (is_specialization_of(type, ^^Choices)) {
+                return a;
             }
         }
         return std::nullopt;
     }
 
-    consteval std::vector<const char *> choices_string_list(const std::meta::info m) {
-        std::vector<const char *> names{};
-        for (const std::meta::info a : std::meta::annotations_of(m)) {
-            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) != std::meta::dealias(^^Choices)) {
-                continue;
-            }
-            const auto choice = std::meta::extract<Choices>(a);
-            for (size_t i{0}; i < choice.count_; i++) {
-                names.push_back(choice.names_[i]);
-            }
-        }
-        return names;
+    template<std::meta::info M>
+    consteval auto choices_list() {
+        constexpr auto annotation = choices_of(M);
+        using C = [:std::meta::remove_cv(std::meta::type_of(*annotation)):];
+        constexpr auto choices = std::meta::extract<C>(*annotation);
+        return std::span{choices.values_, choices.count_};
     }
 
-    template<std::meta::info M>
-    bool matches_choice(const std::string_view name, const bool allow_case_insensitivity = false) {
-        static constexpr auto choices = std::define_static_array(choices_string_list(M));
-        for (const char *choice : choices) {
-            if (name == std::string_view{choice} || (
-                    allow_case_insensitivity && iequals(name, std::string_view{choice})))
-                return true;
+    template<std::meta::info M, typename T>
+    bool matches_choice(const T &value, const bool allow_case_insensitivity = false) {
+        static constexpr auto choices = choices_list<M>();
+        for (const auto &choice : choices) {
+            if constexpr (std::convertible_to<T, std::string_view>) {
+                if (std::string_view{value} == std::string_view{choice} || (
+                        allow_case_insensitivity && iequals(value, choice)))
+                    return true;
+            } else {
+                if (value == choice) return true;
+            }
         }
         return false;
     }
@@ -356,26 +355,6 @@ namespace StarParse::detail::Utilities {
         return false;
     }
 
-    template<typename T>
-    consteval bool no_required_optionals() {
-        for (const auto m : std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current())) {
-            if (is_required(m) && is_optional(std::meta::remove_cv(std::meta::type_of(m)))) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    template<typename T>
-    consteval bool no_positional_containers() {
-        for (const auto m : std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current())) {
-            if (is_positional(m) && is_container(std::meta::remove_cv(std::meta::type_of(m)))) {
-                return false;
-            }
-        }
-        return true;
-    }
-
     template<typename F>
     void for_each_value(std::string_view s, const std::string_view separator, F &&f) {
         if (separator.empty()) {
@@ -425,7 +404,7 @@ namespace StarParse::detail::Utilities {
                 return false;
             }
         } else if constexpr (choice_annotation.has_value()) {
-            static constexpr auto choices = std::define_static_array(choices_string_list(Mem));
+            static constexpr auto choices = choices_list<Mem>();
             if (!matches_choice<Mem>(value, settings.allow_case_insensitivity)) {
                 errors.push_back({
                     .kind = ErrorKind::INVALID_CHOICE,
@@ -434,6 +413,7 @@ namespace StarParse::detail::Utilities {
                     .current_argument = std::meta::identifier_of(Mem),
                     .argv_index = index
                 });
+                return false;
             }
         } else if constexpr (min_annotation.has_value()) {
             using A = [:std::meta::remove_cv(std::meta::type_of(*min_annotation)):];

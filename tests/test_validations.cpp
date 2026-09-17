@@ -25,6 +25,7 @@ struct Args {
     [[=StarParse::Validator{[](const std::string &arg) -> bool { return arg == "hello"; }}]] std::string string4;
     [[=StarParse::Choices{"a", "b", "c", "d"}]] std::string letter;
     [[=StarParse::Range{1, 3}]] int range;
+    [[=StarParse::Range{0, 255}]] uint8_t range2;
 };
 
 auto main(int argc, char **argv) -> int {

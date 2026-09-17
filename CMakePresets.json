@@ -1,41 +1,91 @@
 {
-    "version": 6,
-    "cmakeMinimumRequired": { "major": 3, "minor": 25, "patch": 0 },
-    "configurePresets": [
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 25,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "release",
+      "displayName": "GCC 16 Release",
+      "description": "Homebrew GCC with -freflection",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_CXX_COMPILER": "g++-16",
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
+      "name": "debug",
+      "displayName": "GCC 16 Debug",
+      "inherits": "release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "release",
+      "configurePreset": "release"
+    },
+    {
+      "name": "debug",
+      "configurePreset": "debug"
+    }
+  ],
+  "workflowPresets": [
+    {
+      "name": "release",
+      "steps": [
         {
-            "name": "gcc",
-            "displayName": "GCC 16 Release",
-            "description": "Homebrew GCC with -freflection",
-            "binaryDir": "${sourceDir}/build/${presetName}",
-            "cacheVariables": {
-                "CMAKE_CXX_COMPILER": "g++-16",
-                "CMAKE_BUILD_TYPE": "Release",
-                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
-            }
+          "type": "configure",
+          "name": "release"
         },
         {
-            "name": "gcc-debug",
-            "displayName": "GCC 16 Debug",
-            "inherits": "gcc",
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug"
-            }
-        }
-    ],
-    "buildPresets": [
-        { "name": "gcc", "configurePreset": "gcc" },
-        { "name": "gcc-debug", "configurePreset": "gcc-debug" }
-    ],
-    "testPresets": [
-        {
-            "name": "gcc",
-            "configurePreset": "gcc",
-            "output": { "outputOnFailure": true }
+          "type": "build",
+          "name": "release"
         },
         {
-            "name": "gcc-debug",
-            "configurePreset": "gcc-debug",
-            "output": { "outputOnFailure": true }
+          "type": "test",
+          "name": "release"
         }
-    ]
+      ]
+    },
+    {
+      "name": "debug",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "debug"
+        },
+        {
+          "type": "build",
+          "name": "debug"
+        },
+        {
+          "type": "test",
+          "name": "debug"
+        }
+      ]
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "release",
+      "configurePreset": "release",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "debug",
+      "configurePreset": "debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
+  ]
 }
