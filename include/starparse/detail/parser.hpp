@@ -17,8 +17,11 @@
 #include <starparse/detail/utilities.hpp>
 #include <starparse/detail/errors.hpp>
 
+#include "assertions.h"
+
 namespace StarParse::detail::Parser {
     using namespace StarParse::detail::Utilities;
+    using namespace StarParse::detail::Assertions;
 
     struct ArgAttributes {
         size_t argv_index{};
@@ -327,10 +330,30 @@ namespace StarParse::detail::Parser {
 
     template<typename T>
     void check_assertions() {
-        static_assert(Utilities::no_positional_containers<T>(),
+        static_assert(Assertions::no_positional_containers<T>(),
                       "cannot use Positional in combination with a container");
-        static_assert(Utilities::no_required_optionals<T>(),
+        static_assert(Assertions::no_required_optionals<T>(),
                       "a Required field cannot have a std::optional type; drop one of the two");
+        /* TODO
+            1. duplicate short names in Opt
+            2. duplicate/non-contiguous Positional indices
+            3. alias collisions with field names (or with help/version)
+            4. only one type of validator per field
+            5. ambiguous option names: short names same, aliases same within or across fields, alias conflicts with field name, short name with field name
+            6. field name or alias colliding with help/version
+            7. positional indices: duplicates, gaps, indices dont start at zero (reorder fields automatically?)
+            8. annotations only appear once: opt, positional, separator, program, min, max, range, validator
+            9. only one of: validator, choices, min, max, range at a time
+            10. min, max, range on non-numeric types
+            11. requires Choices type convertible to std::string_view
+            12. check Range bounds for reversals, indefinite values, no valid values e.g., 300-400 on uint8_t
+            13. validator: function pointer must be non-null
+            14. reject Separator on scalar fields
+            15. if a field contains opt/positional, fields that don't contain either cant have other annotations
+            16. enums: check aliases colliding with other aliases or enumerator names
+            17. misplaced annotations: program on field, field-only annotations on enum values
+            18. disallowed values: aliases containing =, short names with - or =, leading dashes or whitespace on aliases
+         */
     }
 
     template<typename T>
