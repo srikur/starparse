@@ -42,4 +42,21 @@ namespace StarParse::detail::Assertions {
         }
         return true;
     }
+
+    template<typename T>
+    consteval bool check_positional_indices() {
+        const auto members = std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current());
+        std::vector<bool> seen(members.size());
+        auto count{0uz}, end{0uz};
+        for (const auto m : members) {
+            if (const auto pos = positional_of(m)) {
+                const auto i = pos->index;
+                if (i >= seen.size() || seen[i]) return false;
+                seen[i] = true;
+                count++;
+                end = std::max(end, i + 1);
+            }
+        }
+        return count == end;
+    }
 }
