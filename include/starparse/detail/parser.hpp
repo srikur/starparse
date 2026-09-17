@@ -334,6 +334,7 @@ namespace StarParse::detail::Parser {
                       "cannot use Positional in combination with a container");
         static_assert(Assertions::no_required_optionals<T>(),
                       "a Required field cannot have a std::optional type; drop one of the two");
+        static_assert(Assertions::no_duplicate_short_names<T>(), "two fields cannot have duplicate Opt short names");
         /* TODO
             1. duplicate short names in Opt
             2. duplicate/non-contiguous Positional indices
