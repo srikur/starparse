@@ -82,7 +82,7 @@ namespace StarParse::detail::Assertions {
             });
             if (range_count > 1) return false;
             const auto choices_count = std::ranges::count_if(annotations, [](const std::meta::info a) {
-                return std::meta::remove_cv(std::meta::type_of(a)) == std::meta::dealias(^^Choices);
+                return is_specialization_of(std::meta::remove_cv(std::meta::type_of(a)), ^^Choices);
             });
             if (choices_count > 1) return false;
             // also if more than 1 on a field

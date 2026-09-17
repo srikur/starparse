@@ -347,7 +347,6 @@ namespace StarParse::detail::Parser {
             8. annotations only appear once: opt, positional, separator, program, min, max, range, validator
             9. only one of: validator, choices, min, max, range at a time
             10. min, max, range on non-numeric types
-            11. requires Choices type convertible to std::string_view
             12. check Range bounds for reversals, indefinite values, no valid values e.g., 300-400 on uint8_t
             13. validator: function pointer must be non-null
             14. reject Separator on scalar fields
