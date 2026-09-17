@@ -90,4 +90,13 @@ namespace StarParse::detail::Assertions {
         }
         return true;
     }
+
+    template<typename T>
+    consteval bool no_scalar_separators() {
+        const auto members = std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current());
+        for (const auto m : members) {
+            if (!is_container(m) && separator_of(m).has_value()) return false;
+        }
+        return true;
+    }
 }

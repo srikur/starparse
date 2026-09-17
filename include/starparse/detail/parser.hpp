@@ -339,6 +339,7 @@ namespace StarParse::detail::Parser {
                       "Positional indices must start be unique, begin at 0, and increment contiguously");
         static_assert(Assertions::no_duplicate_validators<T>(),
                       "only one annotation among Min, Max, Range, Choices, or Validator can be applied to a single field");
+        static_assert(Assertions::no_scalar_separators<T>(), "the Separator annotation cannot be applied to scalar fields");
         /* TODO
             3. alias collisions with field names (or with help/version)
             5. ambiguous option names: short names same, aliases same within or across fields, alias conflicts with field name, short name with field name
@@ -349,7 +350,6 @@ namespace StarParse::detail::Parser {
             10. min, max, range on non-numeric types
             12. check Range bounds for reversals, indefinite values, no valid values e.g., 300-400 on uint8_t
             13. validator: function pointer must be non-null
-            14. reject Separator on scalar fields
             15. if a field contains opt/positional, fields that don't contain either cant have other annotations
             16. enums: check aliases colliding with other aliases or enumerator names
             17. misplaced annotations: program on field, field-only annotations on enum values
