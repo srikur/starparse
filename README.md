@@ -31,12 +31,10 @@ auto main(int argc, char** argv) -> int {
 
 ## Building and testing
 
-The `gcc` preset expects `g++-16` on your `PATH` (e.g. Homebrew's `gcc` package on macOS):
+The `release` and `debug` presets expect `g++-16` on your `PATH` (e.g. Homebrew's `gcc` package on macOS). Configure, build, and test in one command:
 
 ```sh
-cmake --preset gcc
-cmake --build --preset gcc
-ctest --preset gcc
+cmake --workflow --preset release
 ```
 
 Without presets: `cmake -S . -B build -DCMAKE_CXX_COMPILER=g++-16` and go from there.
@@ -58,8 +56,8 @@ target_link_libraries(your_app PRIVATE starparse::starparse)
 ### Installed package
 
 ```sh
-cmake --preset gcc
-cmake --install build/gcc            # or --prefix /some/prefix
+cmake --preset release
+cmake --install build/release        # or --prefix /some/prefix
 ```
 
 ```cmake
