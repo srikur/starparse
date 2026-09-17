@@ -59,4 +59,35 @@ namespace StarParse::detail::Assertions {
         }
         return count == end;
     }
+
+    template<typename T>
+    consteval bool no_duplicate_validators() {
+        const auto members = std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current());
+        for (const auto m : members) {
+            const std::vector<std::meta::info> annotations = std::meta::annotations_of(m);
+            const auto validator_count = std::ranges::count_if(annotations, [](const std::meta::info a) {
+                return is_specialization_of(std::meta::remove_cv(std::meta::type_of(a)), ^^Validator);
+            });
+            if (validator_count > 1) return false;
+            const auto min_count = std::ranges::count_if(annotations, [](const std::meta::info a) {
+                return is_specialization_of(std::meta::remove_cv(std::meta::type_of(a)), ^^Min);
+            });
+            if (min_count > 1) return false;
+            const auto max_count = std::ranges::count_if(annotations, [](const std::meta::info a) {
+                return is_specialization_of(std::meta::remove_cv(std::meta::type_of(a)), ^^Max);
+            });
+            if (max_count > 1) return false;
+            const auto range_count = std::ranges::count_if(annotations, [](const std::meta::info a) {
+                return is_specialization_of(std::meta::remove_cv(std::meta::type_of(a)), ^^Range);
+            });
+            if (range_count > 1) return false;
+            const auto choices_count = std::ranges::count_if(annotations, [](const std::meta::info a) {
+                return std::meta::remove_cv(std::meta::type_of(a)) == std::meta::dealias(^^Choices);
+            });
+            if (choices_count > 1) return false;
+            // also if more than 1 on a field
+            if (validator_count + min_count + max_count + range_count + choices_count > 1) return false;
+        }
+        return true;
+    }
 }

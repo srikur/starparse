@@ -337,9 +337,10 @@ namespace StarParse::detail::Parser {
         static_assert(Assertions::no_duplicate_short_names<T>(), "two fields cannot have duplicate Opt short names");
         static_assert(Assertions::check_positional_indices<T>(),
                       "Positional indices must start be unique, begin at 0, and increment contiguously");
+        static_assert(Assertions::no_duplicate_validators<T>(),
+                      "only one annotation among Min, Max, Range, Choices, or Validator can be applied to a single field");
         /* TODO
             3. alias collisions with field names (or with help/version)
-            4. only one type of validator per field
             5. ambiguous option names: short names same, aliases same within or across fields, alias conflicts with field name, short name with field name
             6. field name or alias colliding with help/version
             7. positional indices: duplicates, gaps, indices dont start at zero (reorder fields automatically?)
