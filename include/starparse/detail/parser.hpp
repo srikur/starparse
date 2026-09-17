@@ -330,27 +330,30 @@ namespace StarParse::detail::Parser {
 
     template<typename T>
     void check_assertions() {
+        static_assert(Assertions::check_annotation_placement<T>(),
+                      "misplaced annotation: Program belongs on the argument type; enum values only accept Alias");
+        static_assert(Assertions::no_annotations_on_ignored_fields<T>(),
+                      "annotated fields need Opt or Positional when another field uses Opt or Positional");
+        static_assert(Assertions::no_duplicate_annotations<T>(),
+                      "annotations other than Alias may only appear once on an entity");
+        static_assert(Assertions::check_name_values<T>(),
+                      "invalid option spelling: aliases must be nonempty, contain no whitespace or '=', and not start with '-'; "
+                      "short names cannot be whitespace, '-' or '='");
         static_assert(Assertions::no_positional_containers<T>(),
                       "cannot use Positional in combination with a container");
         static_assert(Assertions::no_required_optionals<T>(),
                       "a Required field cannot have a std::optional type; drop one of the two");
         static_assert(Assertions::no_duplicate_short_names<T>(), "two fields cannot have duplicate Opt short names");
         static_assert(Assertions::check_positional_indices<T>(),
-                      "Positional indices must start be unique, begin at 0, and increment contiguously");
+                      "Positional indices must be unique, begin at 0, and increment contiguously");
         static_assert(Assertions::no_duplicate_validators<T>(),
                       "only one annotation among Min, Max, Range, Choices, or Validator can be applied to a single field");
         static_assert(Assertions::no_scalar_separators<T>(), "the Separator annotation cannot be applied to scalar fields");
         static_assert(Assertions::check_ranges<T>(), "invalid Range annotation for specified type");
-        /* TODO
-            3. alias collisions with field names (or with help/version)
-            5. ambiguous option names: short names same, aliases same within or across fields, alias conflicts with field name, short name with field name
-            6. field name or alias colliding with help/version
-            13. validator: function pointer must be non-null
-            15. if a field contains opt/positional, fields that don't contain either cant have other annotations
-            16. enums: check aliases colliding with other aliases or enumerator names
-            17. misplaced annotations: program on field, field-only annotations on enum values
-            18. disallowed values: aliases containing =, short names with - or =, leading dashes or whitespace on aliases
-         */
+        static_assert(Assertions::check_alias_collisions<T>(),
+                      "option names, short names, or aliases collide, or use reserved help/version names (including case and kebab spellings)");
+        static_assert(Assertions::check_enum_alias_collisions<T>(),
+                      "enum aliases or enumerator names collide (including case and kebab spellings)");
     }
 
     template<typename T>

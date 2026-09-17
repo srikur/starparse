@@ -22,6 +22,7 @@ target_sources(starparse INTERFACE
     FILES
         include/starparse/starparse.hpp
         include/starparse/detail/annotations.hpp
+        include/starparse/detail/assertions.hpp
         include/starparse/detail/errors.hpp
         include/starparse/detail/parser.hpp
         include/starparse/detail/settings.hpp
