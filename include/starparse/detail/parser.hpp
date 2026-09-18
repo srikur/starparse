@@ -123,12 +123,155 @@ namespace StarParse::detail::Parser {
     };
 
     template<typename T>
+    std::string format_help(std::span<const size_t> command_path, const std::string &command_name,
+                            std::string usage, const bool allow_aliases) {
+        static constexpr auto members = std::define_static_array(
+            std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
+        constexpr auto program = program_of(^^T);
+
+        struct ArgumentRow {
+            size_t index{};
+            std::string_view name;
+            std::string description;
+            bool required{};
+        };
+        struct HelpRow {
+            std::string invocation;
+            std::string description;
+        };
+        std::vector<ArgumentRow> arguments;
+        std::vector<HelpRow> options;
+        std::vector<HelpRow> commands;
+
+        template for (constexpr auto m : members) {
+            using M = [:std::meta::type_of(m):];
+            constexpr auto opt = opt_of(m);
+            constexpr auto pos = positional_of(m);
+            constexpr auto position = positional_index_of<T>(m);
+            constexpr auto name = std::string_view{std::meta::identifier_of(m)};
+            constexpr bool required = is_required(m);
+
+            std::string description;
+            if constexpr (opt.has_value()) {
+                if (opt->help_ != nullptr) description = opt->help();
+            }
+            if constexpr (pos.has_value()) {
+                if (pos->help_ != nullptr) description = pos->help();
+            }
+            if constexpr (required) {
+                description += description.empty() ? "(required)" : " (required)";
+            }
+
+            if constexpr (is_subcommand(m)) {
+                using Child = [:value_type_of(^^M):];
+                constexpr auto child_program = program_of(^^Child);
+                if constexpr (child_program.has_value()) {
+                    if (child_program->description != nullptr) description = child_program->description;
+                }
+                std::string invocation{name};
+                if (allow_aliases) {
+                    for (const char *alias : alias_names<m>()) {
+                        invocation += std::format(", {}", alias);
+                    }
+                }
+                commands.push_back({std::move(invocation), std::move(description)});
+            } else {
+                if constexpr (position.has_value()) {
+                    arguments.push_back({*position, name, description, required});
+                }
+                if constexpr (is_named_option<T>(m)) {
+                    std::string invocation{"    "};
+                    if constexpr (opt.has_value()) {
+                        if constexpr (opt->short_name != 0) {
+                            invocation = std::format("-{}, ", opt->short_name);
+                        }
+                    }
+                    invocation += std::format("--{}", name);
+                    if (allow_aliases) {
+                        for (const char *alias : alias_names<m>()) {
+                            const std::string_view a{alias};
+                            invocation += std::format(", {}{}", a.size() == 1 ? "-" : "--", a);
+                        }
+                    }
+                    if constexpr (!is_flag_type(^^M)) {
+                        invocation += " <value>";
+                    }
+                    options.push_back({std::move(invocation), std::move(description)});
+                }
+            }
+        }
+        std::ranges::sort(arguments, {}, &ArgumentRow::index);
+        options.push_back({"    --help", "Show this help message"});
+        options.push_back({"    --version", "Show version information"});
+
+        usage += " [options]";
+        for (const auto &argument : arguments) {
+            usage += argument.required
+                         ? std::format(" <{}>", argument.name)
+                         : std::format(" [{}]", argument.name);
+        }
+
+        if (!command_path.empty()) {
+            template for (constexpr auto m : members) {
+                if constexpr (is_subcommand(m)) {
+                    if (command_path.front() == member_index_of<T>(m)) {
+                        using Child = [:value_type_of(std::meta::type_of(m)):];
+                        constexpr auto name = std::meta::identifier_of(m);
+                        return format_help<Child>(command_path.subspan(1),
+                                                  std::format("{} {}", command_name, name),
+                                                  std::format("{} {}", usage, name), allow_aliases);
+                    }
+                }
+            }
+        }
+        if (!commands.empty()) usage += " [command]";
+
+        size_t column{0};
+        for (const auto &argument : arguments) column = std::max(column, argument.name.size());
+        for (const auto &option : options) column = std::max(column, option.invocation.size());
+        for (const auto &command : commands) column = std::max(column, command.invocation.size());
+        column += 2;
+
+        std::string text;
+        if constexpr (program.has_value()) {
+            if (program->description != nullptr && *program->description != '\0') {
+                text += std::format("{} - {}\n\n", command_name, program->description);
+            } else {
+                text += std::format("{}\n\n", command_name);
+            }
+        }
+        text += std::format("Usage: {}\n", usage);
+        if (!arguments.empty()) {
+            text += "\nArguments:\n";
+            for (const auto &argument : arguments) {
+                if (argument.description.empty()) text += std::format("  {}\n", argument.name);
+                else text += std::format("  {:<{}}{}\n", argument.name, column, argument.description);
+            }
+        }
+        text += "\nOptions:\n";
+        for (const auto &option : options) {
+            if (option.description.empty()) text += std::format("  {}\n", option.invocation);
+            else text += std::format("  {:<{}}{}\n", option.invocation, column, option.description);
+        }
+        if (!commands.empty()) {
+            text += "\nCommands:\n";
+            for (const auto &command : commands) {
+                if (command.description.empty()) text += std::format("  {}\n", command.invocation);
+                else text += std::format("  {:<{}}{}\n", command.invocation, column, command.description);
+            }
+        }
+        return text;
+    }
+
+    template<typename T>
     class ParsedArgs {
     public:
         ParsedArgs(T out, const bool show_help, const bool show_version,
-                   std::vector<ParseError> &errors) : out_(std::move(out)),
+                   std::vector<ParseError> &errors, std::vector<size_t> command_path = {},
+                   const bool allow_aliases = true) : out_(std::move(out)),
                                                       show_help_(show_help), show_version_(show_version),
-                                                      errors_(std::move(errors)) {}
+                                                      errors_(std::move(errors)),
+                                                      command_path_(std::move(command_path)), allow_aliases_(allow_aliases) {}
 
         T &&value() && {
             return std::move(out_);
@@ -172,102 +315,9 @@ namespace StarParse::detail::Parser {
         }
 
         [[nodiscard]] std::string help() const {
-            static constexpr auto members = std::define_static_array(
-                std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
             constexpr auto program = program_of(^^T);
-            constexpr std::string_view program_name =
-                    program.has_value() ? std::string_view{program->name} : std::string_view{"program"};
-
-            struct ArgumentRow {
-                size_t index{};
-                std::string_view name;
-                std::string description;
-                bool required{};
-            };
-            struct OptionRow {
-                std::string invocation;
-                std::string description;
-            };
-            std::vector<ArgumentRow> arguments;
-            std::vector<OptionRow> options;
-
-            template for (constexpr auto m : members) {
-                using M = [:std::meta::type_of(m):];
-                constexpr auto opt = opt_of(m);
-                constexpr auto pos = positional_of(m);
-                constexpr auto name = std::string_view{std::meta::identifier_of(m)};
-                constexpr bool required = is_required(m);
-
-                std::string description;
-                if constexpr (opt.has_value()) {
-                    if (opt->help_ != nullptr) description = opt->help();
-                }
-                if constexpr (pos.has_value()) {
-                    if (pos->help_ != nullptr) description = pos->help();
-                    if constexpr (required) {
-                        description += description.empty() ? "(required)" : " (required)";
-                    }
-                }
-
-                if constexpr (pos.has_value()) {
-                    arguments.push_back({pos->index, name, std::move(description), required});
-                } else if constexpr (is_named_option<T>(m)) {
-                    std::string invocation{"    "};
-                    if constexpr (opt.has_value()) {
-                        if constexpr (opt->short_name != 0) {
-                            invocation = std::format("-{}, ", opt->short_name);
-                        }
-                    }
-                    invocation += std::format("--{}", name);
-                    for (const char *alias : alias_names<m>()) {
-                        const std::string_view a{alias};
-                        invocation += std::format(", {}{}", a.size() == 1 ? "-" : "--", a);
-                    }
-                    if constexpr (!is_flag_type(^^M)) {
-                        invocation += " <value>";
-                    }
-                    options.push_back({std::move(invocation), std::move(description)});
-                }
-            }
-            std::ranges::sort(arguments, {}, &ArgumentRow::index);
-            options.push_back({"    --help", "Show this help message"});
-            options.push_back({"    --version", "Show version information"});
-
-            std::string usage = std::format("Usage: {} [options]", program_name);
-            for (const auto &argument : arguments) {
-                usage += argument.required
-                             ? std::format(" <{}>", argument.name)
-                             : std::format(" [{}]", argument.name);
-            }
-
-            size_t column{0};
-            for (const auto &argument : arguments) column = std::max(column, argument.name.size());
-            for (const auto &option : options) column = std::max(column, option.invocation.size());
-            column += 2;
-
-            std::string text;
-            if constexpr (program.has_value()) {
-                if (program->description != nullptr && *program->description != '\0') {
-                    text += std::format("{} - {}\n\n", program_name, program->description);
-                } else {
-                    text += std::format("{}\n\n", program_name);
-                }
-            }
-            text += usage;
-            text += '\n';
-            if (!arguments.empty()) {
-                text += "\nArguments:\n";
-                for (const auto &argument : arguments) {
-                    if (argument.description.empty()) text += std::format("  {}\n", argument.name);
-                    else text += std::format("  {:<{}}{}\n", argument.name, column, argument.description);
-                }
-            }
-            text += "\nOptions:\n";
-            for (const auto &option : options) {
-                if (option.description.empty()) text += std::format("  {}\n", option.invocation);
-                else text += std::format("  {:<{}}{}\n", option.invocation, column, option.description);
-            }
-            return text;
+            const std::string program_name = program.has_value() ? program->name : "program";
+            return format_help<T>(command_path_, program_name, program_name, allow_aliases_);
         }
 
         [[nodiscard]] std::string error_message() const {
@@ -287,6 +337,8 @@ namespace StarParse::detail::Parser {
         bool show_help_{};
         bool show_version_{};
         std::vector<ParseError> errors_;
+        std::vector<size_t> command_path_;
+        bool allow_aliases_{};
     };
 
     template<typename T>
@@ -391,6 +443,7 @@ namespace StarParse::detail::Parser {
         bool help_requested{false};
         bool version_requested{false};
         std::vector<ParseError> errors{};
+        std::vector<size_t> command_path{};
     };
 
     template<typename T>
@@ -426,6 +479,7 @@ namespace StarParse::detail::Parser {
                         matched = true;
                         ++fields_set[idx];
 
+                        state.command_path.push_back(idx);
                         parse_into<Child>(attributes.subspan(i + 1), *child, settings, state);
                         entered_child = true;
                     }
@@ -477,6 +531,7 @@ namespace StarParse::detail::Parser {
             }
         }
 
+        if (state.help_requested) return;
         template for (constexpr auto m : members) {
             const size_t index = member_index_of<T>(m);
             if constexpr (is_required(m)) {
