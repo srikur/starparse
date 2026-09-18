@@ -63,6 +63,15 @@ namespace StarParse::detail::Utilities {
         return std::meta::has_template_arguments(r) && std::meta::template_of(r) == ^^std::optional;
     }
 
+    consteval bool is_subcommand(const std::meta::info m) {
+        for (const auto a : std::meta::annotations_of(m)) {
+            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^detail::Subcommand_)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     consteval std::meta::info value_type_of(const std::meta::info r) {
         return std::meta::template_arguments_of(std::meta::dealias(r))[0];
     }
@@ -339,7 +348,7 @@ namespace StarParse::detail::Utilities {
 
     consteval bool is_required(const std::meta::info m) {
         for (const auto a : std::meta::annotations_of(m)) {
-            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^Required_)) {
+            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^detail::Required_)) {
                 return true;
             }
         }

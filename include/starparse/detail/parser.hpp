@@ -31,6 +31,7 @@ namespace StarParse::detail::Parser {
         bool is_version{};
         bool is_positional{};
         bool is_separator{};
+        bool is_subcommand{};
         bool has_value{};
         std::string_view name{};
         std::string_view value{};
@@ -289,11 +290,11 @@ namespace StarParse::detail::Parser {
     };
 
     template<typename T>
-    std::vector<ArgAttributes> get_arg_attrs(std::span<const std::string_view> args, const Settings &settings) {
-        std::vector<ArgAttributes> attr_array;
-        attr_array.reserve(args.size());
-        bool separator_seen{false};
-        for (auto i{0uz}; i < args.size(); ++i) {
+    void get_arg_attrs_into(std::span<const std::string_view> args, const Settings &settings, size_t &i, bool &separator_seen,
+                            std::vector<ArgAttributes> &attrs) {
+        static constexpr auto members = std::define_static_array(
+            std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
+        for (; i < args.size(); ++i) {
             ArgAttributes a{args[i], i + 1, separator_seen};
             if (a.is_separator) {
                 separator_seen = true;
@@ -307,7 +308,7 @@ namespace StarParse::detail::Parser {
                     for (auto f{0uz}; f < a.name.size(); ++f) {
                         ArgAttributes flag{a};
                         flag.name = a.name.substr(f, 1);
-                        attr_array.push_back(flag);
+                        attrs.push_back(flag);
                     }
                     continue;
                 }
@@ -323,8 +324,36 @@ namespace StarParse::detail::Parser {
                 a.value = args[++i];
                 a.has_value = true;
             }
-            attr_array.push_back(a);
+            // check for subcommand
+            if (a.is_positional && !separator_seen) {
+                template for (constexpr auto m : members) {
+                    if constexpr (is_subcommand(m)) {
+                        using M = [:std::meta::type_of(m):];
+                        static_assert(is_optional(^^M));
+                        using Child = [:value_type_of(^^M):];
+
+                        if (does_match_name<m>(a.name, std::nullopt, settings, false)) {
+                            a.is_subcommand = true;
+                            a.is_positional = false;
+                            attrs.push_back(a);
+                            i++;
+                            get_arg_attrs_into<Child>(args, settings, i, separator_seen, attrs);
+                            return;
+                        }
+                    }
+                }
+            }
+            attrs.push_back(a);
         }
+    }
+
+    template<typename T>
+    std::vector<ArgAttributes> get_arg_attrs(const std::span<const std::string_view> args, const Settings &settings) {
+        std::vector<ArgAttributes> attr_array;
+        attr_array.reserve(args.size());
+        bool separator_seen{false};
+        auto index{0uz};
+        get_arg_attrs_into<T>(args, settings, index, separator_seen, attr_array);
         return attr_array;
     }
 

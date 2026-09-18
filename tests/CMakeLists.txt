@@ -20,6 +20,7 @@ starparse_test_executable(test_separator)
 starparse_test_executable(test_container)
 starparse_test_executable(test_container_validation)
 starparse_test_executable(test_settings)
+starparse_test_executable(test_subcommands)
 
 # starparse_case(<test name> <target> <expected output regex> [args...])
 function(starparse_case name target expected)
