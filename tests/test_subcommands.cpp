@@ -4,11 +4,11 @@
 
 // TODO: static assert: subcommand names can't overlap (might just be covered by not having duplicate field names possible)
 struct Add {
-    int value;
+    [[=StarParse::Positional{0}]] int value;
 };
 
 struct Subtract {
-    int value;
+    [[=StarParse::Positional{0}]] int value;
 };
 
 struct Operation {
@@ -18,7 +18,7 @@ struct Operation {
 };
 
 struct Args {
-    [[=StarParse::Required]] int initial;
+    [[=StarParse::Required, =StarParse::Positional{0}]] int initial;
     [[=StarParse::Subcommand]] std::optional<Operation> operation;
 };
 
