@@ -35,6 +35,10 @@ namespace StarParse::inline annotations {
 
         template<typename F>
         using first_arg_t = first_arg<std::remove_cvref_t<F> >::type;
+
+        struct Subcommand_ final {};
+
+        struct Required_ final {};
     }
 
     struct Opt final {
@@ -62,8 +66,6 @@ namespace StarParse::inline annotations {
 
         [[nodiscard]] constexpr std::string_view help() const { return help_; }
     };
-
-    struct Required final {};
 
     struct Separator final {
         const char *value{};
@@ -170,4 +172,8 @@ namespace StarParse::inline annotations {
 
     template<typename F>
     Validator(F) -> Validator<detail::first_arg_t<F> >;
+
+    constexpr detail::Subcommand_ Subcommand{};
+
+    constexpr detail::Required_ Required{};
 }

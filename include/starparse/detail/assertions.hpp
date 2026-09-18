@@ -24,7 +24,7 @@ namespace StarParse::detail::Assertions {
         const auto type = std::meta::dealias(std::meta::remove_cv(std::meta::type_of(annotation)));
         if (type == ^^Opt) return AnnotationKind::OPT;
         if (type == ^^Positional) return AnnotationKind::POSITIONAL;
-        if (type == ^^Required) return AnnotationKind::REQUIRED;
+        if (type == ^^Required_) return AnnotationKind::REQUIRED;
         if (type == ^^Separator) return AnnotationKind::SEPARATOR;
         if (type == ^^Alias) return AnnotationKind::ALIAS;
         if (type == ^^Program) return AnnotationKind::PROGRAM;

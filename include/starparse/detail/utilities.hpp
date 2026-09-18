@@ -339,7 +339,7 @@ namespace StarParse::detail::Utilities {
 
     consteval bool is_required(const std::meta::info m) {
         for (const auto a : std::meta::annotations_of(m)) {
-            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^Required)) {
+            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^Required_)) {
                 return true;
             }
         }
