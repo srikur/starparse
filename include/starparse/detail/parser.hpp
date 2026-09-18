@@ -385,75 +385,88 @@ namespace StarParse::detail::Parser {
                       "enum aliases or enumerator names collide (including case and kebab spellings)");
     }
 
+    struct ParseState {
+        bool help_requested{false};
+        bool version_requested{false};
+        std::vector<ParseError> errors{};
+    };
+
     template<typename T>
-    ParsedArgs<T> parse(std::span<const std::string_view> args, T initial = {}, Settings settings = {}) {
+    void parse_into(std::span<const ArgAttributes> attributes, T &out, const Settings &settings, ParseState &state) {
         static constexpr auto members = std::define_static_array(
             std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
-
-        // 1. Check annotation constraints
         check_assertions<T>();
-
-        T out{std::move(initial)};
-        bool help_requested{}, version_requested{};
-        std::vector<ParseError> errors{};
-        size_t next_positional{0};
-        ArgContext ctx{};
-        const auto attr_array = get_arg_attrs<T>(args, settings);
         std::array<size_t, members.size()> fields_set{};
+        size_t next_positional{0uz};
+        auto &errors = state.errors;
+        for (auto i{0uz}; i < attributes.size(); ++i) {
+            const auto &attrs = attributes[i];
+            bool matched{false}, entered_child{false};
 
-        for (const auto &attrs : attr_array) {
-            bool matched{false};
             if (attrs.is_help) {
-                help_requested = true;
+                state.help_requested = true;
                 break;
             }
             if (attrs.is_version) {
-                version_requested = true;
+                state.version_requested = true;
                 break;
             }
             template for (constexpr auto m : members) {
                 using M = [:std::meta::type_of(m):];
                 constexpr auto idx = member_index_of<T>(m);
                 constexpr auto pos = positional_index_of<T>(m);
-                if (attrs.is_positional || ctx.separator_seen) {
-                    if constexpr (pos.has_value()) {
-                        if (!matched && next_positional == *pos) {
-                            matched = true;
-                            next_positional++;
-                            assign_from_string<m>(out.[:m:], attrs.name, attrs.argv_index, fields_set[idx], errors,
-                                                  settings);
-                        }
-                    }
-                } else if (attrs.is_separator) {
-                    ctx.separator_seen = true;
-                } else if (attrs.dashed || attrs.double_dashed) {
-                    constexpr auto opt = opt_of(m);
-                    constexpr bool named = is_named_option<T>(m);
-                    const bool matching_string = named && does_match_name<m>(attrs.name, opt, settings);
-                    if (!matched && matching_string) {
+                if constexpr (is_subcommand(m)) {
+                    if (attrs.is_subcommand && !matched && does_match_name<m>(attrs.name, std::nullopt, settings, false)) {
+                        using M = [:std::meta::type_of(m):];
+                        using Child = [:value_type_of(^^M):];
+                        auto &child = out.[:m:];
+                        if (!child) child.emplace();
                         matched = true;
-                        if constexpr (is_flag_type(^^M)) {
-                            if (attrs.has_value) {
+                        ++fields_set[idx];
+
+                        parse_into<Child>(attributes.subspan(i + 1), *child, settings, state);
+                        entered_child = true;
+                    }
+                } else {
+                    if (attrs.is_positional) {
+                        if constexpr (pos.has_value()) {
+                            if (!matched && next_positional == *pos) {
+                                matched = true;
+                                next_positional++;
+                                assign_from_string<m>(out.[:m:], attrs.name, attrs.argv_index, fields_set[idx], errors,
+                                                      settings);
+                            }
+                        }
+                    } else if (attrs.dashed || attrs.double_dashed) {
+                        constexpr auto opt = opt_of(m);
+                        constexpr bool named = is_named_option<T>(m);
+                        const bool matching_string = named && does_match_name<m>(attrs.name, opt, settings);
+                        if (!matched && matching_string) {
+                            matched = true;
+                            if constexpr (is_flag_type(^^M)) {
+                                if (attrs.has_value) {
+                                    assign_from_string<m>(out.[:m:], attrs.value, attrs.argv_index, fields_set[idx], errors,
+                                                          settings);
+                                } else {
+                                    out.[:m:] = true;
+                                }
+                                fields_set[idx] = 1;
+                            } else {
+                                if (!attrs.has_value) {
+                                    errors.push_back({
+                                        .kind = ErrorKind::MISSING_VALUE, .current_argument = attrs.name,
+                                        .argv_index = attrs.argv_index
+                                    });
+                                    continue;
+                                }
                                 assign_from_string<m>(out.[:m:], attrs.value, attrs.argv_index, fields_set[idx], errors,
                                                       settings);
-                            } else {
-                                out.[:m:] = true;
                             }
-                            fields_set[idx] = 1;
-                        } else {
-                            if (!attrs.has_value) {
-                                errors.push_back({
-                                    .kind = ErrorKind::MISSING_VALUE, .current_argument = attrs.name,
-                                    .argv_index = attrs.argv_index
-                                });
-                                continue;
-                            }
-                            assign_from_string<m>(out.[:m:], attrs.value, attrs.argv_index, fields_set[idx], errors,
-                                                  settings);
                         }
                     }
                 }
             }
+            if (entered_child) break;
             if (!matched) {
                 errors.push_back({
                     .kind = ErrorKind::UNKNOWN_OPTION, .input_value = attrs.name,
@@ -467,7 +480,7 @@ namespace StarParse::detail::Parser {
             if constexpr (is_required(m)) {
                 if (fields_set[index] == 0) {
                     const auto field_name = std::string_view{std::meta::identifier_of(m)};
-                    errors.push_back({
+                    state.errors.push_back({
                         .kind = ErrorKind::MISSING_REQUIRED,
                         .current_argument = std::optional{field_name},
                         .argv_index = index
@@ -476,7 +489,7 @@ namespace StarParse::detail::Parser {
             } else if constexpr (is_array(m)) {
                 if (fields_set[index] < std::meta::tuple_size(m)) {
                     const auto field_name = std::string_view{std::meta::identifier_of(m)};
-                    errors.push_back({
+                    state.errors.push_back({
                         .kind = ErrorKind::MISSING_VALUE,
                         .current_argument = std::optional{field_name},
                         .argv_index = index
@@ -484,7 +497,15 @@ namespace StarParse::detail::Parser {
                 }
             }
         }
+    }
 
-        return ParsedArgs<T>{out, help_requested, version_requested, errors};
+    template<typename T>
+    ParsedArgs<T> parse(std::span<const std::string_view> args, T initial = {}, Settings settings = {}) {
+        T out{std::move(initial)};
+        ParseState state{};
+        const auto attr_array = get_arg_attrs<T>(args, settings);
+
+        parse_into<T>(attr_array, out, settings, state);
+        return ParsedArgs<T>{std::move(out), state.help_requested, state.version_requested, state.errors};
     }
 }
