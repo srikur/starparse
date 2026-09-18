@@ -63,6 +63,15 @@ namespace StarParse::detail::Utilities {
         return std::meta::has_template_arguments(r) && std::meta::template_of(r) == ^^std::optional;
     }
 
+    consteval bool is_subcommand(const std::meta::info m) {
+        for (const auto a : std::meta::annotations_of(m)) {
+            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^detail::Subcommand_)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     consteval std::meta::info value_type_of(const std::meta::info r) {
         return std::meta::template_arguments_of(std::meta::dealias(r))[0];
     }
@@ -262,6 +271,15 @@ namespace StarParse::detail::Utilities {
         return std::nullopt;
     }
 
+    consteval std::optional<detail::Subcommand_> subcommand_of(const std::meta::info m) {
+        for (const std::meta::info a : std::meta::annotations_of(m)) {
+            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^detail::Subcommand_)) {
+                return std::meta::extract<detail::Subcommand_>(a);
+            }
+        }
+        return std::nullopt;
+    }
+
     template<std::meta::info M>
     consteval auto choices_list() {
         constexpr auto annotation = choices_of(M);
@@ -298,11 +316,14 @@ namespace StarParse::detail::Utilities {
 
     template<typename T>
     consteval bool is_named_option(const std::meta::info m) {
-        return opt_of(m).has_value() || positional_of(m).has_value() || is_bare<T>();
+        return !is_subcommand(m) && (opt_of(m).has_value() || positional_of(m).has_value() || is_bare<T>());
     }
 
     template<typename T>
-    consteval std::optional<size_t> positional_index_of(std::meta::info m) {
+    consteval std::optional<size_t> positional_index_of(const std::meta::info m) {
+        if (is_subcommand(m)) {
+            return std::nullopt;
+        }
         if (auto pos = positional_of(m)) {
             return pos->index;
         }
@@ -339,7 +360,7 @@ namespace StarParse::detail::Utilities {
 
     consteval bool is_required(const std::meta::info m) {
         for (const auto a : std::meta::annotations_of(m)) {
-            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^Required)) {
+            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^detail::Required_)) {
                 return true;
             }
         }

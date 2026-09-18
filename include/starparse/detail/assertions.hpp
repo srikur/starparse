@@ -17,14 +17,15 @@ namespace StarParse::detail::Assertions {
     using namespace StarParse::detail::Utilities;
 
     enum class AnnotationKind {
-        UNKNOWN, OPT, POSITIONAL, REQUIRED, SEPARATOR, ALIAS, PROGRAM, MIN, MAX, RANGE, CHOICES, VALIDATOR, COUNT
+        UNKNOWN, OPT, POSITIONAL, SUBCOMMAND, REQUIRED, SEPARATOR, ALIAS, PROGRAM, MIN, MAX, RANGE, CHOICES, VALIDATOR, COUNT
     };
 
     consteval AnnotationKind annotation_kind(const std::meta::info annotation) {
         const auto type = std::meta::dealias(std::meta::remove_cv(std::meta::type_of(annotation)));
         if (type == ^^Opt) return AnnotationKind::OPT;
         if (type == ^^Positional) return AnnotationKind::POSITIONAL;
-        if (type == ^^Required) return AnnotationKind::REQUIRED;
+        if (type == ^^detail::Subcommand_) return AnnotationKind::SUBCOMMAND;
+        if (type == ^^detail::Required_) return AnnotationKind::REQUIRED;
         if (type == ^^Separator) return AnnotationKind::SEPARATOR;
         if (type == ^^Alias) return AnnotationKind::ALIAS;
         if (type == ^^Program) return AnnotationKind::PROGRAM;
@@ -81,7 +82,7 @@ namespace StarParse::detail::Assertions {
     template<typename T>
     consteval bool no_annotations_on_ignored_fields() {
         for (const auto member : std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current())) {
-            if (!is_named_option<T>(member) && has_parser_annotations(member)) return false;
+            if (!is_named_option<T>(member) && !is_subcommand(member) && has_parser_annotations(member)) return false;
         }
         return true;
     }
@@ -161,13 +162,14 @@ namespace StarParse::detail::Assertions {
         return true;
     }
 
-    consteval void append_names(std::vector<Name> &names, const std::meta::info entity) {
+    consteval void append_names(std::vector<Name> &names, const std::meta::info entity,
+                                const bool include_short_name = true) {
         const std::string identifier{std::meta::identifier_of(entity)};
         names.push_back({.text = identifier, .owner = entity});
         std::string kebab = identifier;
         std::ranges::replace(kebab, '_', '-');
         if (kebab != identifier) names.push_back({.text = std::move(kebab), .owner = entity});
-        if (const auto opt = opt_of(entity); opt && opt->short_name != 0) {
+        if (const auto opt = opt_of(entity); include_short_name && opt && opt->short_name != 0) {
             names.push_back({.text = std::string(1, opt->short_name), .owner = entity, .is_short = true});
         }
         for (const char *alias : alias_name_list(entity)) {
@@ -202,6 +204,15 @@ namespace StarParse::detail::Assertions {
             if (is_named_option<T>(m)) append_names(names, m);
         }
         return unique_names(names, true);
+    }
+
+    template<typename T>
+    consteval bool check_subcommand_collisions() {
+        std::vector<Name> names;
+        for (const auto m : std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current())) {
+            if (is_subcommand(m)) append_names(names, m, false);
+        }
+        return unique_names(names, false);
     }
 
     template<typename T>
