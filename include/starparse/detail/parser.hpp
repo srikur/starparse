@@ -362,7 +362,7 @@ namespace StarParse::detail::Parser {
         static_assert(Assertions::check_annotation_placement<T>(),
                       "misplaced annotation: Program belongs on the argument type; enum values only accept Alias");
         static_assert(Assertions::no_annotations_on_ignored_fields<T>(),
-                      "annotated fields need Opt or Positional when another field uses Opt or Positional");
+                      "annotated fields need Opt, Positional, or Subcommand when another field uses Opt or Positional");
         static_assert(Assertions::no_duplicate_annotations<T>(),
                       "annotations other than Alias may only appear once on an entity");
         static_assert(Assertions::check_name_values<T>(),
@@ -381,6 +381,8 @@ namespace StarParse::detail::Parser {
         static_assert(Assertions::check_ranges<T>(), "invalid Range annotation for specified type");
         static_assert(Assertions::check_alias_collisions<T>(),
                       "option names, short names, or aliases collide, or use reserved help/version names (including case and kebab spellings)");
+        static_assert(Assertions::check_subcommand_collisions<T>(),
+                      "subcommand names or aliases collide (including case and kebab spellings)");
         static_assert(Assertions::check_enum_alias_collisions<T>(),
                       "enum aliases or enumerator names collide (including case and kebab spellings)");
     }

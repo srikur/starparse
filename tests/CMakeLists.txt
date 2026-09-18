@@ -21,6 +21,7 @@ starparse_test_executable(test_container)
 starparse_test_executable(test_container_validation)
 starparse_test_executable(test_settings)
 starparse_test_executable(test_subcommands)
+starparse_test_executable(test_subcommand_assertions)
 
 # starparse_case(<test name> <target> <expected output regex> [args...])
 function(starparse_case name target expected)
@@ -95,3 +96,15 @@ starparse_case(container.validation_array_rejected test_container_validation "Va
 
 # settings
 starparse_case(settings.case_insensitivity_true test_settings "model: 8" --model=cgb0)
+
+# subcommands
+add_test(NAME subcommands.assertions COMMAND test_subcommand_assertions)
+starparse_case(subcommands.add test_subcommands "Result: 15" 10 operation add 5)
+starparse_case(subcommands.subtract test_subcommands "Result: 5" 10 operation subtract 5)
+starparse_case(subcommands.none test_subcommands "Result: 10" 10)
+starparse_case(subcommands.parent_only test_subcommands "Result: 10" 10 operation)
+starparse_case(subcommands.named_values test_subcommands "Result: 15" --initial=10 operation add --value=5)
+starparse_case(subcommands.case_insensitive test_subcommands "Result: 15" 10 OPERATION ADD 5)
+starparse_case(subcommands.aliases test_subcommands "Result: 15" 10 op plus 5)
+starparse_case(subcommands.subtract_alias test_subcommands "Result: 5" 10 op minus 5)
+starparse_case(subcommands.parent_option test_subcommands "Result: 15" 10 operation --verbose add 5)
