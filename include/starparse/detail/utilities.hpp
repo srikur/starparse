@@ -153,6 +153,8 @@ namespace StarParse::detail::Utilities {
             else return std::unexpected(result.error());
         } else if constexpr (std::constructible_from<M, std::string_view>) {
             return M{s};
+        } else if constexpr (is_char_v<M>) {
+            return s.empty() ? M{0} : M{s[0]};
         } else if constexpr (std::is_arithmetic_v<M>) {
             M v{};
             auto [pointer, error_code] = std::from_chars(s.data(), s.data() + s.size(), v);
@@ -352,8 +354,7 @@ namespace StarParse::detail::Utilities {
             using M = [:std::meta::type_of(m):];
             constexpr auto opt = opt_of(m);
             constexpr bool named = is_named_option<T>(m);
-            const bool match = named && does_match_name<m>(name, opt, settings, is_short);
-            if (match) takes = !is_flag_type(^^M);
+            if (named && does_match_name<m>(name, opt, settings, is_short)) takes = !is_flag_type(^^M);
         }
         return takes;
     }
