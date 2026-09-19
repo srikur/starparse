@@ -87,33 +87,31 @@ namespace StarParse::detail::Parser {
     }
 
     template<typename T>
-    bool is_flag_bundle(std::string_view name) {
+    bool is_flag(const char c, const Settings &settings) {
         static constexpr auto members = std::define_static_array(
             std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
+        template for (constexpr auto m : members) {
+            using M = [:std::meta::type_of(m):];
+            if constexpr (is_flag_type(^^M) && is_named_option<T>(m)) {
+                if (does_match_name<m>(std::string_view{&c, 1}, opt_of(m), settings)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    template<typename T>
+    bool is_flag_bundle(const std::string_view name, const Settings &settings) {
         if (name.size() < 2) {
             return false;
         }
-        for (const char c : name) {
-            bool is_flag{false};
-            template for (constexpr auto m : members) {
-                using M = [:std::meta::type_of(m):];
-                constexpr auto opt = opt_of(m);
-                if constexpr (is_flag_type(^^M)) {
-                    if constexpr (opt.has_value()) {
-                        if (c == opt->short_name) {
-                            is_flag = true;
-                        }
-                    }
-                    if constexpr (is_named_option<T>(m)) {
-                        if (Utilities::matches_alias<m>(std::string_view{&c, 1})) {
-                            is_flag = true;
-                        }
-                    }
-                }
+        for (auto i{0uz}; i < name.size(); ++i) {
+            // as soon as first non-bool option found, assume rest of string is value
+            if (Utilities::option_takes_value<T>(name.substr(i, 1), true, settings)) {
+                return true;
             }
-            if (!is_flag) {
-                return false;
-            }
+            if (!is_flag<T>(name[i], settings)) return false;
         }
         return true;
     }
@@ -356,19 +354,23 @@ namespace StarParse::detail::Parser {
                 // post-separator, all args are positional
                 a.is_positional = true;
             } else if (a.dashed && !a.has_value && a.name.size() > 1 && !matches_full_name<T>(a.name, settings)) {
-                if (is_flag_bundle<T>(a.name)) {
+                if (is_flag_bundle<T>(a.name, settings)) {
                     for (auto f{0uz}; f < a.name.size(); ++f) {
                         ArgAttributes flag{a};
                         flag.name = a.name.substr(f, 1);
+                        if (Utilities::option_takes_value<T>(flag.name, true, settings)) {
+                            flag.value = a.name.substr(f + 1);
+                            flag.has_value = !flag.value.empty();
+                            if (!flag.has_value && i + 1 < args.size()) {
+                                flag.value = args[++i];
+                                flag.has_value = true;
+                            }
+                            attrs.push_back(flag);
+                            break;
+                        }
                         attrs.push_back(flag);
                     }
                     continue;
-                }
-                if (Utilities::option_takes_value<T>(a.name.substr(0, 1), true, settings)) {
-                    // try attached value split (e.g., -ofile for -o file)
-                    a.value = a.name.substr(1, a.name.size() - 1);
-                    a.name = a.name.substr(0, 1);
-                    a.has_value = true;
                 }
             }
             if ((a.dashed || a.double_dashed) && !a.has_value && Utilities::option_takes_value<T>(

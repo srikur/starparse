@@ -10,7 +10,7 @@ struct Flags {
     [[=StarParse::Positional{1}]] int arg2;
 };
 
-auto main(int argc, char** argv) -> int {
+auto main(int argc, char **argv) -> int {
     const auto f{StarParse::parse_or_throw<Flags>(argc, argv)};
     std::println("arg1: {}, keep: {}, verbose: {}, force: {}, arg2: {}", f->arg1, f->keep, f->verbose, f->force, f->arg2);
 }
