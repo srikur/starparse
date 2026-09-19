@@ -13,6 +13,7 @@
 #include <span>
 #include <vector>
 #include <utility>
+#include <limits>
 
 #include <starparse/detail/settings.hpp>
 #include <starparse/detail/annotations.hpp>
@@ -52,6 +53,15 @@ namespace StarParse::detail::Utilities {
         return false;
     }
 
+    consteval std::optional<Opt> opt_of(const std::meta::info m) {
+        for (const std::meta::info a : std::meta::annotations_of(m)) {
+            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^Opt)) {
+                return std::meta::extract<Opt>(a);
+            }
+        }
+        return std::nullopt;
+    }
+
     template<std::meta::info M>
     std::span<const char *const> alias_names() {
         static constexpr auto aliases = std::define_static_array(alias_name_list(M));
@@ -82,6 +92,13 @@ namespace StarParse::detail::Utilities {
             r = std::meta::dealias(value_type_of(r));
         }
         return r == std::meta::dealias(^^bool);
+    }
+
+    consteval bool is_count_type(std::meta::info r) {
+        r = std::meta::dealias(std::meta::remove_cv(r));
+        if (is_optional(r)) r = std::meta::dealias(value_type_of(r));
+        return std::meta::is_integral_type(r) && r != (^^bool) &&
+               !std::meta::extract<bool>(std::meta::substitute(^^is_char_v, {r}));
     }
 
     template<std::meta::info M>
@@ -202,15 +219,6 @@ namespace StarParse::detail::Utilities {
         for (const std::meta::info a : std::meta::annotations_of(r)) {
             if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^Program)) {
                 return std::meta::extract<Program>(a);
-            }
-        }
-        return std::nullopt;
-    }
-
-    consteval std::optional<Opt> opt_of(const std::meta::info m) {
-        for (const std::meta::info a : std::meta::annotations_of(m)) {
-            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^Opt)) {
-                return std::meta::extract<Opt>(a);
             }
         }
         return std::nullopt;
@@ -361,6 +369,19 @@ namespace StarParse::detail::Utilities {
         return takes;
     }
 
+    template<typename T>
+    bool option_is_count(std::string_view name, bool is_short, const Settings &settings) {
+        if (!settings.allow_repeated_counts) return false;
+        static constexpr auto members = std::define_static_array(
+            std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
+        template for (constexpr auto m : members) {
+            if constexpr (is_named_option<T>(m) && is_count_type(std::meta::type_of(m))) {
+                if (does_match_name<m>(name, opt_of(m), settings, is_short)) return true;
+            }
+        }
+        return false;
+    }
+
     consteval bool is_required(const std::meta::info m) {
         for (const auto a : std::meta::annotations_of(m)) {
             if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^detail::Required_)) {
@@ -481,6 +502,29 @@ namespace StarParse::detail::Utilities {
                 });
                 return false;
             }
+        }
+        return true;
+    }
+
+    template<std::meta::info Mem, typename M>
+    bool increment_count(M &field, const std::string_view name, const size_t index,
+                         std::vector<ParseError> &errors, const Settings &settings) {
+        if constexpr (is_optional(^^M)) {
+            auto value = field.value_or(0);
+            if (!increment_count<Mem>(value, name, index, errors, settings)) return false;
+            field = value;
+        } else {
+            if (field == std::numeric_limits<M>::max()) {
+                errors.push_back({
+                    .kind = ErrorKind::OUT_OF_RANGE, .input_value = name,
+                    .detail = "count would overflow", .current_argument = std::meta::identifier_of(Mem),
+                    .argv_index = index
+                });
+                return false;
+            }
+            const M value = field + M{1};
+            if (!validate<Mem>(value, name, index, errors, settings)) return false;
+            field = value;
         }
         return true;
     }

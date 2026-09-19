@@ -60,7 +60,7 @@ starparse_case(bundle.separate_value test_bundle_attached_value "keep: true, job
 starparse_case(bundle.following_flag test_bundle_attached_value "keep: true, jobs: 4" -kj4 -k)
 starparse_case(bundle.single_option_attached test_bundle_attached_value "keep: false, jobs: 42" -j42)
 starparse_case(bundle.full_names test_bundle_attached_value "keep: true, jobs: 4" -keep -jobs 4)
-starparse_case(bundle.missing_value test_bundle_attached_value "Missing value for argument 'j'" -kj)
+starparse_case(bundle.implicit_count test_bundle_attached_value "keep: true, jobs: 1" -kj)
 starparse_case(bundle.invalid_value test_bundle_attached_value "Could not parse input '4k' for argument 'int'" -kj4k)
 starparse_case(bundle.unknown_option test_bundle_attached_value "Unknown option 'kxj4'" -kxj4)
 starparse_case(bundle.double_dash test_bundle_attached_value "Unknown option 'kj4'" --kj4)
@@ -99,7 +99,7 @@ starparse_case(errors.bad_value test_errors "Could not parse input 'abc' for arg
 
 # Specifically testing try_parse()
 starparse_case(try_parse.single_error test_try_parse "Unknown option 'fake_arg'" --fake_arg)
-starparse_case(try_parse.successful_parse test_try_parse "verbose: true, arg1: 3" 3 --verbose)
+starparse_case(try_parse.successful_parse test_try_parse "verbose: true, arg1: 3" -a 3 --verbose)
 
 # Kebab casing
 starparse_case(kebab.basic test_kebab "dry run: 42" --dry-run=42)

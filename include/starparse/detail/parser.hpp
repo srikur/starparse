@@ -340,6 +340,21 @@ namespace StarParse::detail::Parser {
     };
 
     template<typename T>
+    bool takes_next_value(const ArgAttributes &option, const std::string_view next, const Settings &settings) {
+        if (!Utilities::option_is_count<T>(option.name, option.dashed, settings)) return true;
+        if (next.size() > 1 && next.starts_with('-') && !(next[1] >= '0' && next[1] <= '9')) return false;
+
+        static constexpr auto members = std::define_static_array(
+            std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
+        template for (constexpr auto m : members) {
+            if constexpr (is_subcommand(m)) {
+                if (does_match_name<m>(next, std::nullopt, settings, false)) return false;
+            }
+        }
+        return true;
+    }
+
+    template<typename T>
     void get_arg_attrs_into(std::span<const std::string_view> args, const Settings &settings, size_t &i, bool &separator_seen,
                             std::vector<ArgAttributes> &attrs) {
         static constexpr auto members = std::define_static_array(
@@ -361,7 +376,7 @@ namespace StarParse::detail::Parser {
                         if (Utilities::option_takes_value<T>(flag.name, true, settings)) {
                             flag.value = a.name.substr(f + 1);
                             flag.has_value = !flag.value.empty();
-                            if (!flag.has_value && i + 1 < args.size()) {
+                            if (!flag.has_value && i + 1 < args.size() && takes_next_value<T>(flag, args[i + 1], settings)) {
                                 flag.value = args[++i];
                                 flag.has_value = true;
                             }
@@ -374,7 +389,7 @@ namespace StarParse::detail::Parser {
                 }
             }
             if ((a.dashed || a.double_dashed) && !a.has_value && Utilities::option_takes_value<T>(
-                    a.name, a.dashed, settings) && i + 1 < args.size()) {
+                    a.name, a.dashed, settings) && i + 1 < args.size() && takes_next_value<T>(a, args[i + 1], settings)) {
                 a.value = args[++i];
                 a.has_value = true;
             }
@@ -511,6 +526,13 @@ namespace StarParse::detail::Parser {
                                 fields_set[idx] = 1;
                             } else {
                                 if (!attrs.has_value) {
+                                    if constexpr (is_count_type(^^M)) {
+                                        if (settings.allow_repeated_counts) {
+                                            increment_count<m>(out.[:m:], attrs.name, attrs.argv_index, errors, settings);
+                                            ++fields_set[idx];
+                                            continue;
+                                        }
+                                    }
                                     errors.push_back({
                                         .kind = ErrorKind::MISSING_VALUE, .current_argument = attrs.name,
                                         .argv_index = attrs.argv_index
