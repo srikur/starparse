@@ -7,6 +7,7 @@ namespace StarParse {
         bool allow_kebab_casing{true};
         bool allow_aliases{true};
         bool allow_case_insensitivity{true};
+        bool autogenerate_negations{true};
         std::string_view value_separator{","};
 
         Settings &allowKebabCase(const bool value) {
@@ -26,6 +27,11 @@ namespace StarParse {
 
         Settings &allowCaseInsensitivity(const bool value) {
             allow_case_insensitivity = value;
+            return *this;
+        }
+
+        Settings &autogenerateNegations(const bool value) {
+            autogenerate_negations = value;
             return *this;
         }
     };

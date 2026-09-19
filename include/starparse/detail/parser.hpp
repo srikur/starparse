@@ -506,7 +506,7 @@ namespace StarParse::detail::Parser {
                                     assign_from_string<m>(out.[:m:], attrs.value, attrs.argv_index, fields_set[idx], errors,
                                                           settings);
                                 } else {
-                                    out.[:m:] = true;
+                                    out.[:m:] = !settings.autogenerate_negations || !attrs.name.starts_with("no-");
                                 }
                                 fields_set[idx] = 1;
                             } else {

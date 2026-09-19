@@ -108,6 +108,8 @@ namespace StarParse::detail::Utilities {
             return true;
         if (settings.allow_aliases && Utilities::matches_alias<M>(name, settings.allow_case_insensitivity))
             return true;
+        if (settings.autogenerate_negations && name.starts_with("no-") && is_flag_type(std::meta::type_of(M)))
+            return true;
         return false;
     }
 
