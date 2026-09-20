@@ -490,7 +490,7 @@ namespace StarParse::detail::Utilities {
             using A = [:std::meta::remove_cv(std::meta::type_of(*max_annotation)):];
             constexpr auto mx = std::meta::extract<A>(*max_annotation);
 
-            if (numeric_less(value, mx.value)) {
+            if (numeric_less(mx.value, value)) {
                 errors.push_back({
                     .kind = ErrorKind::OUT_OF_RANGE,
                     .input_value = input,
