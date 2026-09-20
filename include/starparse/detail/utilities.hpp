@@ -113,21 +113,31 @@ namespace StarParse::detail::Utilities {
     }();
 
     template<std::meta::info M>
+    constexpr bool check_snake_case(const std::string_view name, const Settings &settings) {
+        return name == snake_name_v<M> || (settings.allow_case_insensitivity && iequals(name, snake_name_v<M>));
+    }
+
+    template<std::meta::info M>
+    constexpr bool check_kebab_case(const std::string_view name, const Settings &settings) {
+        return settings.allow_kebab_casing && (name == kebab_name_v<M> || (settings.allow_case_insensitivity && iequals(name, kebab_name_v<M>)));
+    }
+
+    template<std::meta::info M>
     constexpr bool does_match_name(std::string_view name,
                                    const std::optional<Opt> &opt,
                                    const Settings &settings,
                                    const bool allow_short = true) {
         if (allow_short && name.size() == 1 && opt.has_value() && name[0] == opt->short_name)
             return true;
-        if (name == snake_name_v<M> || (settings.allow_case_insensitivity && iequals(name, snake_name_v<M>)))
-            return true;
-        if (settings.allow_kebab_casing &&
-            (name == kebab_name_v<M> || (settings.allow_case_insensitivity && iequals(name, kebab_name_v<M>))))
+        if (check_snake_case<M>(name, settings) || check_kebab_case<M>(name, settings))
             return true;
         if (settings.allow_aliases && Utilities::matches_alias<M>(name, settings.allow_case_insensitivity))
             return true;
-        if (settings.autogenerate_negations && name.starts_with("no-") && is_flag_type(std::meta::type_of(M)))
-            return true;
+        if (settings.autogenerate_negations && name.starts_with("no-") && is_flag_type(std::meta::type_of(M))) {
+            std::string_view negated{name};
+            negated.remove_prefix(3);
+            return check_snake_case<M>(negated, settings) || check_kebab_case<M>(negated, settings);
+        }
         return false;
     }
 
