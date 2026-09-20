@@ -10,6 +10,7 @@
 #include <charconv>
 #include <type_traits>
 #include <array>
+#include <chrono>
 #include <span>
 #include <vector>
 #include <utility>
@@ -202,6 +203,7 @@ namespace StarParse::detail::Utilities {
                 });
             return *parsed;
         } else {
+            // TODO: can add more info to the msg?
             static_assert(false, "no conversion for this field type");
         }
     }
@@ -237,6 +239,16 @@ namespace StarParse::detail::Utilities {
         for (const std::meta::info a : std::meta::annotations_of(m)) {
             auto type = std::meta::remove_cv(std::meta::type_of(a));
             if (is_specialization_of(type, ^^Validator)) {
+                return a;
+            }
+        }
+        return std::nullopt;
+    }
+
+    consteval std::optional<std::meta::info> parser_of(const std::meta::info m) {
+        for (const std::meta::info a : std::meta::annotations_of(m)) {
+            auto type = std::meta::remove_cv(std::meta::type_of(a));
+            if (is_specialization_of(type, ^^Parser)) {
                 return a;
             }
         }
@@ -533,9 +545,11 @@ namespace StarParse::detail::Utilities {
     void assign_from_string(M &field, const std::string_view s, const size_t index, size_t &count,
                             std::vector<ParseError> &errors, const Settings &settings) {
         constexpr auto annotated = separator_of(Mem);
+        constexpr auto custom_parser = parser_of(Mem);
         const std::string_view separator = annotated.has_value()
                                                ? std::string_view{annotated->value}
                                                : settings.value_separator;
+        // TODO: parser support in conjunction with vectors and arrays
         if constexpr (is_vector(std::meta::remove_cv(^^M))) {
             using E = [:value_type_of(^^M):];
             if (count == 0) field.clear();
@@ -564,6 +578,25 @@ namespace StarParse::detail::Utilities {
                 } else errors.push_back(result.error());
                 count++;
             });
+        } else if constexpr (custom_parser.has_value()) {
+            using V = [:std::meta::remove_cv(std::meta::type_of(*custom_parser)):];
+            constexpr auto parsing_function = std::meta::extract<V>(*custom_parser);
+
+            static_assert(std::is_invocable_r_v<std::expected<M, std::string>, const V &, const std::string_view>,
+                          "Parser must accept the parsed value type");
+
+            if (auto result = parsing_function(s); !result) {
+                errors.push_back({
+                    .kind = ErrorKind::CUSTOM_PARSING_FAILED,
+                    .input_value = s,
+                    .detail = result.error().empty()
+                                  ? std::string{"parsed returned an error"}
+                                  : std::move(result.error()),
+                    .current_argument = std::meta::identifier_of(Mem),
+                    .argv_index = index
+                });
+            } else field = *result;
+            count++;
         } else {
             if (auto result = from_string<M>(s, index, settings)) {
                 if (validate<Mem>(*result, s, index, errors, settings)) {

@@ -483,6 +483,7 @@ namespace StarParse::detail::Parser {
                 state.version_requested = true;
                 break;
             }
+            // TODO: refactor/cleanup
             template for (constexpr auto m : members) {
                 using M = [:std::meta::type_of(m):];
                 constexpr auto idx = member_index_of<T>(m);
