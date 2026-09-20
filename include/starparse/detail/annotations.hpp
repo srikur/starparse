@@ -96,6 +96,19 @@ namespace StarParse::inline annotations {
         const char *version{};
     };
 
+    template<typename T, typename... Ts>
+    inline constexpr bool is_any_of_v = (std::is_same_v<T, Ts> || ...);
+
+    template<typename T>
+    struct is_char : std::bool_constant<
+                is_any_of_v<std::remove_cv_t<T>, char, signed char, unsigned char, wchar_t, char8_t, char16_t, char32_t> > {};
+
+    template<typename T>
+    inline constexpr bool is_char_v = is_char<T>::value;
+
+    template<typename T>
+    concept Character = is_char_v<T>;
+
     template<typename T>
     concept Numeric = std::integral<T> || std::floating_point<T>;
 
@@ -176,4 +189,23 @@ namespace StarParse::inline annotations {
     constexpr detail::Subcommand_ Subcommand{};
 
     constexpr detail::Required_ Required{};
+
+    // TODO: need to add constructors for other signatures  
+    template<typename T>
+    struct Parser final {
+        using Result = std::expected<T, std::string>;
+        using ExpectedFn = Result (*)(const std::string_view &);
+
+        ExpectedFn expected_fn{};
+
+        explicit consteval Parser(const ExpectedFn f) : expected_fn(f) {}
+
+        [[nodiscard]] constexpr Result operator()(const std::string_view &s) const {
+            if (expected_fn) return expected_fn(s);
+            return std::unexpected{std::string{}};
+        }
+    };
+
+    template<typename F>
+    Parser(F) -> Parser<detail::first_arg_t<F> >;
 }

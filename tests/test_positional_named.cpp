@@ -8,7 +8,7 @@ struct Args {
     [[=StarParse::Positional{1}]] int arg2;
 };
 
-auto main(int argc, char** argv) -> int {
+auto main(int argc, char **argv) -> int {
     const auto args{StarParse::parse_or_throw<Args>(argc, argv)};
     std::println("Args arg1: {}, verbose: {}, arg2: {}", args->arg1, args->verbose, args->arg2);
 }

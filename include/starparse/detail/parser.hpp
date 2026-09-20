@@ -87,33 +87,31 @@ namespace StarParse::detail::Parser {
     }
 
     template<typename T>
-    bool is_flag_bundle(std::string_view name) {
+    bool is_flag(const char c, const Settings &settings) {
         static constexpr auto members = std::define_static_array(
             std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
+        template for (constexpr auto m : members) {
+            using M = [:std::meta::type_of(m):];
+            if constexpr (is_flag_type(^^M) && is_named_option<T>(m)) {
+                if (does_match_name<m>(std::string_view{&c, 1}, opt_of(m), settings)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    template<typename T>
+    bool is_flag_bundle(const std::string_view name, const Settings &settings) {
         if (name.size() < 2) {
             return false;
         }
-        for (const char c : name) {
-            bool is_flag{false};
-            template for (constexpr auto m : members) {
-                using M = [:std::meta::type_of(m):];
-                constexpr auto opt = opt_of(m);
-                if constexpr (is_flag_type(^^M)) {
-                    if constexpr (opt.has_value()) {
-                        if (c == opt->short_name) {
-                            is_flag = true;
-                        }
-                    }
-                    if constexpr (is_named_option<T>(m)) {
-                        if (Utilities::matches_alias<m>(std::string_view{&c, 1})) {
-                            is_flag = true;
-                        }
-                    }
-                }
+        for (auto i{0uz}; i < name.size(); ++i) {
+            // as soon as first non-bool option found, assume rest of string is value
+            if (Utilities::option_takes_value<T>(name.substr(i, 1), true, settings)) {
+                return true;
             }
-            if (!is_flag) {
-                return false;
-            }
+            if (!is_flag<T>(name[i], settings)) return false;
         }
         return true;
     }
@@ -342,6 +340,21 @@ namespace StarParse::detail::Parser {
     };
 
     template<typename T>
+    bool takes_next_value(const ArgAttributes &option, const std::string_view next, const Settings &settings) {
+        if (!Utilities::option_is_count<T>(option.name, option.dashed, settings)) return true;
+        if (next.size() > 1 && next.starts_with('-') && !(next[1] >= '0' && next[1] <= '9')) return false;
+
+        static constexpr auto members = std::define_static_array(
+            std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
+        template for (constexpr auto m : members) {
+            if constexpr (is_subcommand(m)) {
+                if (does_match_name<m>(next, std::nullopt, settings, false)) return false;
+            }
+        }
+        return true;
+    }
+
+    template<typename T>
     void get_arg_attrs_into(std::span<const std::string_view> args, const Settings &settings, size_t &i, bool &separator_seen,
                             std::vector<ArgAttributes> &attrs) {
         static constexpr auto members = std::define_static_array(
@@ -356,23 +369,27 @@ namespace StarParse::detail::Parser {
                 // post-separator, all args are positional
                 a.is_positional = true;
             } else if (a.dashed && !a.has_value && a.name.size() > 1 && !matches_full_name<T>(a.name, settings)) {
-                if (is_flag_bundle<T>(a.name)) {
+                if (is_flag_bundle<T>(a.name, settings)) {
                     for (auto f{0uz}; f < a.name.size(); ++f) {
                         ArgAttributes flag{a};
                         flag.name = a.name.substr(f, 1);
+                        if (Utilities::option_takes_value<T>(flag.name, true, settings)) {
+                            flag.value = a.name.substr(f + 1);
+                            flag.has_value = !flag.value.empty();
+                            if (!flag.has_value && i + 1 < args.size() && takes_next_value<T>(flag, args[i + 1], settings)) {
+                                flag.value = args[++i];
+                                flag.has_value = true;
+                            }
+                            attrs.push_back(flag);
+                            break;
+                        }
                         attrs.push_back(flag);
                     }
                     continue;
                 }
-                if (Utilities::option_takes_value<T>(a.name.substr(0, 1), true, settings)) {
-                    // try attached value split (e.g., -ofile for -o file)
-                    a.value = a.name.substr(1, a.name.size() - 1);
-                    a.name = a.name.substr(0, 1);
-                    a.has_value = true;
-                }
             }
             if ((a.dashed || a.double_dashed) && !a.has_value && Utilities::option_takes_value<T>(
-                    a.name, a.dashed, settings) && i + 1 < args.size()) {
+                    a.name, a.dashed, settings) && i + 1 < args.size() && takes_next_value<T>(a, args[i + 1], settings)) {
                 a.value = args[++i];
                 a.has_value = true;
             }
@@ -466,6 +483,7 @@ namespace StarParse::detail::Parser {
                 state.version_requested = true;
                 break;
             }
+            // TODO: refactor/cleanup
             template for (constexpr auto m : members) {
                 using M = [:std::meta::type_of(m):];
                 constexpr auto idx = member_index_of<T>(m);
@@ -504,11 +522,18 @@ namespace StarParse::detail::Parser {
                                     assign_from_string<m>(out.[:m:], attrs.value, attrs.argv_index, fields_set[idx], errors,
                                                           settings);
                                 } else {
-                                    out.[:m:] = true;
+                                    out.[:m:] = !settings.autogenerate_negations || !attrs.name.starts_with("no-");
                                 }
                                 fields_set[idx] = 1;
                             } else {
                                 if (!attrs.has_value) {
+                                    if constexpr (is_count_type(^^M)) {
+                                        if (settings.allow_repeated_counts) {
+                                            increment_count<m>(out.[:m:], attrs.name, attrs.argv_index, errors, settings);
+                                            ++fields_set[idx];
+                                            continue;
+                                        }
+                                    }
                                     errors.push_back({
                                         .kind = ErrorKind::MISSING_VALUE, .current_argument = attrs.name,
                                         .argv_index = attrs.argv_index

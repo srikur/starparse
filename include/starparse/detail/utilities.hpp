@@ -10,9 +10,11 @@
 #include <charconv>
 #include <type_traits>
 #include <array>
+#include <chrono>
 #include <span>
 #include <vector>
 #include <utility>
+#include <limits>
 
 #include <starparse/detail/settings.hpp>
 #include <starparse/detail/annotations.hpp>
@@ -52,6 +54,15 @@ namespace StarParse::detail::Utilities {
         return false;
     }
 
+    consteval std::optional<Opt> opt_of(const std::meta::info m) {
+        for (const std::meta::info a : std::meta::annotations_of(m)) {
+            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^Opt)) {
+                return std::meta::extract<Opt>(a);
+            }
+        }
+        return std::nullopt;
+    }
+
     template<std::meta::info M>
     std::span<const char *const> alias_names() {
         static constexpr auto aliases = std::define_static_array(alias_name_list(M));
@@ -84,6 +95,13 @@ namespace StarParse::detail::Utilities {
         return r == std::meta::dealias(^^bool);
     }
 
+    consteval bool is_count_type(std::meta::info r) {
+        r = std::meta::dealias(std::meta::remove_cv(r));
+        if (is_optional(r)) r = std::meta::dealias(value_type_of(r));
+        return std::meta::is_integral_type(r) && r != (^^bool) &&
+               !std::meta::extract<bool>(std::meta::substitute(^^is_char_v, {r}));
+    }
+
     template<std::meta::info M>
     inline constexpr std::string_view snake_name_v = std::meta::identifier_of(M);
 
@@ -107,6 +125,8 @@ namespace StarParse::detail::Utilities {
             (name == kebab_name_v<M> || (settings.allow_case_insensitivity && iequals(name, kebab_name_v<M>))))
             return true;
         if (settings.allow_aliases && Utilities::matches_alias<M>(name, settings.allow_case_insensitivity))
+            return true;
+        if (settings.autogenerate_negations && name.starts_with("no-") && is_flag_type(std::meta::type_of(M)))
             return true;
         return false;
     }
@@ -153,6 +173,8 @@ namespace StarParse::detail::Utilities {
             else return std::unexpected(result.error());
         } else if constexpr (std::constructible_from<M, std::string_view>) {
             return M{s};
+        } else if constexpr (is_char_v<M>) {
+            return s.empty() ? M{0} : M{s[0]};
         } else if constexpr (std::is_arithmetic_v<M>) {
             M v{};
             auto [pointer, error_code] = std::from_chars(s.data(), s.data() + s.size(), v);
@@ -181,6 +203,7 @@ namespace StarParse::detail::Utilities {
                 });
             return *parsed;
         } else {
+            // TODO: can add more info to the msg?
             static_assert(false, "no conversion for this field type");
         }
     }
@@ -203,15 +226,6 @@ namespace StarParse::detail::Utilities {
         return std::nullopt;
     }
 
-    consteval std::optional<Opt> opt_of(const std::meta::info m) {
-        for (const std::meta::info a : std::meta::annotations_of(m)) {
-            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^Opt)) {
-                return std::meta::extract<Opt>(a);
-            }
-        }
-        return std::nullopt;
-    }
-
     consteval std::optional<Separator> separator_of(const std::meta::info m) {
         for (const std::meta::info a : std::meta::annotations_of(m)) {
             if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^Separator)) {
@@ -225,6 +239,16 @@ namespace StarParse::detail::Utilities {
         for (const std::meta::info a : std::meta::annotations_of(m)) {
             auto type = std::meta::remove_cv(std::meta::type_of(a));
             if (is_specialization_of(type, ^^Validator)) {
+                return a;
+            }
+        }
+        return std::nullopt;
+    }
+
+    consteval std::optional<std::meta::info> parser_of(const std::meta::info m) {
+        for (const std::meta::info a : std::meta::annotations_of(m)) {
+            auto type = std::meta::remove_cv(std::meta::type_of(a));
+            if (is_specialization_of(type, ^^Parser)) {
                 return a;
             }
         }
@@ -352,10 +376,22 @@ namespace StarParse::detail::Utilities {
             using M = [:std::meta::type_of(m):];
             constexpr auto opt = opt_of(m);
             constexpr bool named = is_named_option<T>(m);
-            const bool match = named && does_match_name<m>(name, opt, settings, is_short);
-            if (match) takes = !is_flag_type(^^M);
+            if (named && does_match_name<m>(name, opt, settings, is_short)) takes = !is_flag_type(^^M);
         }
         return takes;
+    }
+
+    template<typename T>
+    bool option_is_count(std::string_view name, bool is_short, const Settings &settings) {
+        if (!settings.allow_repeated_counts) return false;
+        static constexpr auto members = std::define_static_array(
+            std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
+        template for (constexpr auto m : members) {
+            if constexpr (is_named_option<T>(m) && is_count_type(std::meta::type_of(m))) {
+                if (does_match_name<m>(name, opt_of(m), settings, is_short)) return true;
+            }
+        }
+        return false;
     }
 
     consteval bool is_required(const std::meta::info m) {
@@ -483,12 +519,37 @@ namespace StarParse::detail::Utilities {
     }
 
     template<std::meta::info Mem, typename M>
+    bool increment_count(M &field, const std::string_view name, const size_t index,
+                         std::vector<ParseError> &errors, const Settings &settings) {
+        if constexpr (is_optional(^^M)) {
+            auto value = field.value_or(0);
+            if (!increment_count<Mem>(value, name, index, errors, settings)) return false;
+            field = value;
+        } else {
+            if (field == std::numeric_limits<M>::max()) {
+                errors.push_back({
+                    .kind = ErrorKind::OUT_OF_RANGE, .input_value = name,
+                    .detail = "count would overflow", .current_argument = std::meta::identifier_of(Mem),
+                    .argv_index = index
+                });
+                return false;
+            }
+            const M value = field + M{1};
+            if (!validate<Mem>(value, name, index, errors, settings)) return false;
+            field = value;
+        }
+        return true;
+    }
+
+    template<std::meta::info Mem, typename M>
     void assign_from_string(M &field, const std::string_view s, const size_t index, size_t &count,
                             std::vector<ParseError> &errors, const Settings &settings) {
         constexpr auto annotated = separator_of(Mem);
+        constexpr auto custom_parser = parser_of(Mem);
         const std::string_view separator = annotated.has_value()
                                                ? std::string_view{annotated->value}
                                                : settings.value_separator;
+        // TODO: parser support in conjunction with vectors and arrays
         if constexpr (is_vector(std::meta::remove_cv(^^M))) {
             using E = [:value_type_of(^^M):];
             if (count == 0) field.clear();
@@ -517,6 +578,25 @@ namespace StarParse::detail::Utilities {
                 } else errors.push_back(result.error());
                 count++;
             });
+        } else if constexpr (custom_parser.has_value()) {
+            using V = [:std::meta::remove_cv(std::meta::type_of(*custom_parser)):];
+            constexpr auto parsing_function = std::meta::extract<V>(*custom_parser);
+
+            static_assert(std::is_invocable_r_v<std::expected<M, std::string>, const V &, const std::string_view>,
+                          "Parser must accept the parsed value type");
+
+            if (auto result = parsing_function(s); !result) {
+                errors.push_back({
+                    .kind = ErrorKind::CUSTOM_PARSING_FAILED,
+                    .input_value = s,
+                    .detail = result.error().empty()
+                                  ? std::string{"parsed returned an error"}
+                                  : std::move(result.error()),
+                    .current_argument = std::meta::identifier_of(Mem),
+                    .argv_index = index
+                });
+            } else field = *result;
+            count++;
         } else {
             if (auto result = from_string<M>(s, index, settings)) {
                 if (validate<Mem>(*result, s, index, errors, settings)) {
