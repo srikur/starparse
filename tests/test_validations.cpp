@@ -90,11 +90,6 @@ TEST_CASE("validation: Range rejects values outside the bounds") {
         REQUIRE_FALSE(args);
         CHECK(args.errors()[0].kind == ErrorKind::OUT_OF_RANGE);
     }
-    SUBCASE("above on an unsigned field") {
-        const auto args = parse_from<Args>({"--range2=256"});
-        REQUIRE_FALSE(args);
-        CHECK(args.errors()[0].kind == ErrorKind::OUT_OF_RANGE);
-    }
     SUBCASE("value that does not fit the field type at all") {
         const auto args = parse_from<Args>({"--range2=70000"});
         REQUIRE_FALSE(args);

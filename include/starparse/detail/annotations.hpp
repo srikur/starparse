@@ -100,13 +100,9 @@ namespace StarParse::inline annotations {
     template<typename T, typename... Ts>
     inline constexpr bool is_any_of_v = (std::is_same_v<T, Ts> || ...);
 
-    template<typename T, typename... Ts>
-    inline constexpr bool is_not_any_of_v = !is_any_of_v<T, Ts...>;
-
     template<typename T>
     struct is_char : std::bool_constant<
-                is_any_of_v<std::remove_cv_t<T>, char, signed char, unsigned char, wchar_t, char8_t, char16_t, char32_t>
-                && is_not_any_of_v<std::uint8_t>> {};
+                is_any_of_v<std::remove_cv_t<T>, char, wchar_t, char8_t, char16_t, char32_t> > {};
 
     template<typename T>
     inline constexpr bool is_char_v = is_char<T>::value;
