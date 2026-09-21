@@ -551,20 +551,46 @@ namespace StarParse::detail::Utilities {
         return true;
     }
 
+    template<std::meta::info Mem, typename E>
+    std::expected<E, ParseError> apply_custom_parser(const std::string_view s, const size_t index) {
+        constexpr auto parser = *parser_of(Mem);
+        using V = [:std::meta::remove_cv(std::meta::type_of(parser)):];
+        constexpr auto parsing_function = std::meta::extract<V>(parser);
+
+        static_assert(std::is_invocable_r_v<std::expected<E, std::string>, const V &, const std::string_view>,
+                      "Parser must accept a string_view and return std::expected of the parsed value type and std::string");
+        if (auto result = parsing_function(s); !result) {
+            return std::unexpected(ParseError{
+                .kind = ErrorKind::CUSTOM_PARSING_FAILED,
+                .input_value = s,
+                .detail = result.error().empty()
+                              ? std::string{"parsed returned an error"}
+                              : std::move(result.error()),
+                .current_argument = std::meta::identifier_of(Mem),
+                .argv_index = index
+            });
+        } else return *result;
+    }
+
     template<std::meta::info Mem, typename M>
     void assign_from_string(M &field, const std::string_view s, const size_t index, size_t &count,
                             std::vector<ParseError> &errors, const Settings &settings) {
         constexpr auto annotated = separator_of(Mem);
-        constexpr auto custom_parser = parser_of(Mem);
+        constexpr bool has_custom_parser = parser_of(Mem).has_value();
         const std::string_view separator = annotated.has_value()
                                                ? std::string_view{annotated->value}
                                                : settings.value_separator;
-        // TODO: parser support in conjunction with vectors and arrays
         if constexpr (is_vector(std::meta::remove_cv(^^M))) {
             using E = [:value_type_of(^^M):];
             if (count == 0) field.clear();
             for_each_value(s, separator, [&](auto piece) {
-                if (auto result = from_string<E>(piece, index, settings)) {
+                if constexpr (has_custom_parser) {
+                    if (auto result = apply_custom_parser<Mem, E>(piece, index)) {
+                        if (validate<Mem>(*result, piece, index, errors, settings)) {
+                            field.push_back(*result);
+                        }
+                    } else errors.push_back(result.error());
+                } else if (auto result = from_string<E>(piece, index, settings)) {
                     if (validate<Mem>(*result, piece, index, errors, settings)) {
                         field.push_back(*result);
                     }
@@ -581,6 +607,12 @@ namespace StarParse::detail::Utilities {
                         .current_argument = std::meta::identifier_of(Mem),
                         .argv_index = index
                     });
+                } else if constexpr (has_custom_parser) {
+                    if (auto result = apply_custom_parser<Mem, E>(piece, index)) {
+                        if (validate<Mem>(*result, piece, index, errors, settings)) {
+                            field[count] = *result;
+                        }
+                    } else errors.push_back(result.error());
                 } else if (auto result = from_string<E>(piece, index, settings)) {
                     if (validate<Mem>(*result, piece, index, errors, settings)) {
                         field[count] = *result;
@@ -588,23 +620,9 @@ namespace StarParse::detail::Utilities {
                 } else errors.push_back(result.error());
                 count++;
             });
-        } else if constexpr (custom_parser.has_value()) {
-            using V = [:std::meta::remove_cv(std::meta::type_of(*custom_parser)):];
-            constexpr auto parsing_function = std::meta::extract<V>(*custom_parser);
-
-            static_assert(std::is_invocable_r_v<std::expected<M, std::string>, const V &, const std::string_view>,
-                          "Parser must accept the parsed value type");
-
-            if (auto result = parsing_function(s); !result) {
-                errors.push_back({
-                    .kind = ErrorKind::CUSTOM_PARSING_FAILED,
-                    .input_value = s,
-                    .detail = result.error().empty()
-                                  ? std::string{"parsed returned an error"}
-                                  : std::move(result.error()),
-                    .current_argument = std::meta::identifier_of(Mem),
-                    .argv_index = index
-                });
+        } else if constexpr (has_custom_parser) {
+            if (auto result = apply_custom_parser<Mem, M>(s, index); !result) {
+                errors.push_back(result.error());
             } else field = *result;
             count++;
         } else {
