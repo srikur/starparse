@@ -1,18 +1,30 @@
-#include <print>
-#include <starparse/starparse.hpp>
+#include "test_support.hpp"
 
-struct Args {
-    [[=StarParse::Positional{0}]] std::string positional;
-    [[=StarParse::Opt{"dry run"}]] bool dry_run;
-    [[=StarParse::Opt{'d', "super dry run"}]] bool super_dry_run;
-};
+#include <string>
 
-auto main(int argc, char **argv) -> int {
-    const auto args{StarParse::parse<Args>(argc, argv)};
-    if (args) {
-        std::println("positional: {}, dry run: {}, super dry: {}", args->positional, args->dry_run,
-                     args->super_dry_run);
-    } else {
-        std::println("{}", args.error_message());
+using namespace StarParse;
+
+namespace {
+    struct Args {
+        [[=Positional{0}]] std::string positional;
+        [[=Opt{"dry run"}]] bool dry_run;
+        [[=Opt{'d', "super dry run"}]] bool super_dry_run;
+    };
+}
+
+TEST_CASE("separator: everything after -- is positional") {
+    SUBCASE("-- --foo=bar") {
+        const auto args = parse_from<Args>({"--", "--foo=bar"});
+        REQUIRE(args);
+        CHECK(args->positional == "--foo=bar");
+        CHECK_FALSE(args->dry_run);
+        CHECK_FALSE(args->super_dry_run);
+    }
+    SUBCASE("-- -kj4") {
+        const auto args = parse_from<Args>({"--", "-kj4"});
+        REQUIRE(args);
+        CHECK(args->positional == "-kj4");
+        CHECK_FALSE(args->dry_run);
+        CHECK_FALSE(args->super_dry_run);
     }
 }

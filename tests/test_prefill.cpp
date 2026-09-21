@@ -1,16 +1,45 @@
-#include <print>
-#include <starparse/starparse.hpp>
+#include "test_support.hpp"
+
 #include <string>
 
-struct Flags {
-    [[=StarParse::Positional{0}]] std::string arg1;
-    [[=StarParse::Opt{'k', "Keep going"}]] bool keep;
-    [[=StarParse::Opt{'v', "Verbose mode"}]] bool verbose;
-    [[=StarParse::Positional{1}]] int arg2;
-};
+using namespace StarParse;
 
-auto main(int argc, char **argv) -> int {
-    Flags defaults{.arg1 = "default1", .keep = true, .verbose = false, .arg2 = 99};
-    const auto f{StarParse::parse_or_throw(argc, argv, defaults)};
-    std::println("arg1: {}, keep: {}, verbose: {}, arg2: {}", f->arg1, f->keep, f->verbose, f->arg2);
+namespace {
+    struct Flags {
+        [[=Positional{0}]] std::string arg1;
+        [[=Opt{'k', "Keep going"}]] bool keep;
+        [[=Opt{'v', "Verbose mode"}]] bool verbose;
+        [[=Positional{1}]] int arg2;
+    };
+
+    Flags defaults() {
+        return {.arg1 = "default1", .keep = true, .verbose = false, .arg2 = 99};
+    }
+}
+
+TEST_CASE("prefill: defaults survive when nothing is passed") {
+    const auto args = parse_from<Flags>({}, defaults());
+    REQUIRE(args);
+    CHECK(args->arg1 == "default1");
+    CHECK(args->keep);
+    CHECK_FALSE(args->verbose);
+    CHECK(args->arg2 == 99);
+}
+
+TEST_CASE("prefill: only mentioned fields are overwritten") {
+    const auto args = parse_from<Flags>({"--arg2=5", "-v"}, defaults());
+    REQUIRE(args);
+    CHECK(args->arg1 == "default1");
+    CHECK(args->keep);
+    CHECK(args->verbose);
+    CHECK(args->arg2 == 5);
+}
+
+TEST_CASE("prefill: positionals overwrite in order") {
+    const auto args = parse_from<Flags>({"hello"}, defaults());
+    REQUIRE(args);
+    CHECK(args->arg1 == "hello");
+    CHECK(args->keep);
+    CHECK_FALSE(args->verbose);
+    CHECK(args->arg2 == 99);
 }

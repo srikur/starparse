@@ -1,15 +1,22 @@
-#include <print>
-#include <starparse/starparse.hpp>
+#include "test_support.hpp"
 
-struct Args {
-    int dry_run;
-};
+using namespace StarParse;
 
-int main(const int argc, char **argv) {
-    const auto args{StarParse::parse<Args>(argc, argv)};
-    if (args) {
-        std::println("dry run: {}", args->dry_run);
-    } else {
-        std::println("{}", args.error_message());
+namespace {
+    struct Args {
+        int dry_run;
+    };
+}
+
+TEST_CASE("kebab: snake_case fields accept kebab-case spellings") {
+    SUBCASE("--dry-run=42") {
+        const auto args = parse_from<Args>({"--dry-run=42"});
+        REQUIRE(args);
+        CHECK(args->dry_run == 42);
+    }
+    SUBCASE("--dry-run 42") {
+        const auto args = parse_from<Args>({"--dry-run", "42"});
+        REQUIRE(args);
+        CHECK(args->dry_run == 42);
     }
 }
