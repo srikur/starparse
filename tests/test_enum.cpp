@@ -1,24 +1,53 @@
-#include <print>
-#include <starparse/starparse.hpp>
+#include "test_support.hpp"
+
 #include <string>
-#include <utility>
 
-enum class Mode {
-    fast [[=StarParse::Alias{"quick"}]],
-    safe,
-    dry_run [[=StarParse::Alias{"dry", "n"}]],
-};
+using namespace StarParse;
 
-struct Args {
-    [[=StarParse::Opt{'m', "Archive mode"}]] Mode mode;
-    [[=StarParse::Positional{0}]] std::string input;
-};
+namespace {
+    enum class Mode {
+        fast [[=Alias{"quick"}]],
+        safe,
+        dry_run [[=Alias{"dry", "n"}]],
+    };
 
-auto main(int argc, char **argv) -> int {
-    try {
-        const auto args{StarParse::parse_or_throw<Args>(argc, argv)};
-        std::println("mode: {}, input: {}", std::to_underlying(args->mode), args->input);
-    } catch (const std::exception &e) {
-        std::println("error: {}", e.what());
+    struct Args {
+        [[=Opt{'m', "Archive mode"}]] Mode mode;
+        [[=Positional{0}]] std::string input;
+    };
+}
+
+TEST_CASE("enum: value by enumerator name") {
+    const auto args = parse_from<Args>({"--mode=safe", "hello"});
+    REQUIRE(args);
+    CHECK(args->mode == Mode::safe);
+    CHECK(args->input == "hello");
+}
+
+TEST_CASE("enum: value by enumerator alias") {
+    SUBCASE("--mode quick") {
+        const auto args = parse_from<Args>({"--mode", "quick", "hello"});
+        REQUIRE(args);
+        CHECK(args->mode == Mode::fast);
     }
+    SUBCASE("-m dry") {
+        const auto args = parse_from<Args>({"-m", "dry", "hello"});
+        REQUIRE(args);
+        CHECK(args->mode == Mode::dry_run);
+    }
+    SUBCASE("-m n") {
+        const auto args = parse_from<Args>({"-m", "n", "hello"});
+        REQUIRE(args);
+        CHECK(args->mode == Mode::dry_run);
+    }
+}
+
+TEST_CASE("enum: unknown value is an invalid-value error") {
+    const auto args = parse_from<Args>({"--mode=slow", "hello"});
+    REQUIRE_FALSE(args);
+    REQUIRE(args.errors().size() == 1uz);
+    const auto &error = args.errors()[0];
+    CHECK(error.kind == ErrorKind::INVALID_VALUE);
+    CHECK(error.input_value == "slow");
+    CHECK(error.current_argument.value_or("").ends_with("Mode"));
 }

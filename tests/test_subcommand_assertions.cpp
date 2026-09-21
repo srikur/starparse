@@ -1,4 +1,6 @@
-#include <starparse/starparse.hpp>
+#include "test_support.hpp"
+
+#include <optional>
 
 namespace {
     using namespace StarParse;
@@ -89,8 +91,13 @@ namespace {
     static_assert(check_subcommand_collisions<NestedArgs>());
 }
 
-int main() {
+TEST_CASE("subcommand assertions: valid layouts pass every check") {
     StarParse::detail::Parser::check_assertions<MixedArgs>();
     StarParse::detail::Parser::check_assertions<BuiltinNames>();
     StarParse::detail::Parser::check_assertions<NestedArgs>();
+    CHECK(check_subcommand_collisions<MixedArgs>());
+    CHECK(check_subcommand_collisions<BuiltinNames>());
+    CHECK(check_subcommand_collisions<NestedArgs>());
+    CHECK_FALSE(check_subcommand_collisions<CaseCollision>());
+    CHECK_FALSE(check_subcommand_collisions<KebabCollision>());
 }

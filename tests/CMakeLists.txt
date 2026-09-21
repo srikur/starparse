@@ -1,133 +1,39 @@
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-function(starparse_test_executable name)
-    add_executable(${name} ${name}.cpp)
-    target_link_libraries(${name} PRIVATE starparse::starparse)
-    target_compile_options(${name} PRIVATE -Wall -Werror)
-endfunction()
+include(FetchContent)
+FetchContent_Declare(doctest
+        GIT_REPOSITORY https://github.com/doctest/doctest.git
+        GIT_TAG v2.5.3
+        GIT_SHALLOW TRUE
+        SYSTEM)
+set(DOCTEST_WITH_TESTS OFF)
+set(DOCTEST_WITH_MAIN_IN_STATIC_LIB OFF)
+set(DOCTEST_NO_INSTALL ON)
+FetchContent_MakeAvailable(doctest)
+include("${doctest_SOURCE_DIR}/scripts/cmake/doctest.cmake")
 
-starparse_test_executable(test_parse)
-starparse_test_executable(test_bare)
-starparse_test_executable(test_positional_named)
-starparse_test_executable(test_bundle)
-starparse_test_executable(test_bundle_attached_value)
-starparse_test_executable(test_prefill)
-starparse_test_executable(test_errors)
-starparse_test_executable(test_alias)
-starparse_test_executable(test_enum)
-starparse_test_executable(test_try_parse)
-starparse_test_executable(test_kebab)
-starparse_test_executable(test_separator)
-starparse_test_executable(test_container)
-starparse_test_executable(test_container_validation)
-starparse_test_executable(test_settings)
-starparse_test_executable(test_subcommands)
-starparse_test_executable(test_subcommand_assertions)
+add_executable(starparse_tests
+        main.cpp
+        test_alias.cpp
+        test_bare.cpp
+        test_bundle.cpp
+        test_container.cpp
+        test_container_validation.cpp
+        test_custom_parsing.cpp
+        test_entry_points.cpp
+        test_enum.cpp
+        test_errors.cpp
+        test_kebab.cpp
+        test_parse.cpp
+        test_positional_named.cpp
+        test_prefill.cpp
+        test_separator.cpp
+        test_settings.cpp
+        test_subcommand_assertions.cpp
+        test_subcommands.cpp
+        test_validations.cpp)
+target_link_libraries(starparse_tests PRIVATE starparse::starparse doctest::doctest)
+target_compile_options(starparse_tests PRIVATE -Wall -Werror)
 
-# starparse_case(<test name> <target> <expected output regex> [args...])
-function(starparse_case name target expected)
-    add_test(NAME ${name} COMMAND ${target} ${ARGN})
-    set_tests_properties(${name} PROPERTIES PASS_REGULAR_EXPRESSION "${expected}")
-endfunction()
-
-# Annotated struct: only annotated fields participate.
-starparse_case(parse.no_args test_parse "k: false, v: false, f: false")
-starparse_case(parse.flag_bundle test_parse "k: true, v: true, f: true" -kvf)
-starparse_case(parse.long_flag test_parse "k: false, v: true, f: false" --verbose)
-starparse_case(parse.short_flags test_parse "k: true, v: false, f: true" -k -f)
-starparse_case(parse.enum_value test_parse "mode: 2" -m MODE_2)
-starparse_case(parse.attached_value test_parse "output_file: filename" -ofilename)
-starparse_case(parse.vector test_parse "include_paths: \\[\"path1\", \"path2\"\\]" -I path1 -I path2)
-
-# Bare struct: every field addressable by name, non-bools also positional.
-starparse_case(bare.named_mixed_dashes test_bare "Bare arg1: hello, verbose: false, arg2: 42" --arg1=hello -arg2=42)
-starparse_case(bare.positional test_bare "Bare arg1: hello, verbose: false, arg2: 42" hello 42)
-starparse_case(bare.flag test_bare "Bare arg1: hello, verbose: true, arg2: 42" hello --verbose 42)
-
-# Positional annotations are also addressable by full name.
-starparse_case(positional.by_order test_positional_named "Args arg1: hello, verbose: true, arg2: 42" hello -v 42)
-starparse_case(positional.by_name test_positional_named "Args arg1: hello, verbose: false, arg2: 42" --arg1 hello --arg2 42)
-
-# --name=value and -kvf bundles.
-starparse_case(bundle.flags_and_positionals test_bundle "arg1: hello, keep: true, verbose: true, force: true, arg2: 42" -kvf hello 42)
-starparse_case(bundle.equals test_bundle "arg1: hello, keep: false, verbose: false, force: false, arg2: 42" --arg1=hello --arg2=42)
-
-# first value-taking option ends a bundle
-starparse_case(bundle.attached_value test_bundle_attached_value "keep: true, jobs: 4" -kj4)
-starparse_case(bundle.attached_multi_digit test_bundle_attached_value "keep: true, jobs: 42" -kj42)
-starparse_case(bundle.attached_negative test_bundle_attached_value "keep: true, jobs: -4" -kj-4)
-starparse_case(bundle.separate_value test_bundle_attached_value "keep: true, jobs: 4" -kj 4)
-starparse_case(bundle.following_flag test_bundle_attached_value "keep: true, jobs: 4" -kj4 -k)
-starparse_case(bundle.single_option_attached test_bundle_attached_value "keep: false, jobs: 42" -j42)
-starparse_case(bundle.full_names test_bundle_attached_value "keep: true, jobs: 4" -keep -jobs 4)
-starparse_case(bundle.implicit_count test_bundle_attached_value "keep: true, jobs: 1" -kj)
-starparse_case(bundle.invalid_value test_bundle_attached_value "Could not parse input '4k' for argument 'int'" -kj4k)
-starparse_case(bundle.unknown_option test_bundle_attached_value "Unknown option 'kxj4'" -kxj4)
-starparse_case(bundle.double_dash test_bundle_attached_value "Unknown option 'kj4'" --kj4)
-starparse_case(bundle.flag_alias test_bundle_attached_value "keep: true, jobs: 4" -qj4)
-starparse_case(bundle.value_alias test_bundle_attached_value "keep: true, jobs: 4" -kn4)
-starparse_case(bundle.case_insensitive_alias test_bundle_attached_value "keep: true, jobs: 4" -QN4)
-starparse_case(bundle.attached_string test_parse "output_file: file" -kvofile)
-starparse_case(bundle.value_contains_flags test_parse "output_file: kvf" -kokvf)
-starparse_case(bundle.attached_positional test_parse "arg1: input" -kvofile input)
-starparse_case(bundle.separate_positional test_parse "arg1: input" -kvo file input)
-starparse_case(bundle.attached_container test_parse "include_paths: \\[\"path1\", \"path2\"\\]" -kIpath1 -Ipath2)
-starparse_case(bundle.after_separator test_separator "positional: -kj4" -- -kj4)
-
-# Prefilled object: only fields mentioned on the command line are overwritten.
-starparse_case(prefill.defaults_survive test_prefill "arg1: default1, keep: true, verbose: false, arg2: 99")
-starparse_case(prefill.partial_override test_prefill "arg1: default1, keep: true, verbose: true, arg2: 5" --arg2=5 -v)
-starparse_case(prefill.positional_override test_prefill "arg1: hello, keep: true, verbose: false, arg2: 99" hello)
-
-# Alias annotations: extra names for options and positionals.
-starparse_case(alias.long_alias test_alias "input: hello, verbose: true, keep: false, arg2: 42" --talkative hello 42)
-starparse_case(alias.named_by_alias test_alias "input: hello, verbose: false, keep: false, arg2: 42" --source=hello --count=42)
-starparse_case(alias.single_char test_alias "input: hello, verbose: true, keep: false, arg2: 42" -q hello 42)
-starparse_case(alias.bundle_char test_alias "input: hello, verbose: true, keep: true, arg2: 42" -qk hello 42)
-
-# Enum values match by enumerator name or by Alias annotations on enumerators.
-starparse_case(enum.by_name test_enum "mode: 1, input: hello" --mode=safe hello)
-starparse_case(enum.by_alias test_enum "mode: 0, input: hello" --mode quick hello)
-starparse_case(enum.alias_dry test_enum "mode: 2, input: hello" -m dry hello)
-starparse_case(enum.alias_short test_enum "mode: 2, input: hello" -m n hello)
-starparse_case(enum.bad_value test_enum "Could not parse input 'slow' for argument 'Mode'" --mode=slow hello)
-
-# parse_or_throw() surfaces the first parse error as an exception.
-starparse_case(errors.unrecognized test_errors "Unknown option 'nope'" --nope)
-starparse_case(errors.missing_value test_errors "Missing value for argument 'arg1'" --arg1)
-starparse_case(errors.bad_value test_errors "Could not parse input 'abc' for argument 'int'" abc)
-
-# Specifically testing try_parse()
-starparse_case(try_parse.single_error test_try_parse "Unknown option 'fake_arg'" --fake_arg)
-starparse_case(try_parse.successful_parse test_try_parse "verbose: true, arg1: 3" -a 3 --verbose)
-
-# Kebab casing
-starparse_case(kebab.basic test_kebab "dry run: 42" --dry-run=42)
-starparse_case(kebab.with_value test_kebab "dry run: 42" --dry-run 42)
-
-# -- separator
-starparse_case(separator.dashed_positional test_separator "positional: --foo=bar" -- --foo=bar)
-
-# containers
-starparse_case(container.basic test_container "vector: \\[\"1\", \"2\", \"3\", \"4\"\\], array: \\[\"1\", \"2\", \"3\", \"4\"\\]" --vec=1,2,3,4 --arr=1,2,3,4)
-
-# containers with validators
-starparse_case(container.validation_delimited test_container_validation "vector: \\[\"hello\", \"world\"\\], array: \\[\"hello\", \"world\"\\]" --vec=hello,world --arr=hello,world)
-starparse_case(container.validation_repeated test_container_validation "vector: \\[\"hello\", \"world\"\\], array: \\[\"hello\", \"world\"\\]" -v hello -v world -a hello -a world)
-starparse_case(container.validation_vector_rejected test_container_validation "Validation failed for input 'invalid': validator returned false" --vec=hello,invalid)
-starparse_case(container.validation_array_rejected test_container_validation "Validation failed for input 'invalid': validator returned false" --arr=hello,invalid)
-
-# settings
-starparse_case(settings.case_insensitivity_true test_settings "model: 8" --model=cgb0)
-
-# subcommands
-add_test(NAME subcommands.assertions COMMAND test_subcommand_assertions)
-starparse_case(subcommands.add test_subcommands "Result: 15" 10 operation add 5)
-starparse_case(subcommands.subtract test_subcommands "Result: 5" 10 operation subtract 5)
-starparse_case(subcommands.none test_subcommands "Result: 10" 10)
-starparse_case(subcommands.parent_only test_subcommands "Result: 10" 10 operation)
-starparse_case(subcommands.named_values test_subcommands "Result: 15" --initial=10 operation add --value=5)
-starparse_case(subcommands.case_insensitive test_subcommands "Result: 15" 10 OPERATION ADD 5)
-starparse_case(subcommands.aliases test_subcommands "Result: 15" 10 op plus 5)
-starparse_case(subcommands.subtract_alias test_subcommands "Result: 5" 10 op minus 5)
-starparse_case(subcommands.parent_option test_subcommands "Result: 15" 10 operation --verbose add 5)
+# Registers every TEST_CASE as an individual CTest test.
+doctest_discover_tests(starparse_tests)

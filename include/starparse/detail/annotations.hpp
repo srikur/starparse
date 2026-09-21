@@ -41,6 +41,7 @@ namespace StarParse::inline annotations {
         struct Required_ final {};
     }
 
+    // TODO: long name override
     struct Opt final {
         char short_name{0};
         const char *help_{};
@@ -101,7 +102,7 @@ namespace StarParse::inline annotations {
 
     template<typename T>
     struct is_char : std::bool_constant<
-                is_any_of_v<std::remove_cv_t<T>, char, signed char, unsigned char, wchar_t, char8_t, char16_t, char32_t> > {};
+                is_any_of_v<std::remove_cv_t<T>, char, wchar_t, char8_t, char16_t, char32_t> > {};
 
     template<typename T>
     inline constexpr bool is_char_v = is_char<T>::value;
@@ -177,6 +178,7 @@ namespace StarParse::inline annotations {
                 if (const char *msg = cstr_fn(v)) {
                     return std::unexpected{std::string{msg}};
                 }
+                return {};
             }
             if (bool_fn(v)) return {};
             return std::unexpected{std::string{}};
@@ -208,4 +210,7 @@ namespace StarParse::inline annotations {
 
     template<typename F>
     Parser(F) -> Parser<detail::first_arg_t<F> >;
+
+    // TODO: File{} annotation on structs, Env{} on fields
+    // TODO: maybe Env{filename, var} option for a more granular configuration option?
 }

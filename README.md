@@ -156,8 +156,6 @@ struct Args {
 // --timeout 30s
 ```
 
-Custom parsers are early-stage: `vector`/`array` support coming soon.
-
 ### Subcommands
 
 Annotate a `std::optional<ChildStruct>` field with `Subcommand`. The field name (plus kebab/case/alias variants) is the
