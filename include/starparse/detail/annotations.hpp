@@ -41,6 +41,7 @@ namespace StarParse::inline annotations {
         struct Required_ final {};
     }
 
+    // TODO: long name override
     struct Opt final {
         char short_name{0};
         const char *help_{};
@@ -213,4 +214,7 @@ namespace StarParse::inline annotations {
 
     template<typename F>
     Parser(F) -> Parser<detail::first_arg_t<F> >;
+
+    // TODO: File{} annotation on structs, Env{} on fields
+    // TODO: maybe Env{filename, var} option for a more granular configuration option?
 }

@@ -182,6 +182,7 @@ namespace StarParse::detail::Assertions {
     consteval bool unique_names(const std::vector<Name> &names, const bool reserve_builtin_options) {
         for (auto i{0uz}; i < names.size(); ++i) {
             const auto &name = names[i];
+            // TODO: add short versions -h and -v
             if (reserve_builtin_options && (same_name(name.text, "help") || same_name(name.text, "version"))) {
                 return false;
             }
