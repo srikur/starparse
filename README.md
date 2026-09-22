@@ -38,6 +38,17 @@ auto main(int argc, char** argv) -> int {
 Every annotated field is addressable by its full name in several spellings: `--jobs 4`, `--jobs=4`, `-jobs 4`,
 `-jobs=4`. `Opt` adds a one-character short name (`-j 4`, `-j=4`).
 
+`Name` replaces the field's identifier as its command-line name:
+
+```cpp
+[[=StarParse::Opt{'j'}, =StarParse::Name{"threads"}]] int jobs;
+// --threads 4 and -j 4 work; --jobs 4 is rejected.
+```
+
+The override is used for matching, help text, field-name diagnostics, and collision checks. It also works on bare
+fields,
+positional fields, and subcommand fields. Explicit `Alias` spellings and `Opt` short names can be used in conjunction.
+
 - **Kebab-case**: a field named `dry_run` also resolves via `--dry-run` (on by default).
 - **Case-insensitive**: `--Jobs` and `--JOBS` match `jobs` (on by default).
 - **Aliases**: `[[=StarParse::Alias{"threads", "t"}]]` adds any number of extra long or short spellings. Aliases are
@@ -158,9 +169,9 @@ struct Args {
 
 ### Subcommands
 
-Annotate a `std::optional<ChildStruct>` field with `Subcommand`. The field name (plus kebab/case/alias variants) is the
-command name; the child struct is a full argument struct of its own; it can have its own positionals, options, `Program`
-description, and even nested subcommands.
+Annotate a `std::optional<ChildStruct>` field with `Subcommand`. The field name or its `Name` override supplies the
+command name, including kebab/case/alias variants. The child struct is a full argument struct of its own; it can have
+its own positionals, options, `Program` description, and even nested subcommands.
 
 ```cpp
 struct Add      { [[=StarParse::Positional{0}]] int value; };
@@ -256,6 +267,7 @@ subcommand or enum-alias collisions.
 | `Positional{n}` / `Positional{n, "help"}`   | field                         | fill from position `n`; still addressable by name                    |
 | `Required`                                  | field                         | omission is a parse error                                            |
 | `Alias{"name", ...}`                        | field or enumerator           | extra long/short spellings                                           |
+| `Name{"name"}`                              | field                         | replaces the identifier used as the command-line name                |
 | `Subcommand`                                | `std::optional<Struct>` field | subcommand                                                           |
 | `Program{"name", "description", "version"}` | struct                        | powers `--help` / `--version`                                        |
 | `Separator{";"}`                            | container field               | per-field value delimiter                                            |

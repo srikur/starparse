@@ -25,6 +25,8 @@ add_executable(starparse_tests
         test_errors.cpp
         test_help_and_version.cpp
         test_kebab.cpp
+        test_name.cpp
+        test_name_assertions.cpp
         test_parse.cpp
         test_positional_named.cpp
         test_prefill.cpp
