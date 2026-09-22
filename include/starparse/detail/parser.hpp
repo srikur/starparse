@@ -401,9 +401,9 @@ namespace StarParse::detail::Parser {
                 a.value = args[++i];
                 a.has_value = true;
             }
-            if (a.dashed && !short_name_exists<T>(a.name, settings.allow_case_insensitivity)) {
-                if (a.dashed && a.name == "h") a.is_help = true;
-                else if (a.dashed && a.name == "v") a.is_version = true;
+            if (a.dashed && a.name.size() == 1 && !short_name_exists<T>(a.name, settings.allow_case_insensitivity)) {
+                if (a.name == "h" || (settings.allow_case_insensitivity && ascii_lower(a.name[0]) == 'h')) a.is_help = true;
+                else if (a.name == "v" || (settings.allow_case_insensitivity && ascii_lower(a.name[0]) == 'v')) a.is_version = true;
             }
 
             // check for subcommand
