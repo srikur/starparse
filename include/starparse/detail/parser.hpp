@@ -152,7 +152,7 @@ namespace StarParse::detail::Parser {
             constexpr auto opt = opt_of(m);
             constexpr auto pos = positional_of(m);
             constexpr auto position = positional_index_of<T>(m);
-            constexpr auto name = std::string_view{std::meta::identifier_of(m)};
+            constexpr auto name = name_of(m);
             constexpr bool required = is_required(m);
 
             std::string description;
@@ -204,7 +204,7 @@ namespace StarParse::detail::Parser {
                 }
             }
         }
-        std::ranges::sort(arguments, {}, &ArgumentRow::index);
+        if (arguments.size() > 1) std::ranges::sort(arguments, {}, &ArgumentRow::index);
         std::string_view short_help = short_name_exists<T>("h") ? "" : ", -h";
         std::string_view short_version = short_name_exists<T>("v") ? "" : ", -v";
         options.push_back({std::format("    --help{}", short_help), "Show this help message"});
@@ -222,7 +222,7 @@ namespace StarParse::detail::Parser {
                 if constexpr (is_subcommand(m)) {
                     if (command_path.front() == member_index_of<T>(m)) {
                         using Child = [:value_type_of(std::meta::type_of(m)):];
-                        constexpr auto name = std::meta::identifier_of(m);
+                        constexpr auto name = name_of(m);
                         return format_help<Child>(command_path.subspan(1),
                                                   std::format("{} {}", command_name, name),
                                                   std::format("{} {}", usage, name), allow_aliases);
@@ -448,7 +448,7 @@ namespace StarParse::detail::Parser {
         static_assert(Assertions::no_duplicate_annotations<T>(),
                       "annotations other than Alias may only appear once on an entity");
         static_assert(Assertions::check_name_values<T>(),
-                      "invalid option spelling: aliases must be nonempty, contain no whitespace or '=', and not start with '-'; "
+                      "invalid option spelling: names and aliases must be nonempty, contain no whitespace or '=', and not start with '-'; "
                       "short names cannot be whitespace, '-' or '='");
         static_assert(Assertions::no_positional_containers<T>(),
                       "cannot use Positional in combination with a container");
@@ -535,7 +535,7 @@ namespace StarParse::detail::Parser {
                                     assign_from_string<m>(out.[:m:], attrs.value, attrs.argv_index, fields_set[idx], errors,
                                                           settings);
                                 } else {
-                                    out.[:m:] = !settings.autogenerate_negations || !attrs.name.starts_with("no-");
+                                    out.[:m:] = matches_non_negated_name<m>(attrs.name, opt, settings);
                                 }
                                 fields_set[idx] = 1;
                             } else {
@@ -574,7 +574,7 @@ namespace StarParse::detail::Parser {
             const size_t index = member_index_of<T>(m);
             if constexpr (is_required(m)) {
                 if (fields_set[index] == 0) {
-                    const auto field_name = std::string_view{std::meta::identifier_of(m)};
+                    constexpr auto field_name = name_of(m);
                     state.errors.push_back({
                         .kind = ErrorKind::MISSING_REQUIRED,
                         .current_argument = std::optional{field_name},
@@ -583,7 +583,7 @@ namespace StarParse::detail::Parser {
                 }
             } else if constexpr (is_array(m)) {
                 if (fields_set[index] < std::meta::tuple_size(m)) {
-                    const auto field_name = std::string_view{std::meta::identifier_of(m)};
+                    constexpr auto field_name = name_of(m);
                     state.errors.push_back({
                         .kind = ErrorKind::MISSING_VALUE,
                         .current_argument = std::optional{field_name},
@@ -601,6 +601,9 @@ namespace StarParse::detail::Parser {
         const auto attr_array = get_arg_attrs<T>(args, settings);
 
         parse_into<T>(attr_array, out, settings, state);
-        return ParsedArgs<T>{std::move(out), state.help_requested, state.version_requested, state.errors};
+        return ParsedArgs<T>{
+            std::move(out), state.help_requested, state.version_requested, state.errors,
+            std::move(state.command_path), settings.allow_aliases
+        };
     }
 }

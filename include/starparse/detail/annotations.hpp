@@ -41,7 +41,6 @@ namespace StarParse::inline annotations {
         struct Required_ final {};
     }
 
-    // TODO: long name override
     struct Opt final {
         char short_name{0};
         const char *help_{};
@@ -54,6 +53,12 @@ namespace StarParse::inline annotations {
         explicit consteval Opt(const char s) : short_name(s) {}
 
         [[nodiscard]] constexpr std::string_view help() const { return help_; }
+    };
+
+    struct Name final {
+        const char *name_{};
+
+        explicit consteval Name(std::string_view n) : name_(std::define_static_string(n)) {}
     };
 
     struct Positional final {
