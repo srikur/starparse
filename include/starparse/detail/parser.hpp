@@ -205,8 +205,10 @@ namespace StarParse::detail::Parser {
             }
         }
         std::ranges::sort(arguments, {}, &ArgumentRow::index);
-        options.push_back({"    --help", "Show this help message"});
-        options.push_back({"    --version", "Show version information"});
+        std::string_view short_help = short_name_exists<T>("h") ? "" : ", -h";
+        std::string_view short_version = short_name_exists<T>("v") ? "" : ", -v";
+        options.push_back({std::format("    --help{}", short_help), "Show this help message"});
+        options.push_back({std::format("    --version{}", short_version), "Show version information"});
 
         usage += " [options]";
         for (const auto &argument : arguments) {
