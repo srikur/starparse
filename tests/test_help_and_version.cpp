@@ -1,23 +1,35 @@
-#include <print>
-#include <starparse/starparse.hpp>
+#include "test_support.hpp"
 
 using namespace StarParse;
 
-struct Args {
-    [[=Validator{[](const std::string &arg) -> bool { return arg == "hello"; }}]] std::string string4;
-    [[=Choices{"a", "h", "c", "d"}]] std::string letter;
-    [[=Range{1, 3}]] int range;
-    [[=Range{0, 255}]] uint8_t range2;
-};
+namespace {
+    struct Args {
+        [[=Validator{[](const std::string &arg) -> bool { return arg == "hello"; }}]] std::string string4;
+        [[=Choices{"a", "b", "c", "d"}]] std::string letter;
+        [[=Range{1, 3}]] int range;
+        [[=Range{0, 255}]] uint8_t range2;
+    };
 
-auto main(int argc, char **argv) -> int {
-    const auto opts{StarParse::parse_or_exit<Args>(argc, argv)};
-    if (opts.help_requested()) {
-        std::println("{}", opts.help());
-        return 0;
-    }
-    if (opts.version_requested()) {
-        std::println("{}", opts.version());
-        return 0;
-    }
+    struct Args2 {
+        [[=Validator{[](const std::string &arg) -> bool { return arg == "hello"; }}]] std::string string4;
+        [[=Choices{"a", "h", "c", "d"}]] std::string letter;
+        [[=Range{1, 3}]] int range;
+        [[=Range{0, 255}]] uint8_t range2;
+    };
+
+    constexpr Settings settings{.allow_case_insensitivity = true};
+}
+
+TEST_CASE("help and version: check short form works") {
+    const auto args = parse_from<Args>({"-H"}, settings);
+    REQUIRE(args);
+    CHECK(args.help_requested() == true);
+    CHECK(args.version_requested() == false);
+}
+
+TEST_CASE("help and version: check short form disabled when used by an argument") {
+    const auto args = parse_from<Args2>({"-h"}, settings);
+    REQUIRE_FALSE(args);
+    CHECK(args.errors().size() == 1uz);
+    CHECK(args.errors()[0].kind == ErrorKind::UNKNOWN_OPTION);
 }
