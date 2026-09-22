@@ -39,9 +39,15 @@ namespace StarParse::detail::Parser {
         explicit ArgAttributes(std::string_view argument,
                                const size_t index,
                                const bool separator_seen) : argv_index(index) {
-            if (separator_seen || !argument.starts_with('-') || (argument.starts_with('-') && argument.size() == 1)) {
+            if (separator_seen || !argument.starts_with('-')) {
                 is_positional = true;
                 name = argument;
+                return;
+            }
+            if (argument.starts_with('-') && argument.size() == 1) {
+                is_positional = true;
+                name = argument;
+                dashed = true;
                 return;
             }
 
@@ -199,8 +205,10 @@ namespace StarParse::detail::Parser {
             }
         }
         std::ranges::sort(arguments, {}, &ArgumentRow::index);
-        options.push_back({"    --help", "Show this help message"});
-        options.push_back({"    --version", "Show version information"});
+        std::string_view short_help = short_name_exists<T>("h") ? "" : ", -h";
+        std::string_view short_version = short_name_exists<T>("v") ? "" : ", -v";
+        options.push_back({std::format("    --help{}", short_help), "Show this help message"});
+        options.push_back({std::format("    --version{}", short_version), "Show version information"});
 
         usage += " [options]";
         for (const auto &argument : arguments) {
@@ -393,6 +401,11 @@ namespace StarParse::detail::Parser {
                 a.value = args[++i];
                 a.has_value = true;
             }
+            if (a.dashed && a.name.size() == 1 && !short_name_exists<T>(a.name, settings.allow_case_insensitivity)) {
+                if (a.name == "h" || (settings.allow_case_insensitivity && ascii_lower(a.name[0]) == 'h')) a.is_help = true;
+                else if (a.name == "v" || (settings.allow_case_insensitivity && ascii_lower(a.name[0]) == 'v')) a.is_version = true;
+            }
+
             // check for subcommand
             if (a.is_positional && !separator_seen) {
                 template for (constexpr auto m : members) {

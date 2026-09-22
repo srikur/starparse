@@ -45,7 +45,7 @@ namespace StarParse::detail::Utilities {
     }
 
     template<std::meta::info M>
-    bool matches_alias(const std::string_view name, bool allow_case_insensitivity = false) {
+    bool matches_alias(const std::string_view name, const bool allow_case_insensitivity = false) {
         static constexpr auto aliases = std::define_static_array(alias_name_list(M));
         for (const char *alias : aliases) {
             if (name == std::string_view{alias} || (allow_case_insensitivity && iequals(name, std::string_view{alias})))
@@ -123,7 +123,7 @@ namespace StarParse::detail::Utilities {
     }
 
     template<std::meta::info M>
-    constexpr bool does_match_name(std::string_view name,
+    constexpr bool does_match_name(const std::string_view name,
                                    const std::optional<Opt> &opt,
                                    const Settings &settings,
                                    const bool allow_short = true) {
@@ -324,17 +324,21 @@ namespace StarParse::detail::Utilities {
 
     template<std::meta::info M, typename T>
     bool matches_choice(const T &value, const bool allow_case_insensitivity = false) {
-        static constexpr auto choices = choices_list<M>();
-        for (const auto &choice : choices) {
-            if constexpr (std::convertible_to<T, std::string_view>) {
-                if (std::string_view{value} == std::string_view{choice} || (
-                        allow_case_insensitivity && iequals(value, choice)))
-                    return true;
-            } else {
-                if (value == choice) return true;
+        if constexpr (!choices_of(M).has_value()) {
+            return false;
+        } else {
+            static constexpr auto choices = choices_list<M>();
+            for (const auto &choice : choices) {
+                if constexpr (std::convertible_to<T, std::string_view>) {
+                    if (std::string_view{value} == std::string_view{choice} || (
+                            allow_case_insensitivity && iequals(value, choice)))
+                        return true;
+                } else {
+                    if (value == choice) return true;
+                }
             }
+            return false;
         }
-        return false;
     }
 
     template<typename T>
@@ -434,6 +438,42 @@ namespace StarParse::detail::Utilities {
             s.remove_prefix(pos + separator.size());
         }
         f(s);
+    }
+
+    constexpr char ascii_lower(const char c) {
+        return c >= 'A' && c <= 'Z' ? static_cast<char>(c + ('a' - 'A')) : c;
+    }
+
+    constexpr bool same_name(const std::string_view a, const std::string_view b, const bool case_sensitive = false) {
+        if (a.size() != b.size()) return false;
+        for (size_t i = 0; i < a.size(); ++i) {
+            if (case_sensitive ? a[i] != b[i] : ascii_lower(a[i]) != ascii_lower(b[i])) return false;
+        }
+        return true;
+    }
+
+    template<std::meta::info M>
+    bool matches_short_name(const std::string_view &value, const bool allow_case_insensitivity = false) {
+        constexpr std::optional<Opt> opt = opt_of(M);
+        if (opt.has_value() && value.size() == 1) {
+            return allow_case_insensitivity ? ascii_lower(value[0]) == ascii_lower(opt->short_name) : value[0] == opt->short_name;
+        }
+        return false;
+    }
+
+    template<typename T>
+    bool short_name_exists(const std::string_view name, const bool allow_case_insensitivity = false) {
+        // check aliases, opt, and choices
+        static constexpr auto members = std::define_static_array(
+            std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
+        template for (constexpr auto member : members) {
+            if (matches_alias<member>(name, allow_case_insensitivity)
+                || matches_choice<member>(name, allow_case_insensitivity)
+                || matches_short_name<member>(name, allow_case_insensitivity)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     template<Numeric A, Numeric B>

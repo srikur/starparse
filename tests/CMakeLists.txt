@@ -23,6 +23,7 @@ add_executable(starparse_tests
         test_entry_points.cpp
         test_enum.cpp
         test_errors.cpp
+        test_help_and_version.cpp
         test_kebab.cpp
         test_parse.cpp
         test_positional_named.cpp
@@ -34,6 +35,4 @@ add_executable(starparse_tests
         test_validations.cpp)
 target_link_libraries(starparse_tests PRIVATE starparse::starparse doctest::doctest)
 target_compile_options(starparse_tests PRIVATE -Wall -Werror)
-
-# Registers every TEST_CASE as an individual CTest test.
 doctest_discover_tests(starparse_tests)
