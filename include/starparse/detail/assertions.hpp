@@ -17,7 +17,7 @@ namespace StarParse::detail::Assertions {
     using namespace StarParse::detail::Utilities;
 
     enum class AnnotationKind {
-        UNKNOWN, OPT, POSITIONAL, SUBCOMMAND, REQUIRED, SEPARATOR, ALIAS, PROGRAM, MIN, MAX, RANGE, CHOICES, VALIDATOR, COUNT
+        UNKNOWN, OPT, POSITIONAL, SUBCOMMAND, REQUIRED, SEPARATOR, ALIAS, NAME, PROGRAM, MIN, MAX, RANGE, CHOICES, VALIDATOR, COUNT
     };
 
     consteval AnnotationKind annotation_kind(const std::meta::info annotation) {
@@ -28,6 +28,7 @@ namespace StarParse::detail::Assertions {
         if (type == ^^detail::Required_) return AnnotationKind::REQUIRED;
         if (type == ^^Separator) return AnnotationKind::SEPARATOR;
         if (type == ^^Alias) return AnnotationKind::ALIAS;
+        if (type == ^^Name) return AnnotationKind::NAME;
         if (type == ^^Program) return AnnotationKind::PROGRAM;
         if (is_specialization_of(type, ^^Min)) return AnnotationKind::MIN;
         if (is_specialization_of(type, ^^Max)) return AnnotationKind::MAX;
@@ -124,6 +125,9 @@ namespace StarParse::detail::Assertions {
                 for (size_t i = 0; i < alias.count_; ++i) {
                     if (alias.names_[i] == nullptr || !valid_alias(alias.names_[i])) return false;
                 }
+            } else if (kind == AnnotationKind::NAME) {
+                const auto name = std::meta::extract<Name>(annotation);
+                if (name.name_ == nullptr || !valid_alias(name.name_)) return false;
             }
         }
         return true;
@@ -152,11 +156,11 @@ namespace StarParse::detail::Assertions {
 
     consteval void append_names(std::vector<Name> &names, const std::meta::info entity,
                                 const bool include_short_name = true) {
-        const std::string identifier{std::meta::identifier_of(entity)};
-        names.push_back({.text = identifier, .owner = entity});
-        std::string kebab = identifier;
+        const std::string name{name_of(entity)};
+        names.push_back({.text = name, .owner = entity});
+        std::string kebab = name;
         std::ranges::replace(kebab, '_', '-');
-        if (kebab != identifier) names.push_back({.text = std::move(kebab), .owner = entity});
+        if (kebab != name) names.push_back({.text = std::move(kebab), .owner = entity});
         if (const auto opt = opt_of(entity); include_short_name && opt && opt->short_name != 0) {
             names.push_back({.text = std::string(1, opt->short_name), .owner = entity, .is_short = true});
         }

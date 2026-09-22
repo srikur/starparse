@@ -102,12 +102,23 @@ namespace StarParse::detail::Utilities {
                !std::meta::extract<bool>(std::meta::substitute(^^is_char_v, {r}));
     }
 
+    consteval std::string_view name_of(const std::meta::info entity) {
+        if (std::meta::is_nonstatic_data_member(entity)) {
+            for (const auto annotation : std::meta::annotations_of(entity)) {
+                if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(annotation))) == ^^Name) {
+                    return std::meta::extract<Name>(annotation).name_;
+                }
+            }
+        }
+        return std::meta::identifier_of(entity);
+    }
+
     template<std::meta::info M>
-    inline constexpr std::string_view snake_name_v = std::meta::identifier_of(M);
+    inline constexpr std::string_view snake_name_v = name_of(M);
 
     template<std::meta::info M>
     inline constexpr std::string_view kebab_name_v = [] {
-        std::string s(std::meta::identifier_of(M));
+        std::string s(name_of(M));
         std::ranges::replace(s, '_', '-');
         return std::string_view(std::define_static_string(s), s.size());
     }();
@@ -123,16 +134,25 @@ namespace StarParse::detail::Utilities {
     }
 
     template<std::meta::info M>
-    constexpr bool does_match_name(const std::string_view name,
-                                   const std::optional<Opt> &opt,
-                                   const Settings &settings,
-                                   const bool allow_short = true) {
+    constexpr bool matches_non_negated_name(const std::string_view name,
+                                            const std::optional<Opt> &opt,
+                                            const Settings &settings,
+                                            const bool allow_short = true) {
         if (allow_short && name.size() == 1 && opt.has_value() && name[0] == opt->short_name)
             return true;
         if (check_snake_case<M>(name, settings) || check_kebab_case<M>(name, settings))
             return true;
         if (settings.allow_aliases && Utilities::matches_alias<M>(name, settings.allow_case_insensitivity))
             return true;
+        return false;
+    }
+
+    template<std::meta::info M>
+    constexpr bool does_match_name(const std::string_view name,
+                                   const std::optional<Opt> &opt,
+                                   const Settings &settings,
+                                   const bool allow_short = true) {
+        if (matches_non_negated_name<M>(name, opt, settings, allow_short)) return true;
         if (settings.autogenerate_negations && name.starts_with("no-") && is_flag_type(std::meta::type_of(M))) {
             std::string_view negated{name};
             negated.remove_prefix(3);
@@ -329,11 +349,12 @@ namespace StarParse::detail::Utilities {
         } else {
             static constexpr auto choices = choices_list<M>();
             for (const auto &choice : choices) {
-                if constexpr (std::convertible_to<T, std::string_view>) {
+                if constexpr (std::convertible_to<T, std::string_view> &&
+                              std::convertible_to<decltype(choice), std::string_view>) {
                     if (std::string_view{value} == std::string_view{choice} || (
                             allow_case_insensitivity && iequals(value, choice)))
                         return true;
-                } else {
+                } else if constexpr (requires { { value == choice } -> std::convertible_to<bool>; }) {
                     if (value == choice) return true;
                 }
             }
@@ -467,6 +488,12 @@ namespace StarParse::detail::Utilities {
         static constexpr auto members = std::define_static_array(
             std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
         template for (constexpr auto member : members) {
+            if constexpr (is_named_option<T>(member)) {
+                constexpr auto canonical = name_of(member);
+                if (canonical.size() == 1 &&
+                    (name == canonical || (allow_case_insensitivity && iequals(name, canonical))))
+                    return true;
+            }
             if (matches_alias<member>(name, allow_case_insensitivity)
                 || matches_choice<member>(name, allow_case_insensitivity)
                 || matches_short_name<member>(name, allow_case_insensitivity)) {
@@ -505,7 +532,7 @@ namespace StarParse::detail::Utilities {
                     .detail = result.error().empty()
                                   ? std::string{"validator returned false"}
                                   : std::move(result.error()),
-                    .current_argument = std::meta::identifier_of(Mem),
+                    .current_argument = name_of(Mem),
                     .argv_index = index
                 });
                 return false;
@@ -517,7 +544,7 @@ namespace StarParse::detail::Utilities {
                     .kind = ErrorKind::INVALID_CHOICE,
                     .input_value = input,
                     .detail = std::format("{}", choices),
-                    .current_argument = std::meta::identifier_of(Mem),
+                    .current_argument = name_of(Mem),
                     .argv_index = index
                 });
                 return false;
@@ -531,7 +558,7 @@ namespace StarParse::detail::Utilities {
                     .kind = ErrorKind::OUT_OF_RANGE,
                     .input_value = input,
                     .detail = std::format("minimum is {}", mn.value),
-                    .current_argument = std::meta::identifier_of(Mem),
+                    .current_argument = name_of(Mem),
                     .argv_index = index
                 });
                 return false;
@@ -545,7 +572,7 @@ namespace StarParse::detail::Utilities {
                     .kind = ErrorKind::OUT_OF_RANGE,
                     .input_value = input,
                     .detail = std::format("maximum is {}", mx.value),
-                    .current_argument = std::meta::identifier_of(Mem),
+                    .current_argument = name_of(Mem),
                     .argv_index = index
                 });
                 return false;
@@ -559,7 +586,7 @@ namespace StarParse::detail::Utilities {
                     .kind = ErrorKind::OUT_OF_RANGE,
                     .input_value = input,
                     .detail = std::format("allowed range is [{}, {}]", range.min, range.max),
-                    .current_argument = std::meta::identifier_of(Mem),
+                    .current_argument = name_of(Mem),
                     .argv_index = index
                 });
                 return false;
@@ -579,7 +606,7 @@ namespace StarParse::detail::Utilities {
             if (field == std::numeric_limits<M>::max()) {
                 errors.push_back({
                     .kind = ErrorKind::OUT_OF_RANGE, .input_value = name,
-                    .detail = "count would overflow", .current_argument = std::meta::identifier_of(Mem),
+                    .detail = "count would overflow", .current_argument = name_of(Mem),
                     .argv_index = index
                 });
                 return false;
@@ -606,7 +633,7 @@ namespace StarParse::detail::Utilities {
                 .detail = result.error().empty()
                               ? std::string{"parsed returned an error"}
                               : std::move(result.error()),
-                .current_argument = std::meta::identifier_of(Mem),
+                .current_argument = name_of(Mem),
                 .argv_index = index
             });
         } else return *result;
@@ -644,7 +671,7 @@ namespace StarParse::detail::Utilities {
                     errors.push_back(ParseError{
                         .kind = ErrorKind::DUPLICATE_OPTION,
                         .input_value = piece,
-                        .current_argument = std::meta::identifier_of(Mem),
+                        .current_argument = name_of(Mem),
                         .argv_index = index
                     });
                 } else if constexpr (has_custom_parser) {
