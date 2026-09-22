@@ -150,18 +150,6 @@ namespace StarParse::detail::Assertions {
         bool is_alias{};
     };
 
-    constexpr char ascii_lower(const char c) {
-        return c >= 'A' && c <= 'Z' ? static_cast<char>(c + ('a' - 'A')) : c;
-    }
-
-    constexpr bool same_name(const std::string_view a, const std::string_view b, const bool case_sensitive = false) {
-        if (a.size() != b.size()) return false;
-        for (size_t i = 0; i < a.size(); ++i) {
-            if (case_sensitive ? a[i] != b[i] : ascii_lower(a[i]) != ascii_lower(b[i])) return false;
-        }
-        return true;
-    }
-
     consteval void append_names(std::vector<Name> &names, const std::meta::info entity,
                                 const bool include_short_name = true) {
         const std::string identifier{std::meta::identifier_of(entity)};
@@ -182,7 +170,6 @@ namespace StarParse::detail::Assertions {
     consteval bool unique_names(const std::vector<Name> &names, const bool reserve_builtin_options) {
         for (auto i{0uz}; i < names.size(); ++i) {
             const auto &name = names[i];
-            // TODO: add short versions -h and -v
             if (reserve_builtin_options && (same_name(name.text, "help") || same_name(name.text, "version"))) {
                 return false;
             }

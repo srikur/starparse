@@ -39,9 +39,15 @@ namespace StarParse::detail::Parser {
         explicit ArgAttributes(std::string_view argument,
                                const size_t index,
                                const bool separator_seen) : argv_index(index) {
-            if (separator_seen || !argument.starts_with('-') || (argument.starts_with('-') && argument.size() == 1)) {
+            if (separator_seen || !argument.starts_with('-')) {
                 is_positional = true;
                 name = argument;
+                return;
+            }
+            if (argument.starts_with('-') && argument.size() == 1) {
+                is_positional = true;
+                name = argument;
+                dashed = true;
                 return;
             }
 
@@ -393,6 +399,11 @@ namespace StarParse::detail::Parser {
                 a.value = args[++i];
                 a.has_value = true;
             }
+            if (a.dashed && !short_name_exists<T>(a.name, settings.allow_case_insensitivity)) {
+                if (a.dashed && a.name == "h") a.is_help = true;
+                else if (a.dashed && a.name == "v") a.is_version = true;
+            }
+
             // check for subcommand
             if (a.is_positional && !separator_seen) {
                 template for (constexpr auto m : members) {
