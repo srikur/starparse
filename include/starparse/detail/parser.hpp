@@ -475,7 +475,6 @@ namespace StarParse::detail::Parser {
         bool version_requested{false};
         std::vector<ParseError> errors{};
         std::vector<size_t> command_path{};
-        std::unordered_map<std::string, std::string> env_vars{};
     };
 
     template<typename T>
@@ -575,13 +574,13 @@ namespace StarParse::detail::Parser {
 
         if constexpr (constexpr auto file = file_of(^^T)) {
             if (const auto parse_result = File::read_env(std::string_view{file->filename})) {
-                state.env_vars = std::move(*parse_result);
+                std::unordered_map<std::string, std::string> env_vars = *parse_result;
                 template for (constexpr auto m : members) {
                     const size_t index = member_index_of<T>(m);
                     if constexpr (constexpr auto env = env_of(m)) {
-                        constexpr auto name = env_name_v<m>;
-                        if (state.env_vars.contains(name.data()) && fields_set[index] == 0) {
-                            assign_from_string<m>(out.[:m:], state.env_vars[name.data()],
+                        constexpr std::string_view name = env_name_v<m>;
+                        if (env_vars.contains(name.data()) && fields_set[index] == 0) {
+                            assign_from_string<m>(out.[:m:], env_vars[name.data()],
                                                   0, fields_set[index],
                                                   errors, settings);
                         }
