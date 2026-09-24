@@ -561,6 +561,8 @@ namespace StarParse::detail::Parser {
                 }
             }
             if (entered_child) break;
+            // check env file annotation
+            // if (file_of(m).has_value())
             if (!matched) {
                 errors.push_back({
                     .kind = ErrorKind::UNKNOWN_OPTION, .input_value = attrs.name,

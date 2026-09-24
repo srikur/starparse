@@ -216,6 +216,17 @@ namespace StarParse::inline annotations {
     template<typename F>
     Parser(F) -> Parser<detail::first_arg_t<F> >;
 
-    // TODO: File{} annotation on structs, Env{} on fields
-    // TODO: maybe Env{filename, var} option for a more granular configuration option?
+    struct Env final {
+        const char *filename{};
+        const char *name{};
+
+        explicit consteval Env(std::string_view f, std::string_view n = "") : filename(std::define_static_string(f)),
+                                                                              name(std::define_static_string(n)) {}
+    };
+
+    struct File final {
+        const char *filename{};
+
+        explicit consteval File(std::string_view f) : filename(std::define_static_string(f)) {}
+    };
 }

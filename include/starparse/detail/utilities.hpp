@@ -334,6 +334,24 @@ namespace StarParse::detail::Utilities {
         return std::nullopt;
     }
 
+    consteval std::optional<File> file_of(const std::meta::info m) {
+        for (const std::meta::info a : std::meta::annotations_of(m)) {
+            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^File)) {
+                return std::meta::extract<File>(a);
+            }
+        }
+        return std::nullopt;
+    }
+
+    consteval std::optional<Env> env_of(const std::meta::info m) {
+        for (const std::meta::info a : std::meta::annotations_of(m)) {
+            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^Env)) {
+                return std::meta::extract<Env>(a);
+            }
+        }
+        return std::nullopt;
+    }
+
     template<std::meta::info M>
     consteval auto choices_list() {
         constexpr auto annotation = choices_of(M);
@@ -390,7 +408,7 @@ namespace StarParse::detail::Utilities {
             return std::nullopt;
         }
         size_t index{0};
-        for (std::meta::info member : std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current())) {
+        for (const std::meta::info member : std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current())) {
             if (is_flag_type(std::meta::type_of(member))) {
                 continue;
             }
