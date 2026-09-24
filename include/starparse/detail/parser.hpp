@@ -18,6 +18,7 @@
 #include <starparse/detail/errors.hpp>
 
 #include "assertions.hpp"
+#include "file.h"
 
 namespace StarParse::detail::Parser {
     using namespace StarParse::detail::Utilities;
@@ -474,6 +475,7 @@ namespace StarParse::detail::Parser {
         bool version_requested{false};
         std::vector<ParseError> errors{};
         std::vector<size_t> command_path{};
+        std::unordered_map<std::string, std::string> env_vars{};
     };
 
     template<typename T>
@@ -481,6 +483,14 @@ namespace StarParse::detail::Parser {
         static constexpr auto members = std::define_static_array(
             std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
         check_assertions<T>();
+        if constexpr (auto file = file_of(^^T)) {
+            if (const auto parse_result = File::read_env(file->filename)) {
+                state.env_vars = std::move(*parse_result);
+            } else {
+                state.errors.emplace_back(parse_result.error());
+                return;
+            }
+        }
         std::array<size_t, members.size()> fields_set{};
         size_t next_positional{0uz};
         auto &errors = state.errors;
@@ -561,8 +571,6 @@ namespace StarParse::detail::Parser {
                 }
             }
             if (entered_child) break;
-            // check env file annotation
-            // if (file_of(m).has_value())
             if (!matched) {
                 errors.push_back({
                     .kind = ErrorKind::UNKNOWN_OPTION, .input_value = attrs.name,

@@ -8,7 +8,8 @@
 namespace StarParse {
     enum class ErrorKind {
         UNKNOWN_OPTION, MISSING_VALUE, INVALID_VALUE, UNEXPECTED_POSITIONAL, MISSING_REQUIRED, DUPLICATE_OPTION,
-        EXCEPTION, OUT_OF_RANGE, INVALID_CHOICE, VALIDATION_FAILED, CUSTOM_PARSING_FAILED
+        EXCEPTION, OUT_OF_RANGE, INVALID_CHOICE, VALIDATION_FAILED, CUSTOM_PARSING_FAILED, READING_ENV_FAILED,
+        INVALID_ENV_VALUE
     };
 
     struct ParseError {
@@ -43,6 +44,10 @@ namespace StarParse {
                     return std::format("Validation failed for input '{}': {}", input_value, detail);
                 case ErrorKind::CUSTOM_PARSING_FAILED:
                     return std::format("Annotated parser failed for input '{}': {}", input_value, detail);
+                case ErrorKind::READING_ENV_FAILED:
+                    return std::format("Failed to read from dotenv file: {}", input_value);
+                case ErrorKind::INVALID_ENV_VALUE:
+                    return std::format("Error at line {} while reading dotenv line '{}': {}", argv_index, input_value, detail);
                 default:
                     return std::format("Unknown error: '{}'", input_value);
             }

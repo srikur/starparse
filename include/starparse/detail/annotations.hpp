@@ -217,11 +217,9 @@ namespace StarParse::inline annotations {
     Parser(F) -> Parser<detail::first_arg_t<F> >;
 
     struct Env final {
-        const char *filename{};
         const char *name{};
 
-        explicit consteval Env(std::string_view f, std::string_view n = "") : filename(std::define_static_string(f)),
-                                                                              name(std::define_static_string(n)) {}
+        explicit consteval Env(std::string_view n) : name(std::define_static_string(n)) {}
     };
 
     struct File final {
