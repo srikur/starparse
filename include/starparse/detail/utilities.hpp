@@ -353,6 +353,18 @@ namespace StarParse::detail::Utilities {
     }
 
     template<std::meta::info M>
+    inline constexpr std::string_view env_name_v = [] {
+        constexpr auto env = env_of(M);
+        static_assert(env.has_value(), "member requires an Env annotation");
+        std::string s{env->name};
+        for (auto &c : s) {
+            // note: apparently std::toupper is not constexpr
+            if (c >= 'a' && c <= 'z') c = static_cast<char>(c - 'a' + 'A');
+        }
+        return std::string_view{std::define_static_string(s), s.size()};
+    }();
+
+    template<std::meta::info M>
     consteval auto choices_list() {
         constexpr auto annotation = choices_of(M);
         using C = [:std::meta::remove_cv(std::meta::type_of(*annotation)):];
@@ -477,6 +489,14 @@ namespace StarParse::detail::Utilities {
             s.remove_prefix(pos + separator.size());
         }
         f(s);
+    }
+
+    [[nodiscard]] inline std::string to_uppercase(const std::string_view sv) {
+        std::string result{sv};
+        std::ranges::transform(result, result.begin(), [](unsigned char c) {
+            return std::toupper(c);
+        });
+        return result;
     }
 
     constexpr char ascii_lower(const char c) {

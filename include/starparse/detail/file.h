@@ -6,18 +6,21 @@
 #include <unordered_map>
 #include <fstream>
 
+#include "utilities.hpp"
 #include "starparse/detail/errors.hpp"
 
 
 namespace StarParse::detail::File {
     using EnvMap = std::unordered_map<std::string, std::string>;
 
-    [[nodiscard]] inline std::expected<EnvMap, ParseError> read_env(const std::filesystem::path &path) {
+    [[nodiscard]] inline std::expected<EnvMap, ParseError> read_env(const std::string_view filename) {
+        const std::filesystem::path path{filename};
         std::ifstream ifs{path, std::ios::binary};
         if (!ifs.is_open()) {
             return std::unexpected(ParseError{
                 .kind = ErrorKind::READING_ENV_FAILED,
-                .input_value = path.string(),
+                .input_value = filename,
+                .detail = "failed to open environment file",
             });
         }
 
@@ -104,13 +107,14 @@ namespace StarParse::detail::File {
                     });
                 }
             }
-            result.insert_or_assign(std::string{key}, std::string{value});
+            result.insert_or_assign(std::string{Utilities::to_uppercase(key)}, std::string{value});
         }
 
         if (ifs.bad() || (ifs.fail() && !ifs.eof())) {
             return std::unexpected(ParseError{
                 .kind = ErrorKind::READING_ENV_FAILED,
                 .input_value = path.string(),
+                .detail = "bad input",
             });
         }
 

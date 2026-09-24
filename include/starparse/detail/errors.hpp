@@ -45,7 +45,7 @@ namespace StarParse {
                 case ErrorKind::CUSTOM_PARSING_FAILED:
                     return std::format("Annotated parser failed for input '{}': {}", input_value, detail);
                 case ErrorKind::READING_ENV_FAILED:
-                    return std::format("Failed to read from dotenv file: {}", input_value);
+                    return std::format("Failed to read from dotenv file '{}': {}", input_value, detail);
                 case ErrorKind::INVALID_ENV_VALUE:
                     return std::format("Error at line {} while reading dotenv line '{}': {}", argv_index, input_value, detail);
                 default:

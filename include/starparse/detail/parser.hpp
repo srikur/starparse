@@ -483,14 +483,6 @@ namespace StarParse::detail::Parser {
         static constexpr auto members = std::define_static_array(
             std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
         check_assertions<T>();
-        if constexpr (auto file = file_of(^^T)) {
-            if (const auto parse_result = File::read_env(file->filename)) {
-                state.env_vars = std::move(*parse_result);
-            } else {
-                state.errors.emplace_back(parse_result.error());
-                return;
-            }
-        }
         std::array<size_t, members.size()> fields_set{};
         size_t next_positional{0uz};
         auto &errors = state.errors;
@@ -580,6 +572,26 @@ namespace StarParse::detail::Parser {
         }
 
         if (state.help_requested) return;
+
+        if constexpr (constexpr auto file = file_of(^^T)) {
+            if (const auto parse_result = File::read_env(std::string_view{file->filename})) {
+                state.env_vars = std::move(*parse_result);
+                template for (constexpr auto m : members) {
+                    const size_t index = member_index_of<T>(m);
+                    if constexpr (constexpr auto env = env_of(m)) {
+                        constexpr auto name = env_name_v<m>;
+                        if (state.env_vars.contains(name.data()) && fields_set[index] == 0) {
+                            assign_from_string<m>(out.[:m:], state.env_vars[name.data()],
+                                                  0, fields_set[index],
+                                                  errors, settings);
+                        }
+                    }
+                }
+            } else {
+                state.errors.emplace_back(parse_result.error());
+            }
+        }
+
         template for (constexpr auto m : members) {
             const size_t index = member_index_of<T>(m);
             if constexpr (is_required(m)) {
