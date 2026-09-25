@@ -227,7 +227,7 @@ namespace StarParse::detail::Utilities {
             if (!parsed)
                 return std::unexpected(ParseError{
                     .kind = ErrorKind::INVALID_VALUE,
-                    .input_value = s,
+                    .input_value = std::string{s},
                     .current_argument = std::optional{std::meta::display_string_of(^^M)},
                     .argv_index = index
                 });
@@ -606,9 +606,9 @@ namespace StarParse::detail::Utilities {
             constexpr auto mx = std::meta::extract<A>(*max_annotation);
 
             if (numeric_less(mx.value, value)) {
-                errors.push_back({
+                errors.push_back(ParseError{
                     .kind = ErrorKind::OUT_OF_RANGE,
-                    .input_value = input,
+                    .input_value = std::string{input},
                     .detail = std::format("maximum is {}", mx.value),
                     .current_argument = name_of(Mem),
                     .argv_index = index
@@ -620,7 +620,7 @@ namespace StarParse::detail::Utilities {
             constexpr auto range = std::meta::extract<A>(*range_annotation);
 
             if (numeric_less(value, range.min) || numeric_less(range.max, value)) {
-                errors.push_back({
+                errors.push_back(ParseError{
                     .kind = ErrorKind::OUT_OF_RANGE,
                     .input_value = std::string{input},
                     .detail = std::format("allowed range is [{}, {}]", range.min, range.max),
@@ -642,7 +642,7 @@ namespace StarParse::detail::Utilities {
             field = value;
         } else {
             if (field == std::numeric_limits<M>::max()) {
-                errors.push_back({
+                errors.push_back(ParseError{
                     .kind = ErrorKind::OUT_OF_RANGE, .input_value = std::string{name},
                     .detail = "count would overflow", .current_argument = name_of(Mem),
                     .argv_index = index
@@ -667,7 +667,7 @@ namespace StarParse::detail::Utilities {
         if (auto result = parsing_function(s); !result) {
             return std::unexpected(ParseError{
                 .kind = ErrorKind::CUSTOM_PARSING_FAILED,
-                .input_value = s,
+                .input_value = std::string{s},
                 .detail = result.error().empty()
                               ? std::string{"parsed returned an error"}
                               : std::move(result.error()),
@@ -708,7 +708,7 @@ namespace StarParse::detail::Utilities {
                 if (count >= std::tuple_size_v<M>) {
                     errors.push_back(ParseError{
                         .kind = ErrorKind::DUPLICATE_OPTION,
-                        .input_value = piece,
+                        .input_value = std::string{piece},
                         .current_argument = name_of(Mem),
                         .argv_index = index
                     });
