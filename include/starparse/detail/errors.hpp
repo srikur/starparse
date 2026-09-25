@@ -14,7 +14,7 @@ namespace StarParse {
 
     struct ParseError {
         ErrorKind kind;
-        std::string_view input_value{};
+        std::string input_value{};
         std::string detail{};
         std::optional<std::string_view> current_argument{std::nullopt};
         size_t argv_index{};

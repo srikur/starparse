@@ -176,7 +176,7 @@ namespace StarParse::detail::Utilities {
         constexpr std::array false_values{"no"sv, "0"sv, "off"sv, "false"sv, "f"sv};
         if (std::ranges::any_of(true_values, [&](auto value) { return iequals(s, value); })) return true;
         if (std::ranges::any_of(false_values, [&](auto value) { return iequals(s, value); })) return false;
-        return std::unexpected(ParseError{.kind = ErrorKind::INVALID_VALUE, .input_value = s});
+        return std::unexpected(ParseError{.kind = ErrorKind::INVALID_VALUE, .input_value = std::string{s}});
     }
 
     template<typename T>
@@ -211,7 +211,7 @@ namespace StarParse::detail::Utilities {
             if (error_code != std::errc{} || pointer != s.data() + s.size()) {
                 return std::unexpected(ParseError{
                     .kind = ErrorKind::INVALID_VALUE,
-                    .input_value = s,
+                    .input_value = std::string{s},
                     .current_argument = std::optional{std::meta::display_string_of(^^M)},
                     .argv_index = index
                 });
@@ -566,7 +566,7 @@ namespace StarParse::detail::Utilities {
             if (auto result = validator(value); !result) {
                 errors.push_back({
                     .kind = ErrorKind::VALIDATION_FAILED,
-                    .input_value = input,
+                    .input_value = std::string{input},
                     .detail = result.error().empty()
                                   ? std::string{"validator returned false"}
                                   : std::move(result.error()),
@@ -580,7 +580,7 @@ namespace StarParse::detail::Utilities {
             if (!matches_choice<Mem>(value, settings.allow_case_insensitivity)) {
                 errors.push_back({
                     .kind = ErrorKind::INVALID_CHOICE,
-                    .input_value = input,
+                    .input_value = std::string{input},
                     .detail = std::format("{}", choices),
                     .current_argument = name_of(Mem),
                     .argv_index = index
@@ -594,7 +594,7 @@ namespace StarParse::detail::Utilities {
             if (numeric_less(value, mn.value)) {
                 errors.push_back({
                     .kind = ErrorKind::OUT_OF_RANGE,
-                    .input_value = input,
+                    .input_value = std::string{input},
                     .detail = std::format("minimum is {}", mn.value),
                     .current_argument = name_of(Mem),
                     .argv_index = index
@@ -622,7 +622,7 @@ namespace StarParse::detail::Utilities {
             if (numeric_less(value, range.min) || numeric_less(range.max, value)) {
                 errors.push_back({
                     .kind = ErrorKind::OUT_OF_RANGE,
-                    .input_value = input,
+                    .input_value = std::string{input},
                     .detail = std::format("allowed range is [{}, {}]", range.min, range.max),
                     .current_argument = name_of(Mem),
                     .argv_index = index
@@ -643,7 +643,7 @@ namespace StarParse::detail::Utilities {
         } else {
             if (field == std::numeric_limits<M>::max()) {
                 errors.push_back({
-                    .kind = ErrorKind::OUT_OF_RANGE, .input_value = name,
+                    .kind = ErrorKind::OUT_OF_RANGE, .input_value = std::string{name},
                     .detail = "count would overflow", .current_argument = name_of(Mem),
                     .argv_index = index
                 });

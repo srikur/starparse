@@ -19,7 +19,7 @@ namespace StarParse::detail::File {
         if (!ifs.is_open()) {
             return std::unexpected(ParseError{
                 .kind = ErrorKind::READING_ENV_FAILED,
-                .input_value = filename,
+                .input_value = std::string{filename},
                 .detail = "failed to open environment file",
             });
         }
@@ -54,7 +54,7 @@ namespace StarParse::detail::File {
             if (equals == std::string_view::npos) {
                 return std::unexpected(ParseError{
                     .kind = ErrorKind::INVALID_ENV_VALUE,
-                    .input_value = line,
+                    .input_value = std::string{line},
                     .detail = "expected KEY=VALUE",
                     .argv_index = line_number,
                 });
@@ -68,7 +68,7 @@ namespace StarParse::detail::File {
                 key.find_first_not_of(key_chars) != std::string_view::npos) {
                 return std::unexpected(ParseError{
                     .kind = ErrorKind::INVALID_ENV_VALUE,
-                    .input_value = line,
+                    .input_value = std::string{line},
                     .detail = "invalid variable name",
                     .argv_index = line_number,
                 });
@@ -79,7 +79,7 @@ namespace StarParse::detail::File {
                 if (closing == std::string_view::npos) {
                     return std::unexpected(ParseError{
                         .kind = ErrorKind::INVALID_ENV_VALUE,
-                        .input_value = line,
+                        .input_value = std::string{line},
                         .detail = "unterminated quote",
                         .argv_index = line_number,
                     });
@@ -89,7 +89,7 @@ namespace StarParse::detail::File {
                 if (!tail.empty() && tail.front() != '#') {
                     return std::unexpected(ParseError{
                         .kind = ErrorKind::INVALID_ENV_VALUE,
-                        .input_value = line,
+                        .input_value = std::string{line},
                         .detail = "unexpected text after quoted value",
                         .argv_index = line_number,
                     });
@@ -101,7 +101,7 @@ namespace StarParse::detail::File {
                 if (value.find_first_of("\"'") != std::string_view::npos) {
                     return std::unexpected(ParseError{
                         .kind = ErrorKind::INVALID_ENV_VALUE,
-                        .input_value = line,
+                        .input_value = std::string{line},
                         .detail = "quotes must surround the entire value",
                         .argv_index = line_number,
                     });

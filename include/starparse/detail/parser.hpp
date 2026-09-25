@@ -468,6 +468,7 @@ namespace StarParse::detail::Parser {
                       "subcommand names or aliases collide (including case and kebab spellings)");
         static_assert(Assertions::check_enum_alias_collisions<T>(),
                       "enum aliases or enumerator names collide (including case and kebab spellings)");
+        // TODO: Env + File annotation assertions and tests
     }
 
     struct ParseState {
@@ -564,7 +565,7 @@ namespace StarParse::detail::Parser {
             if (entered_child) break;
             if (!matched) {
                 errors.push_back({
-                    .kind = ErrorKind::UNKNOWN_OPTION, .input_value = attrs.name,
+                    .kind = ErrorKind::UNKNOWN_OPTION, .input_value = std::string{attrs.name},
                     .argv_index = attrs.argv_index
                 });
             }
