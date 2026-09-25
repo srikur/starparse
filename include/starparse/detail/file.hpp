@@ -1,6 +1,7 @@
 #pragma once
 
-#include <print>
+#include <cstdlib>
+#include <optional>
 #include <expected>
 #include <filesystem>
 #include <unordered_map>
@@ -13,7 +14,7 @@
 namespace StarParse::detail::File {
     using EnvMap = std::unordered_map<std::string, std::string>;
 
-    [[nodiscard]] inline std::expected<EnvMap, ParseError> read_env(const std::string_view filename) {
+    [[nodiscard]] inline std::expected<EnvMap, ParseError> read_env_file(const std::string_view filename) {
         const std::filesystem::path path{filename};
         std::ifstream ifs{path, std::ios::binary};
         if (!ifs.is_open()) {
@@ -119,5 +120,12 @@ namespace StarParse::detail::File {
         }
 
         return result;
+    }
+
+    [[nodiscard]] inline std::optional<std::string> read_env(const std::string_view name) {
+        if (const char *v = std::getenv(name.data())) {
+            return std::string{v};
+        }
+        return std::nullopt;
     }
 }
