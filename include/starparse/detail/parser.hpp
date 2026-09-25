@@ -16,9 +16,8 @@
 #include <starparse/detail/settings.hpp>
 #include <starparse/detail/utilities.hpp>
 #include <starparse/detail/errors.hpp>
-
-#include "assertions.hpp"
-#include "file.h"
+#include <starparse/detail/assertions.hpp>
+#include <starparse/detail/file.hpp>
 
 namespace StarParse::detail::Parser {
     using namespace StarParse::detail::Utilities;
