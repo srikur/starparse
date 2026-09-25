@@ -176,7 +176,7 @@ namespace StarParse::detail::Utilities {
         constexpr std::array false_values{"no"sv, "0"sv, "off"sv, "false"sv, "f"sv};
         if (std::ranges::any_of(true_values, [&](auto value) { return iequals(s, value); })) return true;
         if (std::ranges::any_of(false_values, [&](auto value) { return iequals(s, value); })) return false;
-        return std::unexpected(ParseError{.kind = ErrorKind::INVALID_VALUE, .input_value = s});
+        return std::unexpected(ParseError{.kind = ErrorKind::INVALID_VALUE, .input_value = std::string{s}});
     }
 
     template<typename T>
@@ -211,7 +211,7 @@ namespace StarParse::detail::Utilities {
             if (error_code != std::errc{} || pointer != s.data() + s.size()) {
                 return std::unexpected(ParseError{
                     .kind = ErrorKind::INVALID_VALUE,
-                    .input_value = s,
+                    .input_value = std::string{s},
                     .current_argument = std::optional{std::meta::display_string_of(^^M)},
                     .argv_index = index
                 });
@@ -227,7 +227,7 @@ namespace StarParse::detail::Utilities {
             if (!parsed)
                 return std::unexpected(ParseError{
                     .kind = ErrorKind::INVALID_VALUE,
-                    .input_value = s,
+                    .input_value = std::string{s},
                     .current_argument = std::optional{std::meta::display_string_of(^^M)},
                     .argv_index = index
                 });
@@ -334,6 +334,36 @@ namespace StarParse::detail::Utilities {
         return std::nullopt;
     }
 
+    consteval std::optional<File> file_of(const std::meta::info m) {
+        for (const std::meta::info a : std::meta::annotations_of(m)) {
+            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^File)) {
+                return std::meta::extract<File>(a);
+            }
+        }
+        return std::nullopt;
+    }
+
+    consteval std::optional<Env> env_of(const std::meta::info m) {
+        for (const std::meta::info a : std::meta::annotations_of(m)) {
+            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^Env)) {
+                return std::meta::extract<Env>(a);
+            }
+        }
+        return std::nullopt;
+    }
+
+    template<std::meta::info M>
+    inline constexpr std::string_view env_name_v = [] {
+        constexpr auto env = env_of(M);
+        static_assert(env.has_value(), "member requires an Env annotation");
+        std::string s{env->name};
+        for (auto &c : s) {
+            // note: apparently std::toupper is not constexpr
+            if (c >= 'a' && c <= 'z') c = static_cast<char>(c - 'a' + 'A');
+        }
+        return std::string_view{std::define_static_string(s), s.size()};
+    }();
+
     template<std::meta::info M>
     consteval auto choices_list() {
         constexpr auto annotation = choices_of(M);
@@ -390,7 +420,7 @@ namespace StarParse::detail::Utilities {
             return std::nullopt;
         }
         size_t index{0};
-        for (std::meta::info member : std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current())) {
+        for (const std::meta::info member : std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current())) {
             if (is_flag_type(std::meta::type_of(member))) {
                 continue;
             }
@@ -461,6 +491,14 @@ namespace StarParse::detail::Utilities {
         f(s);
     }
 
+    [[nodiscard]] inline std::string to_uppercase(const std::string_view sv) {
+        std::string result{sv};
+        std::ranges::transform(result, result.begin(), [](unsigned char c) {
+            return std::toupper(c);
+        });
+        return result;
+    }
+
     constexpr char ascii_lower(const char c) {
         return c >= 'A' && c <= 'Z' ? static_cast<char>(c + ('a' - 'A')) : c;
     }
@@ -528,7 +566,7 @@ namespace StarParse::detail::Utilities {
             if (auto result = validator(value); !result) {
                 errors.push_back({
                     .kind = ErrorKind::VALIDATION_FAILED,
-                    .input_value = input,
+                    .input_value = std::string{input},
                     .detail = result.error().empty()
                                   ? std::string{"validator returned false"}
                                   : std::move(result.error()),
@@ -542,7 +580,7 @@ namespace StarParse::detail::Utilities {
             if (!matches_choice<Mem>(value, settings.allow_case_insensitivity)) {
                 errors.push_back({
                     .kind = ErrorKind::INVALID_CHOICE,
-                    .input_value = input,
+                    .input_value = std::string{input},
                     .detail = std::format("{}", choices),
                     .current_argument = name_of(Mem),
                     .argv_index = index
@@ -556,7 +594,7 @@ namespace StarParse::detail::Utilities {
             if (numeric_less(value, mn.value)) {
                 errors.push_back({
                     .kind = ErrorKind::OUT_OF_RANGE,
-                    .input_value = input,
+                    .input_value = std::string{input},
                     .detail = std::format("minimum is {}", mn.value),
                     .current_argument = name_of(Mem),
                     .argv_index = index
@@ -568,9 +606,9 @@ namespace StarParse::detail::Utilities {
             constexpr auto mx = std::meta::extract<A>(*max_annotation);
 
             if (numeric_less(mx.value, value)) {
-                errors.push_back({
+                errors.push_back(ParseError{
                     .kind = ErrorKind::OUT_OF_RANGE,
-                    .input_value = input,
+                    .input_value = std::string{input},
                     .detail = std::format("maximum is {}", mx.value),
                     .current_argument = name_of(Mem),
                     .argv_index = index
@@ -582,9 +620,9 @@ namespace StarParse::detail::Utilities {
             constexpr auto range = std::meta::extract<A>(*range_annotation);
 
             if (numeric_less(value, range.min) || numeric_less(range.max, value)) {
-                errors.push_back({
+                errors.push_back(ParseError{
                     .kind = ErrorKind::OUT_OF_RANGE,
-                    .input_value = input,
+                    .input_value = std::string{input},
                     .detail = std::format("allowed range is [{}, {}]", range.min, range.max),
                     .current_argument = name_of(Mem),
                     .argv_index = index
@@ -604,8 +642,8 @@ namespace StarParse::detail::Utilities {
             field = value;
         } else {
             if (field == std::numeric_limits<M>::max()) {
-                errors.push_back({
-                    .kind = ErrorKind::OUT_OF_RANGE, .input_value = name,
+                errors.push_back(ParseError{
+                    .kind = ErrorKind::OUT_OF_RANGE, .input_value = std::string{name},
                     .detail = "count would overflow", .current_argument = name_of(Mem),
                     .argv_index = index
                 });
@@ -629,7 +667,7 @@ namespace StarParse::detail::Utilities {
         if (auto result = parsing_function(s); !result) {
             return std::unexpected(ParseError{
                 .kind = ErrorKind::CUSTOM_PARSING_FAILED,
-                .input_value = s,
+                .input_value = std::string{s},
                 .detail = result.error().empty()
                               ? std::string{"parsed returned an error"}
                               : std::move(result.error()),
@@ -670,7 +708,7 @@ namespace StarParse::detail::Utilities {
                 if (count >= std::tuple_size_v<M>) {
                     errors.push_back(ParseError{
                         .kind = ErrorKind::DUPLICATE_OPTION,
-                        .input_value = piece,
+                        .input_value = std::string{piece},
                         .current_argument = name_of(Mem),
                         .argv_index = index
                     });

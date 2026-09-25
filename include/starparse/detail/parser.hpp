@@ -16,8 +16,8 @@
 #include <starparse/detail/settings.hpp>
 #include <starparse/detail/utilities.hpp>
 #include <starparse/detail/errors.hpp>
-
-#include "assertions.hpp"
+#include <starparse/detail/assertions.hpp>
+#include <starparse/detail/file.hpp>
 
 namespace StarParse::detail::Parser {
     using namespace StarParse::detail::Utilities;
@@ -467,6 +467,7 @@ namespace StarParse::detail::Parser {
                       "subcommand names or aliases collide (including case and kebab spellings)");
         static_assert(Assertions::check_enum_alias_collisions<T>(),
                       "enum aliases or enumerator names collide (including case and kebab spellings)");
+        // TODO: Env + File annotation assertions and tests
     }
 
     struct ParseState {
@@ -563,13 +564,34 @@ namespace StarParse::detail::Parser {
             if (entered_child) break;
             if (!matched) {
                 errors.push_back({
-                    .kind = ErrorKind::UNKNOWN_OPTION, .input_value = attrs.name,
+                    .kind = ErrorKind::UNKNOWN_OPTION, .input_value = std::string{attrs.name},
                     .argv_index = attrs.argv_index
                 });
             }
         }
 
         if (state.help_requested) return;
+
+        if constexpr (constexpr auto file = file_of(^^T)) {
+            if (const auto parse_result = File::read_env_file(std::string_view{file->filename})) {
+                std::unordered_map<std::string, std::string> env_vars = *parse_result;
+                template for (constexpr auto m : members) {
+                    const size_t index = member_index_of<T>(m);
+                    if constexpr (constexpr auto env = env_of(m)) {
+                        constexpr std::string_view name = env_name_v<m>;
+                        if (fields_set[index] != 0) continue;
+                        if (const auto process_env_value = File::read_env(name)) {
+                            assign_from_string<m>(out.[:m:], *process_env_value, 0, fields_set[index], errors, settings);
+                        } else if (env_vars.contains(name.data())) {
+                            assign_from_string<m>(out.[:m:], env_vars[name.data()], 0, fields_set[index], errors, settings);
+                        }
+                    }
+                }
+            } else {
+                state.errors.emplace_back(parse_result.error());
+            }
+        }
+
         template for (constexpr auto m : members) {
             const size_t index = member_index_of<T>(m);
             if constexpr (is_required(m)) {

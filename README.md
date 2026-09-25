@@ -131,6 +131,32 @@ line are overwritten—everything else keeps the value you set.
 `[[=StarParse::Required]]` makes omission a parse error (`Missing value for required option '...'`) and marks the field
 `(required)` in the help text. Combining `Required` with `std::optional` is rejected at compile time.
 
+### Environment variables and dotenv files
+
+`File{"path"}` on the struct names a dotenv file, and `Env{"NAME"}` on a field names the variable that fills it when
+the option is not given on the command line. Order of search:
+
+1. command-line provided value
+2. process environment (via `Env{}`)
+3. dotenv file (via `File{}`)
+4. prefilled object passed to `parse`
+
+```cpp
+struct [[=StarParse::File{".env"}]] Options {
+    [[=StarParse::Opt{'j'}, =StarParse::Env{"APP_JOBS"}]] int jobs;
+    [[=StarParse::Opt{'t'}, =StarParse::Env{"APP_TOKEN"}, =StarParse::Required]] std::string token;
+    [[=StarParse::Env{"APP_TAGS"}]] std::vector<std::string> tags;
+};
+
+// .env
+// # comment
+// export APP_JOBS=4
+// APP_TOKEN="s3cr3t"   # inline comment
+// APP_TAGS=a,b,c
+```
+
+Values from either file or process env go through the same conversions as command-line values.
+
 ### Constraints and validation
 
 At most one of these per field (enforced at compile time), applied per element for containers:
@@ -261,20 +287,22 @@ subcommand or enum-alias collisions.
 
 ## Annotation reference
 
-| Annotation                                  | Applies to                    | Effect                                                               |
-|---------------------------------------------|-------------------------------|----------------------------------------------------------------------|
-| `Opt{'x', "help"}`                          | field                         | short name and/or help text (`Opt{'x'}` and `Opt{"help"}` also work) |
-| `Positional{n}` / `Positional{n, "help"}`   | field                         | fill from position `n`; still addressable by name                    |
-| `Required`                                  | field                         | omission is a parse error                                            |
-| `Alias{"name", ...}`                        | field or enumerator           | extra long/short spellings                                           |
-| `Name{"name"}`                              | field                         | replaces the identifier used as the command-line name                |
-| `Subcommand`                                | `std::optional<Struct>` field | subcommand                                                           |
-| `Program{"name", "description", "version"}` | struct                        | powers `--help` / `--version`                                        |
-| `Separator{";"}`                            | container field               | per-field value delimiter                                            |
-| `Min{n}` / `Max{n}` / `Range{lo, hi}`       | numeric field                 | bounds check                                                         |
-| `Choices{...}`                              | field                         | allowed-value set                                                    |
-| `Validator{fn}`                             | field                         | custom check                                                         |
-| `Parser{fn}`                                | field                         | custom string-to-value conversion                                    |
+| Annotation                                  | Applies to                    | Effect                                                                   |
+|---------------------------------------------|-------------------------------|--------------------------------------------------------------------------|
+| `Opt{'x', "help"}`                          | field                         | short name and/or help text (`Opt{'x'}` and `Opt{"help"}` also work)     |
+| `Positional{n}` / `Positional{n, "help"}`   | field                         | fill from position `n`; still addressable by name                        |
+| `Required`                                  | field                         | omission is a parse error                                                |
+| `Alias{"name", ...}`                        | field or enumerator           | extra long/short spellings                                               |
+| `Name{"name"}`                              | field                         | replaces the identifier used as the command-line name                    |
+| `Subcommand`                                | `std::optional<Struct>` field | subcommand                                                               |
+| `Program{"name", "description", "version"}` | struct                        | powers `--help` / `--version`                                            |
+| `Separator{";"}`                            | container field               | per-field value delimiter                                                |
+| `Min{n}` / `Max{n}` / `Range{lo, hi}`       | numeric field                 | bounds check                                                             |
+| `Choices{...}`                              | field                         | allowed-value set                                                        |
+| `Validator{fn}`                             | field                         | custom check                                                             |
+| `Parser{fn}`                                | field                         | custom string-to-value conversion                                        |
+| `Env{"NAME"}`                               | field                         | fill from environment variable / dotenv key when not on the command line |
+| `File{"path"}`                              | struct                        | dotenv file consulted for the struct's `Env` fields                      |
 
 ## Building and testing
 
