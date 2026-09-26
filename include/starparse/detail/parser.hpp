@@ -8,6 +8,7 @@
 #include <meta>
 #include <string>
 #include <array>
+#include <unordered_map>
 #include <vector>
 #include <memory>
 #include <numeric>
@@ -475,6 +476,7 @@ namespace StarParse::detail::Parser {
         bool version_requested{false};
         std::vector<ParseError> errors{};
         std::vector<size_t> command_path{};
+        std::unordered_map<std::string, std::string> env_vars{};
     };
 
     template<typename T>
@@ -574,21 +576,21 @@ namespace StarParse::detail::Parser {
 
         if constexpr (constexpr auto file = file_of(^^T)) {
             if (const auto parse_result = File::read_env_file(std::string_view{file->filename})) {
-                std::unordered_map<std::string, std::string> env_vars = *parse_result;
-                template for (constexpr auto m : members) {
-                    const size_t index = member_index_of<T>(m);
-                    if constexpr (constexpr auto env = env_of(m)) {
-                        constexpr std::string_view name = env_name_v<m>;
-                        if (fields_set[index] != 0) continue;
-                        if (const auto process_env_value = File::read_env(name)) {
-                            assign_from_string<m>(out.[:m:], *process_env_value, 0, fields_set[index], errors, settings);
-                        } else if (env_vars.contains(name.data())) {
-                            assign_from_string<m>(out.[:m:], env_vars[name.data()], 0, fields_set[index], errors, settings);
-                        }
-                    }
-                }
+                state.env_vars = std::move(*parse_result);
             } else {
                 state.errors.emplace_back(parse_result.error());
+            }
+        }
+        template for (constexpr auto m : members) {
+            const size_t index = member_index_of<T>(m);
+            if constexpr (constexpr auto env = env_of(m)) {
+                constexpr std::string_view name = env_name_v<m>;
+                if (fields_set[index] != 0) continue;
+                if (const auto process_env_value = File::read_env(name)) {
+                    assign_from_string<m>(out.[:m:], *process_env_value, 0, fields_set[index], errors, settings);
+                } else if (state.env_vars.contains(name.data())) {
+                    assign_from_string<m>(out.[:m:], state.env_vars[name.data()], 0, fields_set[index], errors, settings);
+                }
             }
         }
 
