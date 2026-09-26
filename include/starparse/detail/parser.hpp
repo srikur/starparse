@@ -584,8 +584,11 @@ namespace StarParse::detail::Parser {
             }
             if (entered_child) break;
             if (!matched) {
+                std::string suggestion{}; // placeholder
                 errors.push_back({
-                    .kind = ErrorKind::UNKNOWN_OPTION, .input_value = std::string{attrs.name},
+                    .kind = ErrorKind::UNKNOWN_OPTION,
+                    .input_value = std::string{attrs.name},
+                    .detail = suggestion.empty() ? "" : std::format(". Did you mean '{}'?", suggestion),
                     .argv_index = attrs.argv_index
                 });
             }

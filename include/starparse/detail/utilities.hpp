@@ -541,6 +541,36 @@ namespace StarParse::detail::Utilities {
         return false;
     }
 
+    template<typename T>
+    std::vector<std::string> viable_candidate_names(const Settings &settings) {
+        std::vector<std::string> names;
+        static constexpr auto members = std::define_static_array(
+            std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
+        template for (const auto m : members) {
+            if (is_named_option<T>(m)) {
+                // TODO: support case insensitivity here?
+                names.push_back(snake_name_v<m>);
+                if (settings.allow_kebab_casing) {
+                    names.push_back(kebab_name_v<m>);
+                }
+                if (settings.allow_aliases) {
+                    for (const auto name : alias_name_list(m)) {
+                        names.push_back(std::string{name});
+                    }
+                }
+                if (settings.autogenerate_negations && is_flag_type(std::meta::type_of(m))) {
+                    std::string name{snake_name_v<m>};
+                    name.reserve(name.size() + 3);
+                    name.append("no-");
+                    names.push_back(name);
+                }
+                names.push_back("--help");
+                names.push_back("--version");
+            }
+        }
+        return names;
+    }
+
     template<Numeric A, Numeric B>
     constexpr bool numeric_less(const A a, const B b) {
         constexpr bool both_integral = std::is_integral_v<A> && std::is_integral_v<B>;
