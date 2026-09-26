@@ -457,13 +457,13 @@ namespace StarParse::detail::Parser {
         static_assert(Assertions::check_name_values<T>(),
                       "invalid option spelling: names and aliases must be nonempty, contain no whitespace or '=', and not start with '-'; "
                       "short names cannot be whitespace, '-' or '='");
+        static_assert(Assertions::check_positional_indices<T>(),
+                      "Positional indices must be unique, begin at 0, and increment contiguously");
         static_assert(Assertions::no_positional_containers<T>(),
-                      "cannot use Positional in combination with a container");
+                      "a Positional container must be the final Positional index specified");
         static_assert(Assertions::no_required_optionals<T>(),
                       "a Required field cannot have a std::optional type; drop one of the two");
         static_assert(Assertions::no_duplicate_short_names<T>(), "two fields cannot have duplicate Opt short names");
-        static_assert(Assertions::check_positional_indices<T>(),
-                      "Positional indices must be unique, begin at 0, and increment contiguously");
         static_assert(Assertions::no_duplicate_validators<T>(),
                       "only one annotation among Min, Max, Range, Choices, or Validator can be applied to a single field");
         static_assert(Assertions::no_scalar_separators<T>(), "the Separator annotation cannot be applied to scalar fields");
