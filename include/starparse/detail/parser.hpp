@@ -165,9 +165,10 @@ namespace StarParse::detail::Parser {
                 if (pos->help_ != nullptr) description = pos->help();
             }
             if constexpr (env.has_value()) {
-                if (env->name != nullptr) description += description.empty()
-                                                             ? std::format("[env: {}]", env->name)
-                                                             : std::format(" [env: {}]", env->name);
+                if (env->name != nullptr)
+                    description += description.empty()
+                                       ? std::format("[env: {}]", env->name)
+                                       : std::format(" [env: {}]", env->name);
             }
             if constexpr (required) {
                 description += description.empty() ? "(required)" : " (required)";
@@ -457,13 +458,13 @@ namespace StarParse::detail::Parser {
         static_assert(Assertions::check_name_values<T>(),
                       "invalid option spelling: names and aliases must be nonempty, contain no whitespace or '=', and not start with '-'; "
                       "short names cannot be whitespace, '-' or '='");
+        static_assert(Assertions::check_positional_indices<T>(),
+                      "Positional indices must be unique, begin at 0, and increment contiguously");
         static_assert(Assertions::no_positional_containers<T>(),
-                      "cannot use Positional in combination with a container");
+                      "a Positional container must be the final Positional index specified");
         static_assert(Assertions::no_required_optionals<T>(),
                       "a Required field cannot have a std::optional type; drop one of the two");
         static_assert(Assertions::no_duplicate_short_names<T>(), "two fields cannot have duplicate Opt short names");
-        static_assert(Assertions::check_positional_indices<T>(),
-                      "Positional indices must be unique, begin at 0, and increment contiguously");
         static_assert(Assertions::no_duplicate_validators<T>(),
                       "only one annotation among Min, Max, Range, Choices, or Validator can be applied to a single field");
         static_assert(Assertions::no_scalar_separators<T>(), "the Separator annotation cannot be applied to scalar fields");
@@ -492,6 +493,7 @@ namespace StarParse::detail::Parser {
         check_assertions<T>();
         std::array<size_t, members.size()> fields_set{};
         size_t next_positional{0uz};
+        size_t final_positional{static_cast<size_t>(get_positional_range<T>().second - 1)};
         auto &errors = state.errors;
 
         if constexpr (constexpr auto file = file_of(^^T)) {
@@ -533,9 +535,11 @@ namespace StarParse::detail::Parser {
                         entered_child = true;
                     }
                 } else {
+                    // TODO: bugfix — when a positional is specified via name, don't consider it for future positionals
                     if (attrs.is_positional) {
                         if constexpr (pos.has_value()) {
-                            if (!matched && next_positional == *pos) {
+                            using V = [:std::meta::remove_cv(std::meta::type_of(m)):];
+                            if (!matched && (next_positional == *pos || (is_container(^^V) && *pos == final_positional))) {
                                 matched = true;
                                 next_positional++;
                                 assign_from_string<m>(out.[:m:], attrs.name, attrs.argv_index, fields_set[idx], errors,

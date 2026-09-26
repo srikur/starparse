@@ -233,17 +233,6 @@ namespace StarParse::detail::Assertions {
     }
 
     template<typename T>
-    consteval bool no_positional_containers() {
-        const auto members = std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current());
-        for (const auto m : members) {
-            if (is_positional(m) && is_container(std::meta::remove_cv(std::meta::type_of(m)))) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    template<typename T>
     consteval bool no_duplicate_short_names() {
         std::vector<char> short_names;
         const auto members = std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current());
@@ -258,20 +247,38 @@ namespace StarParse::detail::Assertions {
     }
 
     template<typename T>
-    consteval bool check_positional_indices() {
+    consteval std::pair<ssize_t, ssize_t> get_positional_range() {
         const auto members = std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current());
         std::vector<bool> seen(members.size());
-        auto count{0uz}, end{0uz};
+        auto count{0uZ}, end{0uZ};
         for (const auto m : members) {
             if (const auto pos = positional_of(m)) {
                 const auto i = pos->index;
-                if (i >= seen.size() || seen[i]) return false;
+                if (i >= seen.size() || seen[i]) return {-1, 0};
                 seen[i] = true;
                 count++;
                 end = std::max(end, i + 1);
             }
         }
-        return count == end;
+        return {count, end};
+    }
+
+    template<typename T>
+    consteval bool check_positional_indices() {
+        const auto [count, end] = get_positional_range<T>();
+        return count != -1 && count == end; // -1 used as sentinel to represent false
+    }
+
+    template<typename T>
+    consteval bool no_positional_containers() {
+        const auto members = std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current());
+        const auto [count, end] = get_positional_range<T>();
+        for (const auto m : members) {
+            if (const auto pos = positional_of(m); pos && is_container(std::meta::remove_cv(std::meta::type_of(m)))) {
+                if (static_cast<ssize_t>(pos->index) != end - 1) return false;
+            }
+        }
+        return true;
     }
 
     template<typename T>
