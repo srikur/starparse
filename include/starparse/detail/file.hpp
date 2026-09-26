@@ -18,11 +18,7 @@ namespace StarParse::detail::File {
         const std::filesystem::path path{filename};
         std::ifstream ifs{path, std::ios::binary};
         if (!ifs.is_open()) {
-            return std::unexpected(ParseError{
-                .kind = ErrorKind::READING_ENV_FAILED,
-                .input_value = std::string{filename},
-                .detail = "failed to open environment file",
-            });
+            return EnvMap{};
         }
 
         const auto trim = [](const std::string_view s) -> std::string_view {
