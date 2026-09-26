@@ -165,9 +165,10 @@ namespace StarParse::detail::Parser {
                 if (pos->help_ != nullptr) description = pos->help();
             }
             if constexpr (env.has_value()) {
-                if (env->name != nullptr) description += description.empty()
-                                                             ? std::format("[env: {}]", env->name)
-                                                             : std::format(" [env: {}]", env->name);
+                if (env->name != nullptr)
+                    description += description.empty()
+                                       ? std::format("[env: {}]", env->name)
+                                       : std::format(" [env: {}]", env->name);
             }
             if constexpr (required) {
                 description += description.empty() ? "(required)" : " (required)";
@@ -492,6 +493,7 @@ namespace StarParse::detail::Parser {
         check_assertions<T>();
         std::array<size_t, members.size()> fields_set{};
         size_t next_positional{0uz};
+        size_t final_positional{static_cast<size_t>(get_positional_range<T>().second - 1)};
         auto &errors = state.errors;
 
         if constexpr (constexpr auto file = file_of(^^T)) {
@@ -533,9 +535,11 @@ namespace StarParse::detail::Parser {
                         entered_child = true;
                     }
                 } else {
+                    // TODO: bugfix — when a positional is specified via name, don't consider it for future positionals
                     if (attrs.is_positional) {
                         if constexpr (pos.has_value()) {
-                            if (!matched && next_positional == *pos) {
+                            using V = [:std::meta::remove_cv(std::meta::type_of(m)):];
+                            if (!matched && (next_positional == *pos || (is_container(^^V) && *pos == final_positional))) {
                                 matched = true;
                                 next_positional++;
                                 assign_from_string<m>(out.[:m:], attrs.name, attrs.argv_index, fields_set[idx], errors,
