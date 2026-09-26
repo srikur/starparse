@@ -154,6 +154,7 @@ namespace StarParse::detail::Parser {
             constexpr auto pos = positional_of(m);
             constexpr auto position = positional_index_of<T>(m);
             constexpr auto name = name_of(m);
+            constexpr auto env = env_of(m);
             constexpr bool required = is_required(m);
 
             std::string description;
@@ -162,6 +163,11 @@ namespace StarParse::detail::Parser {
             }
             if constexpr (pos.has_value()) {
                 if (pos->help_ != nullptr) description = pos->help();
+            }
+            if constexpr (env.has_value()) {
+                if (env->name != nullptr) description += description.empty()
+                                                             ? std::format("[env: {}]", env->name)
+                                                             : std::format(" [env: {}]", env->name);
             }
             if constexpr (required) {
                 description += description.empty() ? "(required)" : " (required)";
