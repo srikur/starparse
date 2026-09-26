@@ -564,7 +564,7 @@ namespace StarParse::detail::Utilities {
         std::vector<std::string_view> names;
         static constexpr auto members = std::define_static_array(
             std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
-        template for (const auto m : members) {
+        template for (constexpr auto m : members) {
             if (is_named_option<T>(m)) {
                 // TODO: support case insensitivity here?
                 names.push_back(snake_name_v<m>);

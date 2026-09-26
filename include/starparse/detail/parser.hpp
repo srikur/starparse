@@ -495,6 +495,7 @@ namespace StarParse::detail::Parser {
         size_t next_positional{0uz};
         size_t final_positional{static_cast<size_t>(get_positional_range<T>().second - 1)};
         auto &errors = state.errors;
+        std::vector<std::string_view> candidates = viable_candidate_names<T>(settings);
 
         if constexpr (constexpr auto file = file_of(^^T)) {
             if (const auto parse_result = File::read_env_file(std::string_view{file->filename})) {
@@ -584,7 +585,13 @@ namespace StarParse::detail::Parser {
             }
             if (entered_child) break;
             if (!matched) {
-                std::string suggestion{}; // placeholder
+                // compute edit distance candidates
+                std::string_view suggestion{};
+                if (!candidates.empty()) {
+                    suggestion = std::ranges::min(candidates, std::ranges::less{}, [&](const std::string_view candidate) {
+                        return edit_distance(attrs.name, candidate);
+                    });
+                }
                 errors.push_back({
                     .kind = ErrorKind::UNKNOWN_OPTION,
                     .input_value = std::string{attrs.name},
