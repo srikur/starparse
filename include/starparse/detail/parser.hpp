@@ -487,6 +487,15 @@ namespace StarParse::detail::Parser {
         std::array<size_t, members.size()> fields_set{};
         size_t next_positional{0uz};
         auto &errors = state.errors;
+
+        if constexpr (constexpr auto file = file_of(^^T)) {
+            if (const auto parse_result = File::read_env_file(std::string_view{file->filename})) {
+                state.env_vars = std::move(*parse_result);
+            } else {
+                state.errors.emplace_back(parse_result.error());
+            }
+        }
+
         for (auto i{0uz}; i < attributes.size(); ++i) {
             const auto &attrs = attributes[i];
             bool matched{false}, entered_child{false};
@@ -574,13 +583,6 @@ namespace StarParse::detail::Parser {
 
         if (state.help_requested) return;
 
-        if constexpr (constexpr auto file = file_of(^^T)) {
-            if (const auto parse_result = File::read_env_file(std::string_view{file->filename})) {
-                state.env_vars = std::move(*parse_result);
-            } else {
-                state.errors.emplace_back(parse_result.error());
-            }
-        }
         template for (constexpr auto m : members) {
             const size_t index = member_index_of<T>(m);
             if constexpr (constexpr auto env = env_of(m)) {
