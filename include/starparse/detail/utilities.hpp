@@ -572,8 +572,9 @@ namespace StarParse::detail::Utilities {
                     names.push_back(kebab_name_v<m>);
                 }
                 if (settings.allow_aliases) {
-                    for (const auto name : alias_name_list(m)) {
-                        names.push_back(name);
+                    constexpr auto aliases = std::define_static_array(alias_name_list(m));
+                    for (const char *name : aliases) {
+                        names.push_back(std::string_view{name});
                     }
                 }
                 if (settings.autogenerate_negations && is_flag_type(std::meta::type_of(m))) {
