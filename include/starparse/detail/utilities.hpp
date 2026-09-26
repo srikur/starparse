@@ -20,6 +20,7 @@
 #include <starparse/detail/annotations.hpp>
 #include <starparse/detail/errors.hpp>
 
+// TODO: split utilities into multiple files?
 namespace StarParse::detail::Utilities {
     consteval std::vector<const char *> alias_name_list(const std::meta::info m) {
         std::vector<const char *> names{};
@@ -119,6 +120,23 @@ namespace StarParse::detail::Utilities {
     template<std::meta::info M>
     inline constexpr std::string_view kebab_name_v = [] {
         std::string s(name_of(M));
+        std::ranges::replace(s, '_', '-');
+        return std::string_view(std::define_static_string(s), s.size());
+    }();
+
+    template<std::meta::info M>
+    inline constexpr std::string_view snake_negated_name_v = [] {
+        std::string s(name_of(M));
+        s.reserve(s.size() + 3);
+        s.append("no-");
+        return std::string_view(std::define_static_string(s), s.size());
+    }();
+
+    template<std::meta::info M>
+    inline constexpr std::string_view kebab_negated_name_v = [] {
+        std::string s(name_of(M));
+        s.reserve(s.size() + 3);
+        s.append("no_");
         std::ranges::replace(s, '_', '-');
         return std::string_view(std::define_static_string(s), s.size());
     }();
@@ -541,6 +559,35 @@ namespace StarParse::detail::Utilities {
         return false;
     }
 
+    template<typename T>
+    std::vector<std::string_view> viable_candidate_names(const Settings &settings) {
+        std::vector<std::string_view> names;
+        static constexpr auto members = std::define_static_array(
+            std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
+        template for (constexpr auto m : members) {
+            if (is_named_option<T>(m)) {
+                // TODO: support case insensitivity here?
+                names.push_back(snake_name_v<m>);
+                if (settings.allow_kebab_casing) {
+                    names.push_back(kebab_name_v<m>);
+                }
+                if (settings.allow_aliases) {
+                    constexpr auto aliases = std::define_static_array(alias_name_list(m));
+                    for (const char *name : aliases) {
+                        names.push_back(std::string_view{name});
+                    }
+                }
+                if (settings.autogenerate_negations && is_flag_type(std::meta::type_of(m))) {
+                    names.push_back(snake_negated_name_v<m>);
+                    if (settings.allow_kebab_casing) names.push_back(kebab_negated_name_v<m>);
+                }
+                names.push_back("--help");
+                names.push_back("--version");
+            }
+        }
+        return names;
+    }
+
     template<Numeric A, Numeric B>
     constexpr bool numeric_less(const A a, const B b) {
         constexpr bool both_integral = std::is_integral_v<A> && std::is_integral_v<B>;
@@ -738,5 +785,67 @@ namespace StarParse::detail::Utilities {
             } else errors.push_back(result.error());
             count++;
         }
+    }
+
+    [[nodiscard]] constexpr size_t edit_distance(const std::string_view a, const std::string_view b) {
+        const auto m = a.size();
+        const auto n = b.size();
+        if (m == 0) return n;
+        if (n == 0) return m;
+        if (a == b) return 0;
+
+        if (constexpr auto max_size = std::numeric_limits<size_t>::max(); m == max_size || n == max_size) {
+            return 0;
+        }
+
+        const auto rows = m + 1;
+        const auto cols = n + 1;
+        std::vector<size_t> matrix;
+        if (rows > matrix.max_size() / cols) return 0;
+        matrix.resize(rows * cols);
+
+        const auto at = [&matrix, cols](const size_t i, const size_t j) -> size_t & {
+            return matrix[i * cols + j];
+        };
+
+        for (auto i{0uz}; i <= m; ++i) at(i, 0) = i;
+        for (auto j{0uz}; j <= n; ++j) at(0, j) = j;
+
+        constexpr size_t alphabet_size =
+                static_cast<size_t>(std::numeric_limits<unsigned char>::max()) + 1;
+        std::array<size_t, alphabet_size> last_row{};
+
+        // TODO: modification — need to treat _ and - as equal when kebab casing is enabled
+        for (auto i{1uz}; i <= m; ++i) {
+            auto last_match_col{0uz};
+            const auto ac = static_cast<unsigned char>(a[i - 1]);
+
+            for (auto j{1uz}; j <= n; ++j) {
+                const auto bc = static_cast<unsigned char>(b[j - 1]);
+                const auto previous_row = last_row[bc];
+                const auto previous_col = last_match_col;
+                const auto cost = ac == bc ? 0uz : 1uz;
+
+                if (cost == 0)
+                    last_match_col = j;
+
+                auto best = std::min({
+                    at(i - 1, j) + 1, // deletion
+                    at(i, j - 1) + 1, // insertion
+                    at(i - 1, j - 1) + cost // substitution
+                });
+
+                if (previous_row != 0 && previous_col != 0) {
+                    const auto transposition = at(previous_row - 1, previous_col - 1)
+                                               + (i - previous_row - 1)
+                                               + 1
+                                               + (j - previous_col - 1);
+                    best = std::min(best, transposition);
+                }
+                at(i, j) = best;
+            }
+            last_row[ac] = i;
+        }
+        return at(m, n);
     }
 }

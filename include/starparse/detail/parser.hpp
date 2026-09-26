@@ -495,6 +495,7 @@ namespace StarParse::detail::Parser {
         size_t next_positional{0uz};
         size_t final_positional{static_cast<size_t>(get_positional_range<T>().second - 1)};
         auto &errors = state.errors;
+        std::vector<std::string_view> candidates = viable_candidate_names<T>(settings);
 
         if constexpr (constexpr auto file = file_of(^^T)) {
             if (const auto parse_result = File::read_env_file(std::string_view{file->filename})) {
@@ -584,8 +585,19 @@ namespace StarParse::detail::Parser {
             }
             if (entered_child) break;
             if (!matched) {
+                // compute edit distance candidates
+                const auto min_candidate = std::ranges::fold_left(candidates, std::pair{std::numeric_limits<size_t>::max(), ""},
+                                                                  [&](const std::pair<size_t, std::string_view> &best,
+                                                                      const std::string_view candidate) {
+                                                                      const auto distance = edit_distance(attrs.name, candidate);
+                                                                      return distance < best.first ? std::pair{distance, candidate} : best;
+                                                                  });
+                const auto max_allowed_distance = std::max<size_t>(1, (attrs.name.size() + 2) / 3);
+                std::string_view suggestion = min_candidate.first <= max_allowed_distance ? min_candidate.second : std::string_view{};
                 errors.push_back({
-                    .kind = ErrorKind::UNKNOWN_OPTION, .input_value = std::string{attrs.name},
+                    .kind = ErrorKind::UNKNOWN_OPTION,
+                    .input_value = std::string{attrs.name},
+                    .detail = suggestion.empty() ? "" : std::format(". Did you mean '{}'?", suggestion),
                     .argv_index = attrs.argv_index
                 });
             }

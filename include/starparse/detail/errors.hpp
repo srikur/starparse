@@ -23,7 +23,7 @@ namespace StarParse {
             const std::string_view option = current_argument.value_or("");
             switch (kind) {
                 case ErrorKind::UNKNOWN_OPTION:
-                    return std::format("Unknown option '{}'", input_value);
+                    return std::format("Unknown option '{}'{}", input_value, detail);
                 case ErrorKind::MISSING_VALUE:
                     return std::format("Missing value for argument '{}'", option);
                 case ErrorKind::INVALID_VALUE:
