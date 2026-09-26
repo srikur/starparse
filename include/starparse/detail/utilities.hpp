@@ -124,6 +124,23 @@ namespace StarParse::detail::Utilities {
     }();
 
     template<std::meta::info M>
+    inline constexpr std::string_view snake_negated_name_v = [] {
+        std::string s(name_of(M));
+        s.reserve(s.size() + 3);
+        s.append("no-");
+        return std::string_view(std::define_static_string(s), s.size());
+    }();
+
+    template<std::meta::info M>
+    inline constexpr std::string_view kebab_negated_name_v = [] {
+        std::string s(name_of(M));
+        s.reserve(s.size() + 3);
+        s.append("no_");
+        std::ranges::replace(s, '_', '-');
+        return std::string_view(std::define_static_string(s), s.size());
+    }();
+
+    template<std::meta::info M>
     constexpr bool check_snake_case(const std::string_view name, const Settings &settings) {
         return name == snake_name_v<M> || (settings.allow_case_insensitivity && iequals(name, snake_name_v<M>));
     }
@@ -542,8 +559,8 @@ namespace StarParse::detail::Utilities {
     }
 
     template<typename T>
-    std::vector<std::string> viable_candidate_names(const Settings &settings) {
-        std::vector<std::string> names;
+    std::vector<std::string_view> viable_candidate_names(const Settings &settings) {
+        std::vector<std::string_view> names;
         static constexpr auto members = std::define_static_array(
             std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
         template for (const auto m : members) {
@@ -555,14 +572,12 @@ namespace StarParse::detail::Utilities {
                 }
                 if (settings.allow_aliases) {
                     for (const auto name : alias_name_list(m)) {
-                        names.push_back(std::string{name});
+                        names.push_back(name);
                     }
                 }
                 if (settings.autogenerate_negations && is_flag_type(std::meta::type_of(m))) {
-                    std::string name{snake_name_v<m>};
-                    name.reserve(name.size() + 3);
-                    name.append("no-");
-                    names.push_back(name);
+                    names.push_back(snake_negated_name_v<m>);
+                    if (settings.allow_kebab_casing) names.push_back(kebab_negated_name_v<m>);
                 }
                 names.push_back("--help");
                 names.push_back("--version");
