@@ -581,8 +581,8 @@ namespace StarParse::detail::Utilities {
                     names.push_back(snake_negated_name_v<m>);
                     if (settings.allow_kebab_casing) names.push_back(kebab_negated_name_v<m>);
                 }
-                names.push_back("--help");
-                names.push_back("--version");
+                names.push_back("help");
+                names.push_back("version");
             }
         }
         return names;
