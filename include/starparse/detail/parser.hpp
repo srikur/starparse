@@ -86,7 +86,7 @@ namespace StarParse::detail::Parser {
         bool found{false};
         template for (constexpr auto m : members) {
             constexpr bool named = is_named_option<T>(m);
-            if (named && does_match_name<m>(name, opt_of(m), settings)) {
+            if (named && does_match_name<m>(name, settings)) {
                 found = true;
             }
         }
@@ -100,7 +100,7 @@ namespace StarParse::detail::Parser {
         template for (constexpr auto m : members) {
             using M = [:std::meta::type_of(m):];
             if constexpr (is_flag_type(^^M) && is_named_option<T>(m)) {
-                if (does_match_name<m>(std::string_view{&c, 1}, opt_of(m), settings)) {
+                if (does_match_name<m>(std::string_view{&c, 1}, settings)) {
                     return true;
                 }
             }
@@ -364,7 +364,7 @@ namespace StarParse::detail::Parser {
             std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
         template for (constexpr auto m : members) {
             if constexpr (is_subcommand(m)) {
-                if (does_match_name<m>(next, std::nullopt, settings, false)) return false;
+                if (does_match_name<m>(next, settings, false)) return false;
             }
         }
         return true;
@@ -422,7 +422,7 @@ namespace StarParse::detail::Parser {
                         static_assert(is_optional(^^M));
                         using Child = [:value_type_of(^^M):];
 
-                        if (does_match_name<m>(a.name, std::nullopt, settings, false)) {
+                        if (does_match_name<m>(a.name, settings, false)) {
                             a.is_subcommand = true;
                             a.is_positional = false;
                             attrs.push_back(a);
@@ -523,7 +523,7 @@ namespace StarParse::detail::Parser {
                 constexpr auto idx = member_index_of<T>(m);
                 constexpr auto pos = positional_index_of<T>(m);
                 if constexpr (is_subcommand(m)) {
-                    if (attrs.is_subcommand && !matched && does_match_name<m>(attrs.name, std::nullopt, settings, false)) {
+                    if (attrs.is_subcommand && !matched && does_match_name<m>(attrs.name, settings, false)) {
                         using M = [:std::meta::type_of(m):];
                         using Child = [:value_type_of(^^M):];
                         auto &child = out.[:m:];
@@ -550,7 +550,7 @@ namespace StarParse::detail::Parser {
                     } else if (attrs.dashed || attrs.double_dashed) {
                         constexpr auto opt = opt_of(m);
                         constexpr bool named = is_named_option<T>(m);
-                        const bool matching_string = named && does_match_name<m>(attrs.name, opt, settings);
+                        const bool matching_string = named && does_match_name<m>(attrs.name, settings);
                         if (!matched && matching_string) {
                             matched = true;
                             if constexpr (is_flag_type(^^M)) {
@@ -558,7 +558,7 @@ namespace StarParse::detail::Parser {
                                     assign_from_string<m>(out.[:m:], attrs.value, attrs.argv_index, fields_set[idx], errors,
                                                           settings);
                                 } else {
-                                    out.[:m:] = matches_non_negated_name<m>(attrs.name, opt, settings);
+                                    out.[:m:] = matches_non_negated_name<m>(attrs.name, settings);
                                 }
                                 fields_set[idx] = 1;
                             } else {
