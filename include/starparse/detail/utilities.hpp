@@ -377,13 +377,20 @@ namespace StarParse::detail::Utilities {
     consteval bool is_array(const std::meta::info r) { return is_specialization_of(r, ^^std::array); }
     consteval bool is_container(const std::meta::info m) { return is_vector(m) || is_array(m); }
 
+    template<std::meta::info M>
     constexpr std::expected<bool, ParseError> bool_from_string(const std::string_view s) {
         using namespace std::literals;
         constexpr std::array true_values{"yes"sv, "1"sv, "on"sv, "true"sv, "t"sv};
         constexpr std::array false_values{"no"sv, "0"sv, "off"sv, "false"sv, "f"sv};
         if (std::ranges::any_of(true_values, [&](auto value) { return iequals(s, value); })) return true;
         if (std::ranges::any_of(false_values, [&](auto value) { return iequals(s, value); })) return false;
-        return std::unexpected(ParseError{.kind = ErrorKind::INVALID_VALUE, .input_value = std::string{s}});
+        return std::unexpected(
+            ParseError{
+                .kind = ErrorKind::INVALID_VALUE,
+                .input_value = std::string{s},
+                .current_argument = name_of(M),
+            }
+        );
     }
 
     template<typename T>
@@ -399,14 +406,14 @@ namespace StarParse::detail::Utilities {
         throw std::invalid_argument("member not found");
     }
 
-    template<typename M>
+    template<std::meta::info Mem, typename M>
     std::expected<M, ParseError> from_string(std::string_view s, const size_t index, const Settings &settings) {
         if constexpr (is_optional(^^M)) {
             using T = [:value_type_of(^^M):];
-            if (auto result = from_string<T>(s, index, settings)) return M{*result};
+            if (auto result = from_string<Mem, T>(s, index, settings)) return M{*result};
             else return std::unexpected(result.error());
         } else if constexpr (std::same_as<M, bool>) {
-            if (auto result = bool_from_string(s)) return M{*result};
+            if (auto result = bool_from_string<Mem>(s)) return M{*result};
             else return std::unexpected(result.error());
         } else if constexpr (std::constructible_from<M, std::string_view>) {
             return M{s};
@@ -738,7 +745,7 @@ namespace StarParse::detail::Utilities {
                             field.push_back(*result);
                         }
                     } else errors.push_back(result.error());
-                } else if (auto result = from_string<E>(piece, index, settings)) {
+                } else if (auto result = from_string<Mem, E>(piece, index, settings)) {
                     if (validate<Mem>(*result, piece, index, errors, settings)) {
                         field.push_back(*result);
                     }
@@ -761,7 +768,7 @@ namespace StarParse::detail::Utilities {
                             field[count] = *result;
                         }
                     } else errors.push_back(result.error());
-                } else if (auto result = from_string<E>(piece, index, settings)) {
+                } else if (auto result = from_string<Mem, E>(piece, index, settings)) {
                     if (validate<Mem>(*result, piece, index, errors, settings)) {
                         field[count] = *result;
                     }
@@ -776,7 +783,7 @@ namespace StarParse::detail::Utilities {
             } else errors.push_back(result.error());
             count++;
         } else {
-            if (auto result = from_string<M>(s, index, settings)) {
+            if (auto result = from_string<Mem, M>(s, index, settings)) {
                 if (validate<Mem>(*result, s, index, errors, settings)) {
                     field = *result;
                 }
