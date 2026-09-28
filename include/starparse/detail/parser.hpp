@@ -603,7 +603,7 @@ namespace StarParse::detail::Parser {
             }
         }
 
-        if (state.help_requested) return;
+        if (state.help_requested || state.version_requested) return;
 
         template for (constexpr auto m : members) {
             const size_t index = member_index_of<T>(m);
