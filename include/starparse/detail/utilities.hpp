@@ -273,7 +273,6 @@ namespace StarParse::detail::Utilities {
                     return true;
             }
             if (matches_alias<member>(name, allow_case_insensitivity)
-                || matches_choice<member>(name, allow_case_insensitivity)
                 || matches_short_name<member>(name, allow_case_insensitivity)) {
                 return true;
             }
