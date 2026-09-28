@@ -573,8 +573,8 @@ namespace StarParse::detail::Parser {
                                         }
                                     }
                                     errors.push_back({
-                                        .kind = ErrorKind::MISSING_VALUE, .current_argument = attrs.name,
-                                        .argv_index = attrs.argv_index
+                                        .kind = ErrorKind::MISSING_VALUE,
+                                        .current_argument = attrs.name,
                                     });
                                     continue;
                                 }
@@ -629,7 +629,6 @@ namespace StarParse::detail::Parser {
                     state.errors.push_back({
                         .kind = ErrorKind::MISSING_REQUIRED,
                         .current_argument = std::optional{field_name},
-                        .argv_index = index
                     });
                 }
             } else if constexpr (is_array(m)) {
@@ -638,7 +637,6 @@ namespace StarParse::detail::Parser {
                     state.errors.push_back({
                         .kind = ErrorKind::MISSING_VALUE,
                         .current_argument = std::optional{field_name},
-                        .argv_index = index
                     });
                 }
             }
