@@ -770,9 +770,11 @@ namespace StarParse::detail::Utilities {
                 count++;
             });
         } else if constexpr (has_custom_parser) {
-            if (auto result = apply_custom_parser<Mem, M>(s, index); !result) {
-                errors.push_back(result.error());
-            } else field = *result;
+            if (auto result = apply_custom_parser<Mem, M>(s, index)) {
+                if (validate<Mem>(*result, s, index, errors, settings)) {
+                    field = *result;
+                }
+            } else errors.push_back(result.error());
             count++;
         } else {
             if (auto result = from_string<M>(s, index, settings)) {
