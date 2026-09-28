@@ -426,7 +426,7 @@ namespace StarParse::detail::Utilities {
                 return std::unexpected(ParseError{
                     .kind = ErrorKind::INVALID_VALUE,
                     .input_value = std::string{s},
-                    .current_argument = std::optional{std::meta::display_string_of(^^M)},
+                    .current_argument = name_of(Mem),
                     .argv_index = index
                 });
             }
@@ -442,7 +442,7 @@ namespace StarParse::detail::Utilities {
                 return std::unexpected(ParseError{
                     .kind = ErrorKind::INVALID_VALUE,
                     .input_value = std::string{s},
-                    .current_argument = std::optional{std::meta::display_string_of(^^M)},
+                    .current_argument = name_of(Mem),
                     .argv_index = index
                 });
             return *parsed;
