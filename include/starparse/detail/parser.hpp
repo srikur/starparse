@@ -560,6 +560,7 @@ namespace StarParse::detail::Parser {
                                 } else {
                                     out.[:m:] = matches_non_negated_name<m>(attrs.name, settings);
                                 }
+                                if (pos) next_positional++;
                                 fields_set[idx] = 1;
                             } else {
                                 if (!attrs.has_value) {
@@ -567,6 +568,7 @@ namespace StarParse::detail::Parser {
                                         if (settings.allow_repeated_counts) {
                                             increment_count<m>(out.[:m:], attrs.name, attrs.argv_index, errors, settings);
                                             ++fields_set[idx];
+                                            if (pos) next_positional++;
                                             continue;
                                         }
                                     }
@@ -578,6 +580,7 @@ namespace StarParse::detail::Parser {
                                 }
                                 assign_from_string<m>(out.[:m:], attrs.value, attrs.argv_index, fields_set[idx], errors,
                                                       settings);
+                                if (pos) next_positional++;
                             }
                         }
                     }
