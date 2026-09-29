@@ -39,6 +39,8 @@ namespace StarParse::inline annotations {
         struct Subcommand_ final {};
 
         struct Required_ final {};
+
+        struct Hidden_ final {};
     }
 
     struct Opt final {
@@ -227,4 +229,6 @@ namespace StarParse::inline annotations {
 
         explicit consteval File(std::string_view f) : filename(std::define_static_string(f)) {}
     };
+
+    constexpr detail::Hidden_ Hidden{};
 }

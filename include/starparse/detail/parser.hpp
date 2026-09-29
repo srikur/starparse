@@ -149,89 +149,91 @@ namespace StarParse::detail::Parser {
         std::vector<HelpRow> commands;
 
         template for (constexpr auto m : members) {
-            using M = [:std::meta::type_of(m):];
-            constexpr auto opt = opt_of(m);
-            constexpr auto pos = positional_of(m);
-            constexpr auto position = positional_index_of<T>(m);
-            constexpr auto name = name_of(m);
-            constexpr auto env = env_of(m);
-            constexpr bool required = is_required(m);
+            if constexpr (!is_hidden(m)) {
+                using M = [:std::meta::type_of(m):];
+                constexpr auto opt = opt_of(m);
+                constexpr auto pos = positional_of(m);
+                constexpr auto position = positional_index_of<T>(m);
+                constexpr auto name = name_of(m);
+                constexpr auto env = env_of(m);
+                constexpr bool required = is_required(m);
 
-            std::string description;
-            if constexpr (opt.has_value()) {
-                if (opt->help_ != nullptr) description = opt->help();
-            }
-            if constexpr (pos.has_value()) {
-                if (pos->help_ != nullptr) description = pos->help();
-            }
-            if constexpr (env.has_value()) {
-                if (env->name != nullptr)
-                    description += description.empty()
-                                       ? std::format("[env: {}]", env->name)
-                                       : std::format(" [env: {}]", env->name);
-            }
-            if constexpr (required) {
-                description += description.empty() ? "(required)" : " (required)";
-            }
+                std::string description;
+                if constexpr (opt.has_value()) {
+                    if (opt->help_ != nullptr) description = opt->help();
+                }
+                if constexpr (pos.has_value()) {
+                    if (pos->help_ != nullptr) description = pos->help();
+                }
+                if constexpr (env.has_value()) {
+                    if (env->name != nullptr)
+                        description += description.empty()
+                                           ? std::format("[env: {}]", env->name)
+                                           : std::format(" [env: {}]", env->name);
+                }
+                if constexpr (required) {
+                    description += description.empty() ? "(required)" : " (required)";
+                }
 
-            if constexpr (is_subcommand(m)) {
-                using Child = [:value_type_of(^^M):];
-                constexpr auto child_program = program_of(^^Child);
-                if constexpr (child_program.has_value()) {
-                    if (child_program->description != nullptr) description = child_program->description;
-                }
-                std::string invocation{name};
-                if (allow_aliases) {
-                    for (const char *alias : alias_names<m>()) {
-                        invocation += std::format(", {}", alias);
+                if constexpr (is_subcommand(m)) {
+                    using Child = [:value_type_of(^^M):];
+                    constexpr auto child_program = program_of(^^Child);
+                    if constexpr (child_program.has_value()) {
+                        if (child_program->description != nullptr) description = child_program->description;
                     }
-                }
-                commands.push_back({std::move(invocation), std::move(description)});
-            } else {
-                if constexpr (position.has_value()) {
-                    arguments.push_back({*position, name, description, required});
-                }
-                if constexpr (is_named_option<T>(m)) {
-                    std::string invocation{"    "};
-                    if constexpr (opt.has_value()) {
-                        if constexpr (opt->short_name != 0) {
-                            invocation = std::format("-{}, ", opt->short_name);
-                        }
-                    }
-                    invocation += std::format("--{}", name);
+                    std::string invocation{name};
                     if (allow_aliases) {
                         for (const char *alias : alias_names<m>()) {
-                            const std::string_view a{alias};
-                            invocation += std::format(", {}{}", a.size() == 1 ? "-" : "--", a);
+                            invocation += std::format(", {}", alias);
                         }
                     }
-                    if constexpr (!is_flag_type(^^M)) {
-                        if constexpr (constexpr auto range_annotation = range_of(m)) {
-                            using A = [:std::meta::remove_cv(std::meta::type_of(*range_annotation)):];
-                            const auto range = std::meta::extract<A>(*range_annotation);
-                            invocation += std::format(" <{}..{}>", range.min, range.max);
-                        } else if constexpr (constexpr auto min_annotation = min_of(m)) {
-                            using A = [:std::meta::remove_cv(std::meta::type_of(*min_annotation)):];
-                            const auto mn = std::meta::extract<A>(*min_annotation);
-                            invocation += std::format(" <{}..>", mn.value);
-                        } else if constexpr (constexpr auto max_annotation = max_of(m)) {
-                            using A = [:std::meta::remove_cv(std::meta::type_of(*max_annotation)):];
-                            const auto mx = std::meta::extract<A>(*max_annotation);
-                            invocation += std::format(" <..{}>", mx.value);
-                        } else if constexpr (choices_of(m).has_value()) {
-                            constexpr auto choices = choices_list<m>();
-                            invocation += " <";
-                            invocation.append_range(
-                                choices
-                                | std::views::transform([](const char *s) { return std::string_view{s}; })
-                                | std::views::join_with('|')
-                            );
-                            invocation += ">";
-                        } else {
-                            invocation += " <value>";
-                        }
+                    commands.push_back({std::move(invocation), std::move(description)});
+                } else {
+                    if constexpr (position.has_value()) {
+                        arguments.push_back({*position, name, description, required});
                     }
-                    options.push_back({std::move(invocation), std::move(description)});
+                    if constexpr (is_named_option<T>(m)) {
+                        std::string invocation{"    "};
+                        if constexpr (opt.has_value()) {
+                            if constexpr (opt->short_name != 0) {
+                                invocation = std::format("-{}, ", opt->short_name);
+                            }
+                        }
+                        invocation += std::format("--{}", name);
+                        if (allow_aliases) {
+                            for (const char *alias : alias_names<m>()) {
+                                const std::string_view a{alias};
+                                invocation += std::format(", {}{}", a.size() == 1 ? "-" : "--", a);
+                            }
+                        }
+                        if constexpr (!is_flag_type(^^M)) {
+                            if constexpr (constexpr auto range_annotation = range_of(m)) {
+                                using A = [:std::meta::remove_cv(std::meta::type_of(*range_annotation)):];
+                                const auto range = std::meta::extract<A>(*range_annotation);
+                                invocation += std::format(" <{}..{}>", range.min, range.max);
+                            } else if constexpr (constexpr auto min_annotation = min_of(m)) {
+                                using A = [:std::meta::remove_cv(std::meta::type_of(*min_annotation)):];
+                                const auto mn = std::meta::extract<A>(*min_annotation);
+                                invocation += std::format(" <{}..>", mn.value);
+                            } else if constexpr (constexpr auto max_annotation = max_of(m)) {
+                                using A = [:std::meta::remove_cv(std::meta::type_of(*max_annotation)):];
+                                const auto mx = std::meta::extract<A>(*max_annotation);
+                                invocation += std::format(" <..{}>", mx.value);
+                            } else if constexpr (choices_of(m).has_value()) {
+                                constexpr auto choices = choices_list<m>();
+                                invocation += " <";
+                                invocation.append_range(
+                                    choices
+                                    | std::views::transform([](const char *s) { return std::string_view{s}; })
+                                    | std::views::join_with('|')
+                                );
+                                invocation += ">";
+                            } else {
+                                invocation += " <value>";
+                            }
+                        }
+                        options.push_back({std::move(invocation), std::move(description)});
+                    }
                 }
             }
         }

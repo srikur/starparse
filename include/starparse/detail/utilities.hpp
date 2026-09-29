@@ -186,6 +186,15 @@ namespace StarParse::detail::Utilities {
         return !is_subcommand(m) && (opt_of(m).has_value() || positional_of(m).has_value() || is_bare<T>());
     }
 
+    consteval bool is_hidden(const std::meta::info m) {
+        for (const auto a : std::meta::annotations_of(m)) {
+            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^detail::Hidden_)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     constexpr char ascii_lower(const char c) {
         return c >= 'A' && c <= 'Z' ? static_cast<char>(c + ('a' - 'A')) : c;
     }
