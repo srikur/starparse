@@ -589,17 +589,18 @@ namespace StarParse::detail::Parser {
             if (entered_child) break;
             if (!matched) {
                 // compute edit distance candidates
+                const auto name_or_value = attrs.has_value ? attrs.value : attrs.name;
                 const auto min_candidate = std::ranges::fold_left(candidates, std::pair{std::numeric_limits<size_t>::max(), ""},
                                                                   [&](const std::pair<size_t, std::string_view> &best,
                                                                       const std::string_view candidate) {
-                                                                      const auto distance = edit_distance(attrs.name, candidate);
+                                                                      const auto distance = edit_distance(name_or_value, candidate);
                                                                       return distance < best.first ? std::pair{distance, candidate} : best;
                                                                   });
-                const auto max_allowed_distance = std::max<size_t>(1, (attrs.name.size() + 2) / 3);
+                const auto max_allowed_distance = std::max<size_t>(1, (name_or_value.size() + 2) / 3);
                 std::string_view suggestion = min_candidate.first <= max_allowed_distance ? min_candidate.second : std::string_view{};
                 errors.push_back({
                     .kind = ErrorKind::UNKNOWN_OPTION,
-                    .input_value = std::string{attrs.name},
+                    .input_value = std::string{name_or_value},
                     .detail = suggestion.empty() ? "" : std::format(". Did you mean '{}'?", suggestion),
                     .argv_index = attrs.argv_index
                 });

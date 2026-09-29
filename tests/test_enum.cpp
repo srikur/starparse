@@ -49,5 +49,5 @@ TEST_CASE("enum: unknown value is an invalid-value error") {
     const auto &error = args.errors()[0];
     CHECK(error.kind == ErrorKind::INVALID_VALUE);
     CHECK(error.input_value == "slow");
-    CHECK(error.current_argument.value_or("").ends_with("Mode"));
+    CHECK(error.current_argument.value_or("").ends_with("mode"));
 }
