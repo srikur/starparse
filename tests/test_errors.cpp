@@ -32,5 +32,5 @@ TEST_CASE("errors: value that does not parse") {
     REQUIRE_FALSE(args);
     REQUIRE(args.errors().size() == 1uz);
     CHECK(args.errors()[0].kind == ErrorKind::INVALID_VALUE);
-    CHECK(args.error_message() == "Could not parse input 'abc' for argument 'int'");
+    CHECK(args.error_message() == "Could not parse input 'abc' for argument 'arg1'");
 }

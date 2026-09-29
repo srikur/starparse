@@ -22,85 +22,9 @@
 
 // TODO: split utilities into multiple files?
 namespace StarParse::detail::Utilities {
-    consteval std::vector<const char *> alias_name_list(const std::meta::info m) {
-        std::vector<const char *> names{};
-        for (const std::meta::info a : std::meta::annotations_of(m)) {
-            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) != std::meta::dealias(^^Alias)) {
-                continue;
-            }
-            const auto alias = std::meta::extract<Alias>(a);
-            for (size_t i{0}; i < alias.count_; i++) {
-                names.push_back(alias.names_[i]);
-            }
-        }
-        return names;
-    }
-
-    inline bool iequals(const std::string_view a, const std::string_view b) {
-        if (a.length() != b.length()) {
-            return false;
-        }
-        return std::equal(a.begin(), a.end(), b.begin(), [](const unsigned char ac, const unsigned char bc) {
-            return std::tolower(ac) == std::tolower(bc);
-        });
-    }
-
-    template<std::meta::info M>
-    bool matches_alias(const std::string_view name, const bool allow_case_insensitivity = false) {
-        static constexpr auto aliases = std::define_static_array(alias_name_list(M));
-        for (const char *alias : aliases) {
-            if (name == std::string_view{alias} || (allow_case_insensitivity && iequals(name, std::string_view{alias})))
-                return true;
-        }
-        return false;
-    }
-
-    consteval std::optional<Opt> opt_of(const std::meta::info m) {
-        for (const std::meta::info a : std::meta::annotations_of(m)) {
-            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^Opt)) {
-                return std::meta::extract<Opt>(a);
-            }
-        }
-        return std::nullopt;
-    }
-
-    template<std::meta::info M>
-    std::span<const char *const> alias_names() {
-        static constexpr auto aliases = std::define_static_array(alias_name_list(M));
-        return aliases;
-    }
-
-    consteval bool is_optional(std::meta::info r) {
-        r = std::meta::dealias(r);
-        return std::meta::has_template_arguments(r) && std::meta::template_of(r) == ^^std::optional;
-    }
-
-    consteval bool is_subcommand(const std::meta::info m) {
-        for (const auto a : std::meta::annotations_of(m)) {
-            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^detail::Subcommand_)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    consteval std::meta::info value_type_of(const std::meta::info r) {
-        return std::meta::template_arguments_of(std::meta::dealias(r))[0];
-    }
-
-    consteval bool is_flag_type(std::meta::info r) {
-        r = std::meta::dealias(std::meta::remove_cv(r));
-        if (is_optional(r)) {
-            r = std::meta::dealias(value_type_of(r));
-        }
-        return r == std::meta::dealias(^^bool);
-    }
-
-    consteval bool is_count_type(std::meta::info r) {
-        r = std::meta::dealias(std::meta::remove_cv(r));
-        if (is_optional(r)) r = std::meta::dealias(value_type_of(r));
-        return std::meta::is_integral_type(r) && r != (^^bool) &&
-               !std::meta::extract<bool>(std::meta::substitute(^^is_char_v, {r}));
+    consteval bool is_specialization_of(std::meta::info type, const std::meta::info templ) {
+        type = std::meta::dealias(type);
+        return std::meta::has_template_arguments(type) && std::meta::template_of(type) == templ;
     }
 
     consteval std::string_view name_of(const std::meta::info entity) {
@@ -112,148 +36,6 @@ namespace StarParse::detail::Utilities {
             }
         }
         return std::meta::identifier_of(entity);
-    }
-
-    template<std::meta::info M>
-    inline constexpr std::string_view snake_name_v = name_of(M);
-
-    template<std::meta::info M>
-    inline constexpr std::string_view kebab_name_v = [] {
-        std::string s(name_of(M));
-        std::ranges::replace(s, '_', '-');
-        return std::string_view(std::define_static_string(s), s.size());
-    }();
-
-    template<std::meta::info M>
-    inline constexpr std::string_view snake_negated_name_v = [] {
-        std::string s(name_of(M));
-        s.reserve(s.size() + 3);
-        s.append("no-");
-        return std::string_view(std::define_static_string(s), s.size());
-    }();
-
-    template<std::meta::info M>
-    inline constexpr std::string_view kebab_negated_name_v = [] {
-        std::string s(name_of(M));
-        s.reserve(s.size() + 3);
-        s.append("no_");
-        std::ranges::replace(s, '_', '-');
-        return std::string_view(std::define_static_string(s), s.size());
-    }();
-
-    template<std::meta::info M>
-    constexpr bool check_snake_case(const std::string_view name, const Settings &settings) {
-        return name == snake_name_v<M> || (settings.allow_case_insensitivity && iequals(name, snake_name_v<M>));
-    }
-
-    template<std::meta::info M>
-    constexpr bool check_kebab_case(const std::string_view name, const Settings &settings) {
-        return settings.allow_kebab_casing && (name == kebab_name_v<M> || (settings.allow_case_insensitivity && iequals(name, kebab_name_v<M>)));
-    }
-
-    template<std::meta::info M>
-    constexpr bool matches_non_negated_name(const std::string_view name,
-                                            const std::optional<Opt> &opt,
-                                            const Settings &settings,
-                                            const bool allow_short = true) {
-        if (allow_short && name.size() == 1 && opt.has_value() && name[0] == opt->short_name)
-            return true;
-        if (check_snake_case<M>(name, settings) || check_kebab_case<M>(name, settings))
-            return true;
-        if (settings.allow_aliases && Utilities::matches_alias<M>(name, settings.allow_case_insensitivity))
-            return true;
-        return false;
-    }
-
-    template<std::meta::info M>
-    constexpr bool does_match_name(const std::string_view name,
-                                   const std::optional<Opt> &opt,
-                                   const Settings &settings,
-                                   const bool allow_short = true) {
-        if (matches_non_negated_name<M>(name, opt, settings, allow_short)) return true;
-        if (settings.autogenerate_negations && name.starts_with("no-") && is_flag_type(std::meta::type_of(M))) {
-            std::string_view negated{name};
-            negated.remove_prefix(3);
-            return check_snake_case<M>(negated, settings) || check_kebab_case<M>(negated, settings);
-        }
-        return false;
-    }
-
-    consteval bool is_specialization_of(std::meta::info type, const std::meta::info templ) {
-        type = std::meta::dealias(type);
-        return std::meta::has_template_arguments(type) && std::meta::template_of(type) == templ;
-    }
-
-    consteval bool is_vector(const std::meta::info r) { return is_specialization_of(r, ^^std::vector); }
-    consteval bool is_array(const std::meta::info r) { return is_specialization_of(r, ^^std::array); }
-    consteval bool is_container(const std::meta::info m) { return is_vector(m) || is_array(m); }
-
-    constexpr std::expected<bool, ParseError> bool_from_string(const std::string_view s) {
-        using namespace std::literals;
-        constexpr std::array true_values{"yes"sv, "1"sv, "on"sv, "true"sv, "t"sv};
-        constexpr std::array false_values{"no"sv, "0"sv, "off"sv, "false"sv, "f"sv};
-        if (std::ranges::any_of(true_values, [&](auto value) { return iequals(s, value); })) return true;
-        if (std::ranges::any_of(false_values, [&](auto value) { return iequals(s, value); })) return false;
-        return std::unexpected(ParseError{.kind = ErrorKind::INVALID_VALUE, .input_value = std::string{s}});
-    }
-
-    template<typename T>
-    consteval size_t member_index_of(const std::meta::info m) {
-        size_t index{0};
-        for (const std::meta::info member :
-             std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current())) {
-            if (member == m) {
-                return index;
-            }
-            ++index;
-        }
-        throw std::invalid_argument("member not found");
-    }
-
-    template<typename M>
-    std::expected<M, ParseError> from_string(std::string_view s, const size_t index, const Settings &settings) {
-        if constexpr (is_optional(^^M)) {
-            using T = [:value_type_of(^^M):];
-            if (auto result = from_string<T>(s, index, settings)) return M{*result};
-            else return std::unexpected(result.error());
-        } else if constexpr (std::same_as<M, bool>) {
-            if (auto result = bool_from_string(s)) return M{*result};
-            else return std::unexpected(result.error());
-        } else if constexpr (std::constructible_from<M, std::string_view>) {
-            return M{s};
-        } else if constexpr (is_char_v<M>) {
-            return s.empty() ? M{0} : M{s[0]};
-        } else if constexpr (std::is_arithmetic_v<M>) {
-            M v{};
-            auto [pointer, error_code] = std::from_chars(s.data(), s.data() + s.size(), v);
-            if (error_code != std::errc{} || pointer != s.data() + s.size()) {
-                return std::unexpected(ParseError{
-                    .kind = ErrorKind::INVALID_VALUE,
-                    .input_value = std::string{s},
-                    .current_argument = std::optional{std::meta::display_string_of(^^M)},
-                    .argv_index = index
-                });
-            }
-            return v;
-        } else if constexpr (std::is_enum_v<M>) {
-            std::optional<M> parsed;
-            template for (constexpr auto e : std::define_static_array(std::meta::enumerators_of(^^M))) {
-                if (!parsed.has_value() && does_match_name<e>(s, std::nullopt, settings)) {
-                    parsed = [:e:];
-                }
-            }
-            if (!parsed)
-                return std::unexpected(ParseError{
-                    .kind = ErrorKind::INVALID_VALUE,
-                    .input_value = std::string{s},
-                    .current_argument = std::optional{std::meta::display_string_of(^^M)},
-                    .argv_index = index
-                });
-            return *parsed;
-        } else {
-            // TODO: can add more info to the msg?
-            static_assert(false, "no conversion for this field type");
-        }
     }
 
     consteval std::optional<Positional> positional_of(const std::meta::info m) {
@@ -370,17 +152,85 @@ namespace StarParse::detail::Utilities {
         return std::nullopt;
     }
 
-    template<std::meta::info M>
-    inline constexpr std::string_view env_name_v = [] {
-        constexpr auto env = env_of(M);
-        static_assert(env.has_value(), "member requires an Env annotation");
-        std::string s{env->name};
-        for (auto &c : s) {
-            // note: apparently std::toupper is not constexpr
-            if (c >= 'a' && c <= 'z') c = static_cast<char>(c - 'a' + 'A');
+    consteval std::optional<Opt> opt_of(const std::meta::info m) {
+        for (const std::meta::info a : std::meta::annotations_of(m)) {
+            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^Opt)) {
+                return std::meta::extract<Opt>(a);
+            }
         }
-        return std::string_view{std::define_static_string(s), s.size()};
-    }();
+        return std::nullopt;
+    }
+
+    consteval bool is_subcommand(const std::meta::info m) {
+        for (const auto a : std::meta::annotations_of(m)) {
+            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^detail::Subcommand_)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    template<typename T>
+    consteval bool is_bare() {
+        for (const std::meta::info m :
+             std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current())) {
+            if (opt_of(m).has_value() || positional_of(m).has_value()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    template<typename T>
+    consteval bool is_named_option(const std::meta::info m) {
+        return !is_subcommand(m) && (opt_of(m).has_value() || positional_of(m).has_value() || is_bare<T>());
+    }
+
+    constexpr char ascii_lower(const char c) {
+        return c >= 'A' && c <= 'Z' ? static_cast<char>(c + ('a' - 'A')) : c;
+    }
+
+    template<std::meta::info M>
+    bool matches_short_name(const std::string_view value, const bool allow_case_insensitivity = false) {
+        constexpr std::optional<Opt> opt = opt_of(M);
+        if (opt.has_value() && value.size() == 1) {
+            return allow_case_insensitivity ? ascii_lower(value[0]) == ascii_lower(opt->short_name) : value[0] == opt->short_name;
+        }
+        return false;
+    }
+
+    inline bool iequals(const std::string_view a, const std::string_view b) {
+        if (a.length() != b.length()) {
+            return false;
+        }
+        return std::equal(a.begin(), a.end(), b.begin(), [](const unsigned char ac, const unsigned char bc) {
+            return std::tolower(ac) == std::tolower(bc);
+        });
+    }
+
+    consteval std::vector<const char *> alias_name_list(const std::meta::info m) {
+        std::vector<const char *> names{};
+        for (const std::meta::info a : std::meta::annotations_of(m)) {
+            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) != std::meta::dealias(^^Alias)) {
+                continue;
+            }
+            const auto alias = std::meta::extract<Alias>(a);
+            for (size_t i{0}; i < alias.count_; i++) {
+                names.push_back(alias.names_[i]);
+            }
+        }
+        return names;
+    }
+
+    template<std::meta::info M>
+    bool matches_alias(const std::string_view name, const bool allow_case_insensitivity = false) {
+        static constexpr auto aliases = std::define_static_array(alias_name_list(M));
+        for (const char *alias : aliases) {
+            if (name == std::string_view{alias} || (allow_case_insensitivity && iequals(name, std::string_view{alias})))
+                return true;
+        }
+        return false;
+    }
 
     template<std::meta::info M>
     consteval auto choices_list() {
@@ -411,20 +261,209 @@ namespace StarParse::detail::Utilities {
     }
 
     template<typename T>
-    consteval bool is_bare() {
-        for (const std::meta::info m :
-             std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current())) {
-            if (opt_of(m).has_value() || positional_of(m).has_value()) {
-                return false;
+    bool short_name_exists(const std::string_view name, const bool allow_case_insensitivity = false) {
+        // check aliases, opt, and choices
+        static constexpr auto members = std::define_static_array(
+            std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
+        template for (constexpr auto member : members) {
+            if constexpr (is_named_option<T>(member)) {
+                constexpr auto canonical = name_of(member);
+                if (canonical.size() == 1 &&
+                    (name == canonical || (allow_case_insensitivity && iequals(name, canonical))))
+                    return true;
+            }
+            if (matches_alias<member>(name, allow_case_insensitivity)
+                || matches_choice<member>(name, allow_case_insensitivity)
+                || matches_short_name<member>(name, allow_case_insensitivity)) {
+                return true;
             }
         }
-        return true;
+        return false;
+    }
+
+    template<std::meta::info M>
+    std::span<const char *const> alias_names() {
+        static constexpr auto aliases = std::define_static_array(alias_name_list(M));
+        return aliases;
+    }
+
+    consteval bool is_optional(std::meta::info r) {
+        r = std::meta::dealias(r);
+        return std::meta::has_template_arguments(r) && std::meta::template_of(r) == ^^std::optional;
+    }
+
+    consteval std::meta::info value_type_of(const std::meta::info r) {
+        return std::meta::template_arguments_of(std::meta::dealias(r))[0];
+    }
+
+    consteval bool is_flag_type(std::meta::info r) {
+        r = std::meta::dealias(std::meta::remove_cv(r));
+        if (is_optional(r)) {
+            r = std::meta::dealias(value_type_of(r));
+        }
+        return r == std::meta::dealias(^^bool);
+    }
+
+    consteval bool is_count_type(std::meta::info r) {
+        r = std::meta::dealias(std::meta::remove_cv(r));
+        if (is_optional(r)) r = std::meta::dealias(value_type_of(r));
+        return std::meta::is_integral_type(r) && r != (^^bool) &&
+               !std::meta::extract<bool>(std::meta::substitute(^^is_char_v, {r}));
+    }
+
+    template<std::meta::info M>
+    inline constexpr std::string_view snake_name_v = name_of(M);
+
+    template<std::meta::info M>
+    inline constexpr std::string_view kebab_name_v = [] {
+        std::string s(name_of(M));
+        std::ranges::replace(s, '_', '-');
+        return std::string_view(std::define_static_string(s), s.size());
+    }();
+
+    template<std::meta::info M>
+    inline constexpr std::string_view snake_negated_name_v = [] {
+        std::string s(name_of(M));
+        s.reserve(s.size() + 3);
+        s.insert(0, "no-");
+        return std::string_view(std::define_static_string(s), s.size());
+    }();
+
+    template<std::meta::info M>
+    inline constexpr std::string_view kebab_negated_name_v = [] {
+        std::string s(name_of(M));
+        s.reserve(s.size() + 3);
+        s.insert(0, "no_");
+        std::ranges::replace(s, '_', '-');
+        return std::string_view(std::define_static_string(s), s.size());
+    }();
+
+    template<std::meta::info M>
+    constexpr bool check_snake_case(const std::string_view name, const Settings &settings) {
+        return name == snake_name_v<M> || (settings.allow_case_insensitivity && iequals(name, snake_name_v<M>));
+    }
+
+    template<std::meta::info M>
+    constexpr bool check_kebab_case(const std::string_view name, const Settings &settings) {
+        return settings.allow_kebab_casing && (name == kebab_name_v<M> || (settings.allow_case_insensitivity && iequals(name, kebab_name_v<M>)));
+    }
+
+    template<std::meta::info M>
+    constexpr bool matches_non_negated_name(const std::string_view name,
+                                            const Settings &settings,
+                                            const bool allow_short = true) {
+        if (allow_short && matches_short_name<M>(name, settings.allow_case_insensitivity))
+            return true;
+        if (check_snake_case<M>(name, settings) || check_kebab_case<M>(name, settings))
+            return true;
+        if (settings.allow_aliases && Utilities::matches_alias<M>(name, settings.allow_case_insensitivity))
+            return true;
+        return false;
+    }
+
+    template<std::meta::info M>
+    constexpr bool does_match_name(const std::string_view name,
+                                   const Settings &settings,
+                                   const bool allow_short = true) {
+        if (matches_non_negated_name<M>(name, settings, allow_short)) return true;
+        if (settings.autogenerate_negations && name.starts_with("no-") && is_flag_type(std::meta::type_of(M))) {
+            std::string_view negated{name};
+            negated.remove_prefix(3);
+            return check_snake_case<M>(negated, settings) || check_kebab_case<M>(negated, settings);
+        }
+        return false;
+    }
+
+    consteval bool is_vector(const std::meta::info r) { return is_specialization_of(r, ^^std::vector); }
+    consteval bool is_array(const std::meta::info r) { return is_specialization_of(r, ^^std::array); }
+    consteval bool is_container(const std::meta::info m) { return is_vector(m) || is_array(m); }
+
+    template<std::meta::info M>
+    constexpr std::expected<bool, ParseError> bool_from_string(const std::string_view s) {
+        using namespace std::literals;
+        constexpr std::array true_values{"yes"sv, "1"sv, "on"sv, "true"sv, "t"sv};
+        constexpr std::array false_values{"no"sv, "0"sv, "off"sv, "false"sv, "f"sv};
+        if (std::ranges::any_of(true_values, [&](auto value) { return iequals(s, value); })) return true;
+        if (std::ranges::any_of(false_values, [&](auto value) { return iequals(s, value); })) return false;
+        return std::unexpected(
+            ParseError{
+                .kind = ErrorKind::INVALID_VALUE,
+                .input_value = std::string{s},
+                .current_argument = name_of(M),
+            }
+        );
     }
 
     template<typename T>
-    consteval bool is_named_option(const std::meta::info m) {
-        return !is_subcommand(m) && (opt_of(m).has_value() || positional_of(m).has_value() || is_bare<T>());
+    consteval size_t member_index_of(const std::meta::info m) {
+        size_t index{0};
+        for (const std::meta::info member :
+             std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current())) {
+            if (member == m) {
+                return index;
+            }
+            ++index;
+        }
+        throw std::invalid_argument("member not found");
     }
+
+    template<std::meta::info Mem, typename M>
+    std::expected<M, ParseError> from_string(std::string_view s, const size_t index, const Settings &settings) {
+        if constexpr (is_optional(^^M)) {
+            using T = [:value_type_of(^^M):];
+            if (auto result = from_string<Mem, T>(s, index, settings)) return M{*result};
+            else return std::unexpected(result.error());
+        } else if constexpr (std::same_as<M, bool>) {
+            if (auto result = bool_from_string<Mem>(s)) return M{*result};
+            else return std::unexpected(result.error());
+        } else if constexpr (std::constructible_from<M, std::string_view>) {
+            return M{s};
+        } else if constexpr (is_char_v<M>) {
+            return s.empty() ? M{0} : M{s[0]};
+        } else if constexpr (std::is_arithmetic_v<M>) {
+            M v{};
+            auto [pointer, error_code] = std::from_chars(s.data(), s.data() + s.size(), v);
+            if (error_code != std::errc{} || pointer != s.data() + s.size()) {
+                return std::unexpected(ParseError{
+                    .kind = ErrorKind::INVALID_VALUE,
+                    .input_value = std::string{s},
+                    .current_argument = name_of(Mem),
+                    .argv_index = index
+                });
+            }
+            return v;
+        } else if constexpr (std::is_enum_v<M>) {
+            std::optional<M> parsed;
+            template for (constexpr auto e : std::define_static_array(std::meta::enumerators_of(^^M))) {
+                if (!parsed.has_value() && does_match_name<e>(s, settings)) {
+                    parsed = [:e:];
+                }
+            }
+            if (!parsed)
+                return std::unexpected(ParseError{
+                    .kind = ErrorKind::INVALID_VALUE,
+                    .input_value = std::string{s},
+                    .current_argument = name_of(Mem),
+                    .argv_index = index
+                });
+            return *parsed;
+        } else {
+            // TODO: can add more info to the msg?
+            static_assert(false, "no conversion for this field type");
+        }
+    }
+
+    template<std::meta::info M>
+    inline constexpr std::string_view env_name_v = [] {
+        constexpr auto env = env_of(M);
+        static_assert(env.has_value(), "member requires an Env annotation");
+        std::string s{env->name};
+        for (auto &c : s) {
+            // note: apparently std::toupper is not constexpr
+            if (c >= 'a' && c <= 'z') c = static_cast<char>(c - 'a' + 'A');
+        }
+        return std::string_view{std::define_static_string(s), s.size()};
+    }();
 
     template<typename T>
     consteval std::optional<size_t> positional_index_of(const std::meta::info m) {
@@ -457,9 +496,8 @@ namespace StarParse::detail::Utilities {
         bool takes{false};
         template for (constexpr auto m : members) {
             using M = [:std::meta::type_of(m):];
-            constexpr auto opt = opt_of(m);
             constexpr bool named = is_named_option<T>(m);
-            if (named && does_match_name<m>(name, opt, settings, is_short)) takes = !is_flag_type(^^M);
+            if (named && does_match_name<m>(name, settings, is_short)) takes = !is_flag_type(^^M);
         }
         return takes;
     }
@@ -471,7 +509,7 @@ namespace StarParse::detail::Utilities {
             std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
         template for (constexpr auto m : members) {
             if constexpr (is_named_option<T>(m) && is_count_type(std::meta::type_of(m))) {
-                if (does_match_name<m>(name, opt_of(m), settings, is_short)) return true;
+                if (does_match_name<m>(name, settings, is_short)) return true;
             }
         }
         return false;
@@ -517,46 +555,12 @@ namespace StarParse::detail::Utilities {
         return result;
     }
 
-    constexpr char ascii_lower(const char c) {
-        return c >= 'A' && c <= 'Z' ? static_cast<char>(c + ('a' - 'A')) : c;
-    }
-
     constexpr bool same_name(const std::string_view a, const std::string_view b, const bool case_sensitive = false) {
         if (a.size() != b.size()) return false;
         for (size_t i = 0; i < a.size(); ++i) {
             if (case_sensitive ? a[i] != b[i] : ascii_lower(a[i]) != ascii_lower(b[i])) return false;
         }
         return true;
-    }
-
-    template<std::meta::info M>
-    bool matches_short_name(const std::string_view &value, const bool allow_case_insensitivity = false) {
-        constexpr std::optional<Opt> opt = opt_of(M);
-        if (opt.has_value() && value.size() == 1) {
-            return allow_case_insensitivity ? ascii_lower(value[0]) == ascii_lower(opt->short_name) : value[0] == opt->short_name;
-        }
-        return false;
-    }
-
-    template<typename T>
-    bool short_name_exists(const std::string_view name, const bool allow_case_insensitivity = false) {
-        // check aliases, opt, and choices
-        static constexpr auto members = std::define_static_array(
-            std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
-        template for (constexpr auto member : members) {
-            if constexpr (is_named_option<T>(member)) {
-                constexpr auto canonical = name_of(member);
-                if (canonical.size() == 1 &&
-                    (name == canonical || (allow_case_insensitivity && iequals(name, canonical))))
-                    return true;
-            }
-            if (matches_alias<member>(name, allow_case_insensitivity)
-                || matches_choice<member>(name, allow_case_insensitivity)
-                || matches_short_name<member>(name, allow_case_insensitivity)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     template<typename T>
@@ -581,8 +585,8 @@ namespace StarParse::detail::Utilities {
                     names.push_back(snake_negated_name_v<m>);
                     if (settings.allow_kebab_casing) names.push_back(kebab_negated_name_v<m>);
                 }
-                names.push_back("--help");
-                names.push_back("--version");
+                names.push_back("help");
+                names.push_back("version");
             }
         }
         return names;
@@ -742,7 +746,7 @@ namespace StarParse::detail::Utilities {
                             field.push_back(*result);
                         }
                     } else errors.push_back(result.error());
-                } else if (auto result = from_string<E>(piece, index, settings)) {
+                } else if (auto result = from_string<Mem, E>(piece, index, settings)) {
                     if (validate<Mem>(*result, piece, index, errors, settings)) {
                         field.push_back(*result);
                     }
@@ -765,7 +769,7 @@ namespace StarParse::detail::Utilities {
                             field[count] = *result;
                         }
                     } else errors.push_back(result.error());
-                } else if (auto result = from_string<E>(piece, index, settings)) {
+                } else if (auto result = from_string<Mem, E>(piece, index, settings)) {
                     if (validate<Mem>(*result, piece, index, errors, settings)) {
                         field[count] = *result;
                     }
@@ -773,12 +777,14 @@ namespace StarParse::detail::Utilities {
                 count++;
             });
         } else if constexpr (has_custom_parser) {
-            if (auto result = apply_custom_parser<Mem, M>(s, index); !result) {
-                errors.push_back(result.error());
-            } else field = *result;
+            if (auto result = apply_custom_parser<Mem, M>(s, index)) {
+                if (validate<Mem>(*result, s, index, errors, settings)) {
+                    field = *result;
+                }
+            } else errors.push_back(result.error());
             count++;
         } else {
-            if (auto result = from_string<M>(s, index, settings)) {
+            if (auto result = from_string<Mem, M>(s, index, settings)) {
                 if (validate<Mem>(*result, s, index, errors, settings)) {
                     field = *result;
                 }

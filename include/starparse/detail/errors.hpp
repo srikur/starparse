@@ -7,7 +7,7 @@
 
 namespace StarParse {
     enum class ErrorKind {
-        UNKNOWN_OPTION, MISSING_VALUE, INVALID_VALUE, UNEXPECTED_POSITIONAL, MISSING_REQUIRED, DUPLICATE_OPTION,
+        UNKNOWN_OPTION, MISSING_VALUE, INVALID_VALUE, MISSING_REQUIRED, DUPLICATE_OPTION,
         EXCEPTION, OUT_OF_RANGE, INVALID_CHOICE, VALIDATION_FAILED, CUSTOM_PARSING_FAILED, READING_ENV_FAILED,
         INVALID_ENV_VALUE
     };
@@ -28,8 +28,6 @@ namespace StarParse {
                     return std::format("Missing value for argument '{}'", option);
                 case ErrorKind::INVALID_VALUE:
                     return std::format("Could not parse input '{}' for argument '{}'", input_value, option);
-                case ErrorKind::UNEXPECTED_POSITIONAL:
-                    return std::format("Unexpected positional value '{}'", input_value);
                 case ErrorKind::MISSING_REQUIRED:
                     return std::format("Missing value for required option '{}'", option);
                 case ErrorKind::DUPLICATE_OPTION:

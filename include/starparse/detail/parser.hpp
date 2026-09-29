@@ -86,7 +86,7 @@ namespace StarParse::detail::Parser {
         bool found{false};
         template for (constexpr auto m : members) {
             constexpr bool named = is_named_option<T>(m);
-            if (named && does_match_name<m>(name, opt_of(m), settings)) {
+            if (named && does_match_name<m>(name, settings)) {
                 found = true;
             }
         }
@@ -100,7 +100,7 @@ namespace StarParse::detail::Parser {
         template for (constexpr auto m : members) {
             using M = [:std::meta::type_of(m):];
             if constexpr (is_flag_type(^^M) && is_named_option<T>(m)) {
-                if (does_match_name<m>(std::string_view{&c, 1}, opt_of(m), settings)) {
+                if (does_match_name<m>(std::string_view{&c, 1}, settings)) {
                     return true;
                 }
             }
@@ -364,7 +364,7 @@ namespace StarParse::detail::Parser {
             std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
         template for (constexpr auto m : members) {
             if constexpr (is_subcommand(m)) {
-                if (does_match_name<m>(next, std::nullopt, settings, false)) return false;
+                if (does_match_name<m>(next, settings, false)) return false;
             }
         }
         return true;
@@ -422,7 +422,7 @@ namespace StarParse::detail::Parser {
                         static_assert(is_optional(^^M));
                         using Child = [:value_type_of(^^M):];
 
-                        if (does_match_name<m>(a.name, std::nullopt, settings, false)) {
+                        if (does_match_name<m>(a.name, settings, false)) {
                             a.is_subcommand = true;
                             a.is_positional = false;
                             attrs.push_back(a);
@@ -523,7 +523,7 @@ namespace StarParse::detail::Parser {
                 constexpr auto idx = member_index_of<T>(m);
                 constexpr auto pos = positional_index_of<T>(m);
                 if constexpr (is_subcommand(m)) {
-                    if (attrs.is_subcommand && !matched && does_match_name<m>(attrs.name, std::nullopt, settings, false)) {
+                    if (attrs.is_subcommand && !matched && does_match_name<m>(attrs.name, settings, false)) {
                         using M = [:std::meta::type_of(m):];
                         using Child = [:value_type_of(^^M):];
                         auto &child = out.[:m:];
@@ -550,7 +550,7 @@ namespace StarParse::detail::Parser {
                     } else if (attrs.dashed || attrs.double_dashed) {
                         constexpr auto opt = opt_of(m);
                         constexpr bool named = is_named_option<T>(m);
-                        const bool matching_string = named && does_match_name<m>(attrs.name, opt, settings);
+                        const bool matching_string = named && does_match_name<m>(attrs.name, settings);
                         if (!matched && matching_string) {
                             matched = true;
                             if constexpr (is_flag_type(^^M)) {
@@ -558,8 +558,9 @@ namespace StarParse::detail::Parser {
                                     assign_from_string<m>(out.[:m:], attrs.value, attrs.argv_index, fields_set[idx], errors,
                                                           settings);
                                 } else {
-                                    out.[:m:] = matches_non_negated_name<m>(attrs.name, opt, settings);
+                                    out.[:m:] = matches_non_negated_name<m>(attrs.name, settings);
                                 }
+                                if (pos) next_positional++;
                                 fields_set[idx] = 1;
                             } else {
                                 if (!attrs.has_value) {
@@ -567,17 +568,19 @@ namespace StarParse::detail::Parser {
                                         if (settings.allow_repeated_counts) {
                                             increment_count<m>(out.[:m:], attrs.name, attrs.argv_index, errors, settings);
                                             ++fields_set[idx];
+                                            if (pos) next_positional++;
                                             continue;
                                         }
                                     }
                                     errors.push_back({
-                                        .kind = ErrorKind::MISSING_VALUE, .current_argument = attrs.name,
-                                        .argv_index = attrs.argv_index
+                                        .kind = ErrorKind::MISSING_VALUE,
+                                        .current_argument = attrs.name,
                                     });
                                     continue;
                                 }
                                 assign_from_string<m>(out.[:m:], attrs.value, attrs.argv_index, fields_set[idx], errors,
                                                       settings);
+                                if (pos) next_positional++;
                             }
                         }
                     }
@@ -586,24 +589,25 @@ namespace StarParse::detail::Parser {
             if (entered_child) break;
             if (!matched) {
                 // compute edit distance candidates
+                const auto name_or_value = attrs.has_value ? attrs.value : attrs.name;
                 const auto min_candidate = std::ranges::fold_left(candidates, std::pair{std::numeric_limits<size_t>::max(), ""},
                                                                   [&](const std::pair<size_t, std::string_view> &best,
                                                                       const std::string_view candidate) {
-                                                                      const auto distance = edit_distance(attrs.name, candidate);
+                                                                      const auto distance = edit_distance(name_or_value, candidate);
                                                                       return distance < best.first ? std::pair{distance, candidate} : best;
                                                                   });
-                const auto max_allowed_distance = std::max<size_t>(1, (attrs.name.size() + 2) / 3);
+                const auto max_allowed_distance = std::max<size_t>(1, (name_or_value.size() + 2) / 3);
                 std::string_view suggestion = min_candidate.first <= max_allowed_distance ? min_candidate.second : std::string_view{};
                 errors.push_back({
                     .kind = ErrorKind::UNKNOWN_OPTION,
-                    .input_value = std::string{attrs.name},
+                    .input_value = std::string{name_or_value},
                     .detail = suggestion.empty() ? "" : std::format(". Did you mean '{}'?", suggestion),
                     .argv_index = attrs.argv_index
                 });
             }
         }
 
-        if (state.help_requested) return;
+        if (state.help_requested || state.version_requested) return;
 
         template for (constexpr auto m : members) {
             const size_t index = member_index_of<T>(m);
@@ -626,7 +630,6 @@ namespace StarParse::detail::Parser {
                     state.errors.push_back({
                         .kind = ErrorKind::MISSING_REQUIRED,
                         .current_argument = std::optional{field_name},
-                        .argv_index = index
                     });
                 }
             } else if constexpr (is_array(m)) {
@@ -635,7 +638,6 @@ namespace StarParse::detail::Parser {
                     state.errors.push_back({
                         .kind = ErrorKind::MISSING_VALUE,
                         .current_argument = std::optional{field_name},
-                        .argv_index = index
                     });
                 }
             }

@@ -126,7 +126,7 @@ TEST_CASE("bundle: aliases work inside bundles") {
 TEST_CASE("bundle: trailing characters after an attached value are an error") {
     const auto args = parse_from<Jobs>({"-kj4k"});
     REQUIRE_FALSE(args);
-    CHECK(args.error_message() == "Could not parse input '4k' for argument 'int'");
+    CHECK(args.error_message() == "Could not parse input '4k' for argument 'jobs'");
 }
 
 TEST_CASE("bundle: an unknown character rejects the whole bundle") {
