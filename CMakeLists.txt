@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.25)
 
 project(starparse
-    VERSION 0.0.1
+    VERSION 0.0.2
     DESCRIPTION "C++26 reflection-based command line argument parser"
     HOMEPAGE_URL "https://github.com/srikur/starparse"
     LANGUAGES CXX)
