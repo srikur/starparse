@@ -20,6 +20,8 @@
 #include <starparse/detail/assertions.hpp>
 #include <starparse/detail/file.hpp>
 
+#include "terminal.hpp"
+
 namespace StarParse::detail::Parser {
     using namespace StarParse::detail::Utilities;
     using namespace StarParse::detail::Assertions;
@@ -373,7 +375,8 @@ namespace StarParse::detail::Parser {
         [[nodiscard]] std::string help() const {
             constexpr auto program = program_of(^^T);
             const std::string program_name = program.has_value() ? program->name : std::string{argv_name_};
-            return format_help<T>(command_path_, program_name, program_name, allow_aliases_, allow_negations_);
+            const std::string raw_help = format_help<T>(command_path_, program_name, program_name, allow_aliases_, allow_negations_);
+            return Terminal::wrap(raw_help);
         }
 
         [[nodiscard]] std::string error_message() const {
