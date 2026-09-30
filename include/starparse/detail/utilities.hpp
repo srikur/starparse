@@ -74,6 +74,15 @@ namespace StarParse::detail::Utilities {
         return std::nullopt;
     }
 
+    consteval std::optional<Usage> usage_of(const std::meta::info r) {
+        for (const std::meta::info a : std::meta::annotations_of(r)) {
+            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^Usage)) {
+                return std::meta::extract<Usage>(a);
+            }
+        }
+        return std::nullopt;
+    }
+
     consteval std::optional<Separator> separator_of(const std::meta::info m) {
         for (const std::meta::info a : std::meta::annotations_of(m)) {
             if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^Separator)) {

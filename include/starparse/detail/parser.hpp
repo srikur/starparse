@@ -281,7 +281,8 @@ namespace StarParse::detail::Parser {
                 text += std::format("{}\n\n", command_name);
             }
         }
-        text += std::format("Usage: {}\n", usage);
+        constexpr auto usage_override = usage_of(^^T);
+        text += std::format("Usage: {}\n", usage_override ? usage_override->value : usage);
         if constexpr (prologue.has_value()) {
             if (prologue->value != nullptr && *prologue->value != '\0') {
                 text += std::format("\n {}\n", prologue->value);

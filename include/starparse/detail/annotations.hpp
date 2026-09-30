@@ -116,6 +116,12 @@ namespace StarParse::inline annotations {
         explicit consteval Epilogue(std::string_view n) : value(std::define_static_string(n)) {}
     };
 
+    struct Usage final {
+        const char *value{};
+
+        explicit consteval Usage(std::string_view n) : value(std::define_static_string(n)) {}
+    };
+
     template<typename T, typename... Ts>
     inline constexpr bool is_any_of_v = (std::is_same_v<T, Ts> || ...);
 
