@@ -318,13 +318,14 @@ namespace StarParse::detail::Parser {
     template<typename T>
     class ParsedArgs {
     public:
-        ParsedArgs(T out, const bool show_help, const bool show_version,
+        ParsedArgs(T out, const bool show_help, const bool show_version, const std::string_view argv_name,
                    std::vector<ParseError> &errors, std::vector<size_t> command_path = {},
                    const bool allow_aliases = true, const bool allow_negations = true) : out_(std::move(out)),
                                                                                          show_help_(show_help),
                                                                                          show_version_(show_version),
                                                                                          errors_(std::move(errors)),
                                                                                          command_path_(std::move(command_path)),
+                                                                                         argv_name_(argv_name),
                                                                                          allow_aliases_(allow_aliases),
                                                                                          allow_negations_(allow_negations) {}
 
@@ -371,7 +372,7 @@ namespace StarParse::detail::Parser {
 
         [[nodiscard]] std::string help() const {
             constexpr auto program = program_of(^^T);
-            const std::string program_name = program.has_value() ? program->name : "program";
+            const std::string program_name = program.has_value() ? program->name : std::string{argv_name_};
             return format_help<T>(command_path_, program_name, program_name, allow_aliases_, allow_negations_);
         }
 
@@ -393,6 +394,7 @@ namespace StarParse::detail::Parser {
         bool show_version_{};
         std::vector<ParseError> errors_;
         std::vector<size_t> command_path_;
+        std::string_view argv_name_;
         bool allow_aliases_{};
         bool allow_negations_{};
     };
@@ -687,15 +689,15 @@ namespace StarParse::detail::Parser {
     }
 
     template<typename T>
-    ParsedArgs<T> parse(std::span<const std::string_view> args, T initial = {}, Settings settings = {}) {
+    ParsedArgs<T> parse(const std::span<const std::string_view> args, const std::string_view program_name, T initial = {}, Settings settings = {}) {
         T out{std::move(initial)};
         ParseState state{};
         const auto attr_array = get_arg_attrs<T>(args, settings);
 
         parse_into<T>(attr_array, out, settings, state);
         return ParsedArgs<T>{
-            std::move(out), state.help_requested, state.version_requested, state.errors,
-            std::move(state.command_path), settings.allow_aliases
+            std::move(out), state.help_requested, state.version_requested, program_name,
+            state.errors, std::move(state.command_path), settings.allow_aliases
         };
     }
 }

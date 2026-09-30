@@ -24,7 +24,7 @@ namespace StarParse {
         if (argc > 1) {
             args.assign(argv + 1, argv + argc);
         }
-        return detail::Parser::parse<T>(args, std::move(initial), settings);
+        return detail::Parser::parse<T>(args, std::string_view{argv[0]}, std::move(initial), settings);
     }
 
     template<typename T>
@@ -38,7 +38,7 @@ namespace StarParse {
         if (argc > 1) {
             args.assign(argv + 1, argv + argc);
         }
-        auto result = detail::Parser::parse<T>(args, std::move(initial), settings);
+        auto result = detail::Parser::parse<T>(args, std::string_view{argv[0]}, std::move(initial), settings);
         if (!result.errors().empty()) {
             for (const auto &error : result.errors()) {
                 std::println(stderr, "Error: {}", error.to_string());
@@ -60,7 +60,7 @@ namespace StarParse {
         if (argc > 1) {
             args.assign(argv + 1, argv + argc);
         }
-        auto result = detail::Parser::parse<T>(args, std::move(initial), settings);
+        auto result = detail::Parser::parse<T>(args, std::string_view{argv[0]}, std::move(initial), settings);
         if (!result.errors().empty()) {
             throw std::invalid_argument(result.errors()[0].to_string());
         }
@@ -75,6 +75,6 @@ namespace StarParse {
     template<typename T>
     ParsedArgs<T> parse_from(const std::initializer_list<std::string_view> args, T initial = {},
                              const Settings settings = {}) {
-        return detail::Parser::parse<T>(std::span{args.begin(), args.size()}, std::move(initial), settings);
+        return detail::Parser::parse<T>(std::span{args.begin(), args.size()}, "", std::move(initial), settings);
     }
 }
