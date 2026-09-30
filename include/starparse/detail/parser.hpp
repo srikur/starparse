@@ -133,6 +133,8 @@ namespace StarParse::detail::Parser {
         static constexpr auto members = std::define_static_array(
             std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
         constexpr auto program = program_of(^^T);
+        constexpr auto prologue = prologue_of(^^T);
+        constexpr auto epilogue = epilogue_of(^^T);
 
         struct ArgumentRow {
             size_t index{};
@@ -280,6 +282,11 @@ namespace StarParse::detail::Parser {
             }
         }
         text += std::format("Usage: {}\n", usage);
+        if constexpr (prologue.has_value()) {
+            if (prologue->value != nullptr && *prologue->value != '\0') {
+                text += std::format("\n {}\n", prologue->value);
+            }
+        }
         if (!arguments.empty()) {
             text += "\nArguments:\n";
             for (const auto &argument : arguments) {
@@ -297,6 +304,11 @@ namespace StarParse::detail::Parser {
             for (const auto &command : commands) {
                 if (command.description.empty()) text += std::format("  {}\n", command.invocation);
                 else text += std::format("  {:<{}}{}\n", command.invocation, column, command.description);
+            }
+        }
+        if constexpr (epilogue.has_value()) {
+            if (epilogue->value != nullptr && *epilogue->value != '\0') {
+                text += std::format("\n {}\n", epilogue->value);
             }
         }
         return text;
