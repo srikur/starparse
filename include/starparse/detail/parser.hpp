@@ -366,9 +366,9 @@ namespace StarParse::detail::Parser {
         [[nodiscard]] std::string version() const {
             constexpr auto program = program_of(^^T);
             if constexpr (program.has_value()) {
-                return std::format("{} version {}", program->name, program->version);
+                return Terminal::wrap(std::format("{} version {}", program->name, program->version));
             } else {
-                return "No version information.";
+                return Terminal::wrap("No version information.");
             }
         }
 
