@@ -129,7 +129,7 @@ namespace StarParse::detail::Parser {
 
     template<typename T>
     std::string format_help(std::span<const size_t> command_path, const std::string &command_name,
-                            std::string usage, const bool allow_aliases) {
+                            std::string usage, const bool allow_aliases, const bool allow_negations) {
         static constexpr auto members = std::define_static_array(
             std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
         constexpr auto program = program_of(^^T);
@@ -201,7 +201,7 @@ namespace StarParse::detail::Parser {
                                 invocation = std::format("-{}, ", opt->short_name);
                             }
                         }
-                        invocation += std::format("--{}", name);
+                        invocation += std::format("--{}{}", allow_negations ? "[no]-" : "", name);
                         if (allow_aliases) {
                             for (const char *alias : alias_names<m>()) {
                                 const std::string_view a{alias};
@@ -320,10 +320,13 @@ namespace StarParse::detail::Parser {
     public:
         ParsedArgs(T out, const bool show_help, const bool show_version,
                    std::vector<ParseError> &errors, std::vector<size_t> command_path = {},
-                   const bool allow_aliases = true) : out_(std::move(out)),
-                                                      show_help_(show_help), show_version_(show_version),
-                                                      errors_(std::move(errors)),
-                                                      command_path_(std::move(command_path)), allow_aliases_(allow_aliases) {}
+                   const bool allow_aliases = true, const bool allow_negations = true) : out_(std::move(out)),
+                                                                                         show_help_(show_help),
+                                                                                         show_version_(show_version),
+                                                                                         errors_(std::move(errors)),
+                                                                                         command_path_(std::move(command_path)),
+                                                                                         allow_aliases_(allow_aliases),
+                                                                                         allow_negations_(allow_negations) {}
 
         T &&value() && {
             return std::move(out_);
@@ -369,7 +372,7 @@ namespace StarParse::detail::Parser {
         [[nodiscard]] std::string help() const {
             constexpr auto program = program_of(^^T);
             const std::string program_name = program.has_value() ? program->name : "program";
-            return format_help<T>(command_path_, program_name, program_name, allow_aliases_);
+            return format_help<T>(command_path_, program_name, program_name, allow_aliases_, allow_negations_);
         }
 
         [[nodiscard]] std::string error_message() const {
@@ -391,6 +394,7 @@ namespace StarParse::detail::Parser {
         std::vector<ParseError> errors_;
         std::vector<size_t> command_path_;
         bool allow_aliases_{};
+        bool allow_negations_{};
     };
 
     template<typename T>
