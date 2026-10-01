@@ -204,6 +204,11 @@ namespace StarParse::detail::Parser {
                             }
                         }
                         invocation += std::format("--{}{}", allow_negations ? "[no]-" : "", name);
+                        if constexpr (opt.has_value()) {
+                            if constexpr (opt->metavar_ != nullptr && *opt->metavar_ != '\0') {
+                                invocation += std::format(" {}", opt->metavar_);
+                            }
+                        }
                         if (allow_aliases) {
                             for (const char *alias : alias_names<m>()) {
                                 const std::string_view a{alias};
@@ -262,7 +267,9 @@ namespace StarParse::detail::Parser {
                         constexpr auto name = name_of(m);
                         return format_help<Child>(command_path.subspan(1),
                                                   std::format("{} {}", command_name, name),
-                                                  std::format("{} {}", usage, name), allow_aliases);
+                                                  std::format("{} {}", usage, name),
+                                                  allow_aliases,
+                                                  allow_negations);
                     }
                 }
             }

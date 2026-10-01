@@ -46,6 +46,11 @@ namespace StarParse::inline annotations {
     struct Opt final {
         char short_name{0};
         const char *help_{};
+        const char *metavar_{}; // TODO: support multiple
+
+        explicit consteval Opt(const char s, std::string_view h, std::string_view m) : short_name(s),
+                                                                                       help_(std::define_static_string(h)),
+                                                                                       metavar_(std::define_static_string(m)) {}
 
         explicit consteval Opt(const char s, std::string_view h) : short_name(s),
                                                                    help_(std::define_static_string(h)) {}

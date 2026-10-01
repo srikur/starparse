@@ -29,7 +29,7 @@ namespace StarParse::detail::Terminal {
         std::size_t col = 0;
 
         auto words = line
-                     | std::views::chunk_by([](char a, char b) { return is_space(a) == is_space(b); })
+                     | std::views::chunk_by([](const char a, const char b) { return is_space(a) == is_space(b); })
                      | std::views::filter([](auto run) { return !is_space(run.front()); });
 
         for (std::string_view word : words

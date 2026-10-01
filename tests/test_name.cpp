@@ -155,14 +155,14 @@ TEST_CASE("name: subcommands use the override and its aliases") {
 
 TEST_CASE("name: help uses overrides for options positionals and command paths") {
     const auto options = parse_from<Args>({"--help"}).help();
-    CHECK(options.find("--thread_count") != std::string::npos);
-    CHECK(options.find("--chatty_mode") != std::string::npos);
+    CHECK(options.find("--[no]-thread_count") != std::string::npos);
+    CHECK(options.find("--[no]-chatty_mode") != std::string::npos);
     CHECK(options.find("--jobs") == std::string::npos);
-    CHECK(options.find("--verbose") == std::string::npos);
+    CHECK(options.find("--[no]-verbose") == std::string::npos);
 
     const auto positionals = parse_from<PositionalArgs>({"--help"}).help();
     CHECK(positionals.find("<source-file>") != std::string::npos);
-    CHECK(positionals.find("--source-file") != std::string::npos);
+    CHECK(positionals.find("--[no]-source-file") != std::string::npos);
     CHECK(positionals.find("cpp_source") == std::string::npos);
 
     const auto commands = parse_from<Commands>({"--help"}).help();
@@ -173,8 +173,8 @@ TEST_CASE("name: help uses overrides for options positionals and command paths")
     REQUIRE(child);
     CHECK(child.help_requested());
     const auto child_help = child.help();
-    CHECK(child_help.find("Usage: program [options] dry_run [options]") != std::string::npos);
-    CHECK(child_help.find("--amount") != std::string::npos);
+    CHECK(child_help.find("[options] dry_run [options]") != std::string::npos);
+    CHECK(child_help.find("--[no]-amount") != std::string::npos);
     CHECK(child_help.find("cpp_command") == std::string::npos);
     CHECK(child_help.find("cpp_value") == std::string::npos);
 }
