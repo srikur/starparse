@@ -39,11 +39,18 @@ namespace StarParse::inline annotations {
         struct Subcommand_ final {};
 
         struct Required_ final {};
+
+        struct Hidden_ final {};
     }
 
     struct Opt final {
         char short_name{0};
         const char *help_{};
+        const char *metavar_{}; // TODO: support multiple
+
+        explicit consteval Opt(const char s, std::string_view h, std::string_view m) : short_name(s),
+                                                                                       help_(std::define_static_string(h)),
+                                                                                       metavar_(std::define_static_string(m)) {}
 
         explicit consteval Opt(const char s, std::string_view h) : short_name(s),
                                                                    help_(std::define_static_string(h)) {}
@@ -100,6 +107,24 @@ namespace StarParse::inline annotations {
         const char *name{};
         const char *description{};
         const char *version{};
+    };
+
+    struct Prologue final {
+        const char *value{};
+
+        explicit consteval Prologue(std::string_view n) : value(std::define_static_string(n)) {}
+    };
+
+    struct Epilogue final {
+        const char *value{};
+
+        explicit consteval Epilogue(std::string_view n) : value(std::define_static_string(n)) {}
+    };
+
+    struct Usage final {
+        const char *value{};
+
+        explicit consteval Usage(std::string_view n) : value(std::define_static_string(n)) {}
     };
 
     template<typename T, typename... Ts>
@@ -227,4 +252,6 @@ namespace StarParse::inline annotations {
 
         explicit consteval File(std::string_view f) : filename(std::define_static_string(f)) {}
     };
+
+    constexpr detail::Hidden_ Hidden{};
 }

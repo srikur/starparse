@@ -56,6 +56,33 @@ namespace StarParse::detail::Utilities {
         return std::nullopt;
     }
 
+    consteval std::optional<Prologue> prologue_of(const std::meta::info r) {
+        for (const std::meta::info a : std::meta::annotations_of(r)) {
+            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^Prologue)) {
+                return std::meta::extract<Prologue>(a);
+            }
+        }
+        return std::nullopt;
+    }
+
+    consteval std::optional<Epilogue> epilogue_of(const std::meta::info r) {
+        for (const std::meta::info a : std::meta::annotations_of(r)) {
+            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^Epilogue)) {
+                return std::meta::extract<Epilogue>(a);
+            }
+        }
+        return std::nullopt;
+    }
+
+    consteval std::optional<Usage> usage_of(const std::meta::info r) {
+        for (const std::meta::info a : std::meta::annotations_of(r)) {
+            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^Usage)) {
+                return std::meta::extract<Usage>(a);
+            }
+        }
+        return std::nullopt;
+    }
+
     consteval std::optional<Separator> separator_of(const std::meta::info m) {
         for (const std::meta::info a : std::meta::annotations_of(m)) {
             if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^Separator)) {
@@ -184,6 +211,15 @@ namespace StarParse::detail::Utilities {
     template<typename T>
     consteval bool is_named_option(const std::meta::info m) {
         return !is_subcommand(m) && (opt_of(m).has_value() || positional_of(m).has_value() || is_bare<T>());
+    }
+
+    consteval bool is_hidden(const std::meta::info m) {
+        for (const auto a : std::meta::annotations_of(m)) {
+            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^detail::Hidden_)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     constexpr char ascii_lower(const char c) {

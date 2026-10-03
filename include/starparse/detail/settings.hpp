@@ -9,6 +9,7 @@ namespace StarParse {
         bool allow_case_insensitivity{true};
         bool autogenerate_negations{true};
         bool allow_repeated_counts{true};
+        bool print_help_default_values{true};
         std::string_view value_separator{","};
 
         Settings &allowKebabCase(const bool value) {
@@ -38,6 +39,11 @@ namespace StarParse {
 
         Settings &allowRepeatedCounts(const bool value) {
             allow_repeated_counts = value;
+            return *this;
+        }
+
+        Settings &printHelpDefaultValues(const bool value) {
+            print_help_default_values = value;
             return *this;
         }
     };
