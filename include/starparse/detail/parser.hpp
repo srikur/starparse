@@ -287,6 +287,12 @@ namespace StarParse::detail::Parser {
         for (const auto &command : commands) column = std::max(column, command.invocation.size());
         column += 2;
 
+        const int width = Terminal::terminal_width();
+        const auto row = [&](std::string_view name, std::string_view description) {
+            if (description.empty()) return std::format("  {}\n", name);
+            return Terminal::wrap(std::format("  {:<{}}{}", name, column, description), width, column + 2) + '\n';
+        };
+
         std::string text;
         if constexpr (program.has_value()) {
             if (program->description != nullptr && *program->description != '\0') {
@@ -305,20 +311,17 @@ namespace StarParse::detail::Parser {
         if (!arguments.empty()) {
             text += "\nArguments:\n";
             for (const auto &argument : arguments) {
-                if (argument.description.empty()) text += std::format("  {}\n", argument.name);
-                else text += std::format("  {:<{}}{}\n", argument.name, column, argument.description);
+                text += row(argument.name, argument.description);
             }
         }
         text += "\nOptions:\n";
         for (const auto &option : options) {
-            if (option.description.empty()) text += std::format("  {}\n", option.invocation);
-            else text += std::format("  {:<{}}{}\n", option.invocation, column, option.description);
+            text += row(option.invocation, option.description);
         }
         if (!commands.empty()) {
             text += "\nCommands:\n";
             for (const auto &command : commands) {
-                if (command.description.empty()) text += std::format("  {}\n", command.invocation);
-                else text += std::format("  {:<{}}{}\n", command.invocation, column, command.description);
+                text += row(command.invocation, command.description);
             }
         }
         if constexpr (epilogue.has_value()) {

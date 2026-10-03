@@ -21,40 +21,51 @@ namespace StarParse::detail::Terminal {
         return 80;
     }
 
-    constexpr bool is_space(const char c) noexcept {
-        return c == ' ' || c == '\t' || c == '\r';
-    }
+    inline constexpr std::string_view whitespace = " \t\r";
 
-    constexpr void wrap_line(std::string_view line, const std::size_t width, std::string &out) {
-        std::size_t col = 0;
+    constexpr void wrap_line(std::string_view line, const std::size_t width, std::size_t hang, std::string &out) {
+        const auto skip = [line](const std::size_t from, const bool space) {
+            return std::min(space ? line.find_first_not_of(whitespace, from) : line.find_first_of(whitespace, from),
+                            line.size());
+        };
 
-        auto words = line
-                     | std::views::chunk_by([](const char a, const char b) { return is_space(a) == is_space(b); })
-                     | std::views::filter([](auto run) { return !is_space(run.front()); });
+        std::size_t pos = skip(0, true);
+        const auto fits = [width](const std::size_t n) { return n <= width / 2; };
+        const std::size_t indent = fits(pos) ? pos : 0;
+        if (!fits(hang)) hang = indent;
 
-        for (std::string_view word : words
-                                     | std::views::transform([](auto run) { return std::string_view{run}; })) {
-            const std::size_t len = std::min(word.size(), width);
+        out.append(line.substr(0, indent));
+        std::size_t col = indent;
+        std::size_t gap = 0;
 
-            if (col > 0) {
-                if (col + 1 + len > width) {
+        while (pos < line.size()) {
+            const std::size_t end = skip(pos, false);
+            const std::string_view word = line.substr(pos, end - pos);
+
+            if (gap > 0) {
+                if (col + gap + word.size() > width) {
                     out += '\n';
-                    col = 0;
+                    out.append(hang, ' ');
+                    col = hang;
                 } else {
-                    out += ' ';
-                    ++col;
+                    out.append(line.substr(pos - gap, gap));
+                    col += gap;
                 }
             }
 
-            if (word.size() <= width) out += word;
-            else if (width > 3) out.append(word.substr(0, width - 3)).append("...");
-            else out.append(width, '.');
+            const std::size_t room = width - col;
+            if (word.size() <= room) out += word;
+            else if (room > 3) out.append(word.substr(0, room - 3)).append("...");
+            else out.append(room, '.');
+            col += std::min(word.size(), room);
 
-            col += len;
+            pos = skip(end, true);
+            gap = pos - end;
         }
     }
 
-    constexpr std::string wrap(std::string_view text, const int width = terminal_width()) {
+    constexpr std::string wrap(std::string_view text, const int width = terminal_width(),
+                               const std::size_t hang = std::string_view::npos) {
         const std::size_t w = width > 0 ? static_cast<std::size_t>(width) : 1;
         std::string out;
         out.reserve(text.size() + text.size() / w);
@@ -62,7 +73,7 @@ namespace StarParse::detail::Terminal {
         bool first = true;
         for (auto line : text | std::views::split('\n')) {
             if (!std::exchange(first, false)) out += '\n';
-            wrap_line(std::string_view{line}, w, out);
+            wrap_line(std::string_view{line}, w, hang, out);
         }
         return out;
     }
