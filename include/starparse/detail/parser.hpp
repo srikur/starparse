@@ -8,6 +8,7 @@
 #include <meta>
 #include <string>
 #include <array>
+#include <type_traits>
 #include <unordered_map>
 #include <vector>
 #include <memory>
@@ -25,6 +26,7 @@
 namespace StarParse::detail::Parser {
     using namespace StarParse::detail::Utilities;
     using namespace StarParse::detail::Assertions;
+    using DefaultValues = std::vector<std::optional<std::string> >;
 
     struct ArgAttributes {
         size_t argv_index{};
@@ -130,8 +132,8 @@ namespace StarParse::detail::Parser {
     };
 
     template<typename T>
-    std::string format_help(std::span<const size_t> command_path, const std::string &command_name,
-                            std::string usage, const bool allow_aliases, const bool allow_negations) {
+    std::string format_help(std::span<const size_t> command_path, DefaultValues defaults, const std::string &command_name,
+                            std::string usage, const Settings &settings) {
         static constexpr auto members = std::define_static_array(
             std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
         constexpr auto program = program_of(^^T);
@@ -175,6 +177,9 @@ namespace StarParse::detail::Parser {
                                            ? std::format("[env: {}]", env->name)
                                            : std::format(" [env: {}]", env->name);
                 }
+                if (const auto &default_value = defaults[member_index_of<T>(m)]; default_value && settings.print_help_default_values) {
+                    description += description.empty() ? std::format("[default: {}]", *default_value) : std::format(" [default: {}]", *default_value);
+                }
                 if constexpr (required) {
                     description += description.empty() ? "(required)" : " (required)";
                 }
@@ -186,7 +191,7 @@ namespace StarParse::detail::Parser {
                         if (child_program->description != nullptr) description = child_program->description;
                     }
                     std::string invocation{name};
-                    if (allow_aliases) {
+                    if (settings.allow_aliases) {
                         for (const char *alias : alias_names<m>()) {
                             invocation += std::format(", {}", alias);
                         }
@@ -203,13 +208,13 @@ namespace StarParse::detail::Parser {
                                 invocation = std::format("-{}, ", opt->short_name);
                             }
                         }
-                        invocation += std::format("--{}{}", allow_negations ? "[no]-" : "", name);
+                        invocation += std::format("--{}{}", settings.autogenerate_negations ? "[no]-" : "", name);
                         if constexpr (opt.has_value()) {
                             if constexpr (opt->metavar_ != nullptr && *opt->metavar_ != '\0') {
                                 invocation += std::format(" {}", opt->metavar_);
                             }
                         }
-                        if (allow_aliases) {
+                        if (settings.allow_aliases) {
                             for (const char *alias : alias_names<m>()) {
                                 const std::string_view a{alias};
                                 invocation += std::format(", {}{}", a.size() == 1 ? "-" : "--", a);
@@ -268,8 +273,8 @@ namespace StarParse::detail::Parser {
                         return format_help<Child>(command_path.subspan(1),
                                                   std::format("{} {}", command_name, name),
                                                   std::format("{} {}", usage, name),
-                                                  allow_aliases,
-                                                  allow_negations);
+                                                  settings.allow_aliases,
+                                                  settings.autogenerate_negations);
                     }
                 }
             }
@@ -327,16 +332,16 @@ namespace StarParse::detail::Parser {
     template<typename T>
     class ParsedArgs {
     public:
-        ParsedArgs(T out, const bool show_help, const bool show_version, const std::string_view argv_name,
-                   std::vector<ParseError> &errors, std::vector<size_t> command_path = {},
-                   const bool allow_aliases = true, const bool allow_negations = true) : out_(std::move(out)),
+        ParsedArgs(T out, DefaultValues defaults, const bool show_help, const bool show_version, const std::string_view argv_name,
+                   std::vector<ParseError> &errors, std::vector<size_t> command_path, const Settings &settings) : 
+                                                                                         out_(std::move(out)),
+                                                                                         defaults_(std::move(defaults)),
                                                                                          show_help_(show_help),
                                                                                          show_version_(show_version),
                                                                                          errors_(std::move(errors)),
                                                                                          command_path_(std::move(command_path)),
                                                                                          argv_name_(argv_name),
-                                                                                         allow_aliases_(allow_aliases),
-                                                                                         allow_negations_(allow_negations) {}
+                                                                                         settings_(settings) {}
 
         T &&value() && {
             return std::move(out_);
@@ -382,7 +387,7 @@ namespace StarParse::detail::Parser {
         [[nodiscard]] std::string help() const {
             constexpr auto program = program_of(^^T);
             const std::string program_name = program.has_value() ? program->name : std::string{argv_name_};
-            const std::string raw_help = format_help<T>(command_path_, program_name, program_name, allow_aliases_, allow_negations_);
+            const std::string raw_help = format_help<T>(command_path_, defaults_, program_name, program_name, settings_);
             return Terminal::wrap(raw_help);
         }
 
@@ -400,13 +405,13 @@ namespace StarParse::detail::Parser {
 
     private:
         T out_{};
+        DefaultValues defaults_{};
         bool show_help_{};
         bool show_version_{};
         std::vector<ParseError> errors_;
         std::vector<size_t> command_path_;
         std::string_view argv_name_;
-        bool allow_aliases_{};
-        bool allow_negations_{};
+        Settings settings_{};
     };
 
     template<typename T>
@@ -539,6 +544,32 @@ namespace StarParse::detail::Parser {
         std::vector<size_t> command_path{};
         std::unordered_map<std::string, std::string> env_vars{};
     };
+
+    template<std::meta::info Mem, typename M>
+    std::string format_default(M value) {
+        if constexpr (is_optional(^^M)) {
+            return std::format("Optional[{}]", value);
+        } else if constexpr (std::same_as<M, bool>) {
+            return value ? "true" : "false";
+        } else if constexpr (std::constructible_from<M, std::string_view> || is_char_v<M> || std::is_arithmetic_v<M>) {
+            return std::to_string(value);
+        } else if constexpr (std::is_enum_v<M>) {
+            return std::to_underlying(value);
+        } else {
+            return std::string{};
+        }
+    }
+
+    template<typename T>
+    DefaultValues capture_defaults(T initial) {
+        static constexpr auto members = std::define_static_array(
+            std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
+        DefaultValues defaults{members.size()};
+        template for (constexpr auto m : members) {
+            defaults[member_index_of<T>(m)] = format_default<m>(initial.[:m:]);
+        }
+        return defaults;
+    }
 
     template<typename T>
     void parse_into(std::span<const ArgAttributes> attributes, T &out, const Settings &settings, ParseState &state) {
@@ -700,14 +731,15 @@ namespace StarParse::detail::Parser {
 
     template<typename T>
     ParsedArgs<T> parse(const std::span<const std::string_view> args, const std::string_view program_name, T initial = {}, Settings settings = {}) {
+        auto defaults = capture_defaults<T>(initial);
         T out{std::move(initial)};
         ParseState state{};
         const auto attr_array = get_arg_attrs<T>(args, settings);
 
         parse_into<T>(attr_array, out, settings, state);
         return ParsedArgs<T>{
-            std::move(out), state.help_requested, state.version_requested, program_name,
-            state.errors, std::move(state.command_path), settings.allow_aliases
+            std::move(out), std::move(defaults), state.help_requested, state.version_requested, program_name,
+            state.errors, std::move(state.command_path), settings
         };
     }
 }
