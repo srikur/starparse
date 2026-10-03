@@ -271,10 +271,10 @@ namespace StarParse::detail::Parser {
                         using Child = [:value_type_of(std::meta::type_of(m)):];
                         constexpr auto name = name_of(m);
                         return format_help<Child>(command_path.subspan(1),
+                                                  defaults,
                                                   std::format("{} {}", command_name, name),
                                                   std::format("{} {}", usage, name),
-                                                  settings.allow_aliases,
-                                                  settings.autogenerate_negations);
+                                                  settings);
                     }
                 }
             }
@@ -549,17 +549,25 @@ namespace StarParse::detail::Parser {
     };
 
     template<std::meta::info Mem, typename M>
-    std::string format_default(M value) {
+    std::optional<std::string> format_default(M value) {
         if constexpr (is_optional(^^M)) {
-            return std::format("Optional[{}]", value);
+            using E = [:value_type_of(^^M):];
+            if (value) {
+                const auto inner = format_default<Mem, E>(*value);
+                return std::format("Optional[{}]", inner.value_or("empty"));
+            }
+            return "Optional[empty]";
         } else if constexpr (std::same_as<M, bool>) {
             return value ? "true" : "false";
-        } else if constexpr (std::constructible_from<M, std::string_view> || is_char_v<M> || std::is_arithmetic_v<M>) {
+        } else if constexpr (std::constructible_from<M, std::string_view>) {
+            return value;
+        } else if constexpr (is_char_v<M> || std::is_arithmetic_v<M>) {
+            // TODO: char might print int value need to check
             return std::to_string(value);
         } else if constexpr (std::is_enum_v<M>) {
-            return std::to_underlying(value);
+            return std::to_string(std::to_underlying(value));
         } else {
-            return std::string{};
+            return std::nullopt;
         }
     }
 
@@ -567,7 +575,8 @@ namespace StarParse::detail::Parser {
     DefaultValues capture_defaults(T initial) {
         static constexpr auto members = std::define_static_array(
             std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
-        DefaultValues defaults{members.size()};
+        constexpr auto sz = members.size();
+        DefaultValues defaults(sz);
         template for (constexpr auto m : members) {
             defaults[member_index_of<T>(m)] = format_default<m>(initial.[:m:]);
         }
