@@ -12,6 +12,7 @@
 #include <vector>
 
 #include <starparse/detail/utilities.hpp>
+#include "annotations.hpp"
 
 namespace StarParse::detail::Assertions {
     using namespace StarParse::detail::Utilities;
@@ -22,6 +23,7 @@ namespace StarParse::detail::Assertions {
         POSITIONAL,
         SUBCOMMAND,
         REQUIRED,
+        REQUIRES_SUBCOMMAND,
         SEPARATOR,
         ALIAS,
         NAME,
@@ -44,6 +46,8 @@ namespace StarParse::detail::Assertions {
             return AnnotationKind::SUBCOMMAND;
         if (type == ^^detail::Required_)
             return AnnotationKind::REQUIRED;
+        if (type == ^^detail::RequiresSubcommand_)
+            return AnnotationKind::REQUIRES_SUBCOMMAND;
         if (type == ^^Separator)
             return AnnotationKind::SEPARATOR;
         if (type == ^^Alias)
@@ -85,7 +89,7 @@ namespace StarParse::detail::Assertions {
     consteval bool check_annotation_placement() {
         for (const auto annotation : std::meta::annotations_of(^^T)) {
             const auto kind = annotation_kind(annotation);
-            if (kind != AnnotationKind::UNKNOWN && kind != AnnotationKind::PROGRAM)
+            if (kind != AnnotationKind::UNKNOWN && kind != AnnotationKind::PROGRAM && kind != AnnotationKind::REQUIRES_SUBCOMMAND)
                 return false;
         }
         for (const auto member : std::meta::members_of(^^T, std::meta::access_context::current())) {
@@ -110,6 +114,16 @@ namespace StarParse::detail::Assertions {
                     }
                 }
             }
+        }
+        return true;
+    }
+
+    template<typename T>
+    consteval bool check_requires_subcommand() {
+        // checks that RequiresSubcommand is only on the struct
+        for (const auto member : std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current())) {
+            if (has_annotation<detail::RequiresSubcommand_>(member))
+                return false;
         }
         return true;
     }

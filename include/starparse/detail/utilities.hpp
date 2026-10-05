@@ -548,9 +548,10 @@ namespace StarParse::detail::Utilities {
         return false;
     }
 
-    consteval bool subcommand_required(const std::meta::info m) {
+    template<typename Annotation>
+    consteval bool has_annotation(const std::meta::info m) {
         for (const auto a : std::meta::annotations_of(m)) {
-            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^detail::RequiresSubcommand_)) {
+            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^Annotation)) {
                 return true;
             }
         }

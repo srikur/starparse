@@ -21,6 +21,7 @@
 #include <starparse/detail/settings.hpp>
 #include <starparse/detail/utilities.hpp>
 
+#include "assertions.hpp"
 #include "terminal.hpp"
 
 namespace StarParse::detail::Parser {
@@ -506,6 +507,7 @@ namespace StarParse::detail::Parser {
         static_assert(Assertions::check_subcommand_collisions<T>(), "subcommand names or aliases collide (including case and kebab spellings)");
         static_assert(Assertions::check_enum_alias_collisions<T>(), "enum aliases or enumerator names collide (including case and kebab spellings)");
         // TODO: Env + File annotation assertions and tests
+        static_assert(Assertions::check_requires_subcommand<T>(), "RequiresSubcommand belongs on the argument type, not a field");
     }
 
     struct ParseState {
@@ -687,7 +689,7 @@ namespace StarParse::detail::Parser {
             }
         }
 
-        if constexpr (subcommand_required(^^T)) {
+        if constexpr (has_annotation<detail::RequiresSubcommand_>(^^T)) {
             if (!subcommand_entered) {
                 state.errors.push_back({.kind = ErrorKind::MISSING_SUBCOMMAND});
             }
