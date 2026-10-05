@@ -876,4 +876,22 @@ namespace StarParse::detail::Utilities {
         }
         return at(m, n);
     }
+
+    template<typename T>
+    size_t option_max_values(std::string_view name, bool is_short, const Settings &settings) {
+        static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
+        auto n{1uz};
+        template for (constexpr auto m : members) {
+            using M = [:std::meta::remove_cv(std::meta::type_of(m)):];
+            if constexpr (is_named_option<T>(m) && is_container(^^M)) {
+                if (does_match_name<m>(name, settings, is_short)) {
+                    if constexpr (is_array(^^M))
+                        n = std::tuple_size_v<M>;
+                    else if constexpr (has_annotation<detail::Nargs_>(m))
+                        n = SIZE_MAX;
+                }
+            }
+        }
+        return n;
+    }
 } // namespace StarParse::detail::Utilities

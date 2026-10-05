@@ -43,6 +43,8 @@ namespace StarParse::inline annotations {
         struct Hidden_ final {};
 
         struct RequiresSubcommand_ final {};
+
+        struct Nargs_ final {};
     } // namespace detail
 
     struct Opt final {
@@ -250,4 +252,6 @@ namespace StarParse::inline annotations {
     constexpr detail::Hidden_ Hidden{};
 
     constexpr detail::RequiresSubcommand_ RequiresSubcommand{};
+
+    constexpr detail::Nargs_ Nargs{};
 } // namespace StarParse::inline annotations

@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cctype>
 #include <format>
 #include <memory>
 #include <meta>
@@ -390,12 +391,14 @@ namespace StarParse::detail::Parser {
     };
 
     template<typename T>
-    bool takes_next_value(const ArgAttributes &option, const std::string_view next, const Settings &settings) {
-        if (!Utilities::option_is_count<T>(option.name, option.dashed, settings))
-            return true;
-        if (next.size() > 1 && next.starts_with('-') && !(next[1] >= '0' && next[1] <= '9'))
-            return false;
-
+    bool is_bare_value(const std::string_view next, const Settings &settings) {
+        if (next.size() > 1 && next.starts_with('-')) {
+            // "--", "--foo", "-x" are options; "-5" and "-.5" are values unless a digit is itself a short name
+            const bool numeric = std::isdigit(static_cast<unsigned char>(next[1])) ||
+                                 (next[1] == '.' && next.size() > 2 && std::isdigit(static_cast<unsigned char>(next[2])));
+            if (!numeric || short_name_exists<T>(next.substr(1, 1), settings.allow_case_insensitivity))
+                return false;
+        }
         static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
         template for (constexpr auto m : members) {
             if constexpr (is_subcommand(m)) {
@@ -404,6 +407,13 @@ namespace StarParse::detail::Parser {
             }
         }
         return true;
+    }
+
+    template<typename T>
+    bool takes_next_value(const ArgAttributes &option, const std::string_view next, const Settings &settings) {
+        if (!Utilities::option_is_count<T>(option.name, option.dashed, settings))
+            return true;
+        return is_bare_value<T>(next, settings);
     }
 
     template<typename T>
@@ -443,6 +453,12 @@ namespace StarParse::detail::Parser {
                 i + 1 < args.size() && takes_next_value<T>(a, args[i + 1], settings)) {
                 a.value = args[++i];
                 a.has_value = true;
+                const auto max = option_max_values<T>(a.name, a.dashed, settings);
+                for (auto taken{1uz}; taken < max && i + 1 < args.size() && is_bare_value<T>(args[i + 1], settings); ++taken) {
+                    attrs.push_back(a);
+                    a.value = args[++i];
+                    a.argv_index = i + 1;
+                }
             }
             if (a.dashed && a.name.size() == 1 && !short_name_exists<T>(a.name, settings.allow_case_insensitivity)) {
                 if (a.name == "h" || (settings.allow_case_insensitivity && ascii_lower(a.name[0]) == 'h'))
