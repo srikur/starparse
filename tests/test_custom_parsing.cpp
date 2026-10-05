@@ -41,8 +41,8 @@ namespace {
     bool is_positive(const std::chrono::seconds &value) { return value > std::chrono::seconds{0}; }
 
     struct ValidatedContainerArgs {
-        [[ = Parser{parse_duration}, = Validator{is_positive} ]] std::vector<std::chrono::seconds> vec;
-        [[ = Parser{parse_duration}, = Validator{is_positive} ]] std::array<std::chrono::seconds, 2> arr;
+        [[=Parser{parse_duration}, =Validator{is_positive}]] std::vector<std::chrono::seconds> vec;
+        [[=Parser{parse_duration}, =Validator{is_positive}]] std::array<std::chrono::seconds, 2> arr;
     };
 } // namespace
 

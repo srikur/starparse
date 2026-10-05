@@ -9,7 +9,7 @@ using namespace StarParse;
 namespace {
     struct Args {
         [[=Opt{'v', "Vector test"}]] std::vector<std::string> vec;
-        [[ = Opt{'a', "Array test"}, = Separator{","} ]] std::array<std::string, 4> arr;
+        [[=Opt{'a', "Array test"}, =Separator{","}]] std::array<std::string, 4> arr;
     };
 } // namespace
 

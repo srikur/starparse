@@ -11,8 +11,8 @@ using namespace StarParse;
 
 namespace {
     struct Args {
-        [[ = Opt{'j'}, = Name{"thread_count"}, = Alias{"workers"} ]] int jobs{};
-        [[ = Opt{'q'}, = Name{"chatty_mode"}, = Alias{"talkative"} ]] bool verbose{};
+        [[=Opt{'j'}, =Name{"thread_count"}, =Alias{"workers"}]] int jobs{};
+        [[=Opt{'q'}, =Name{"chatty_mode"}, =Alias{"talkative"}]] bool verbose{};
     };
 
     struct BareArgs {
@@ -20,15 +20,15 @@ namespace {
     };
 
     struct PositionalArgs {
-        [[ = Positional{0}, = Required, = Name{"source-file"} ]] std::string cpp_source;
+        [[=Positional{0}, =Required, =Name{"source-file"}]] std::string cpp_source;
     };
 
     struct Command {
-        [[ = Opt{'n'}, = Name{"amount"} ]] int cpp_value{};
+        [[=Opt{'n'}, =Name{"amount"}]] int cpp_value{};
     };
 
     struct Commands {
-        [[ = Subcommand, = Name{"dry_run"}, = Alias{"preview"} ]] std::optional<Command> cpp_command;
+        [[=Subcommand, =Name{"dry_run"}, =Alias{"preview"}]] std::optional<Command> cpp_command;
     };
 } // namespace
 
@@ -194,11 +194,11 @@ TEST_CASE("name: required and missing-value diagnostics use the override") {
 
 TEST_CASE("name: validation diagnostics use the override") {
     struct Validated {
-        [[ = Name{"minimum"}, = Min{2} ]] int cpp_min{};
-        [[ = Name{"maximum"}, = Max{2} ]] int cpp_max{};
-        [[ = Name{"interval"}, = Range{1, 2} ]] int cpp_range{};
-        [[ = Name{"choice"}, = Choices{1, 2} ]] int cpp_choice{};
-        [[ = Name{"positive"}, = Validator{[](const int &value) { return value > 0; }} ]] int cpp_validator{};
+        [[=Name{"minimum"}, =Min{2}]] int cpp_min{};
+        [[=Name{"maximum"}, =Max{2}]] int cpp_max{};
+        [[=Name{"interval"}, =Range{1, 2}]] int cpp_range{};
+        [[=Name{"choice"}, =Choices{1, 2}]] int cpp_choice{};
+        [[=Name{"positive"}, =Validator{[](const int &value) { return value > 0; }}]] int cpp_validator{};
     };
     const auto args = parse_from<Validated>({"--minimum=1", "--maximum=3", "--interval=3", "--choice=3", "--positive=-1"});
     REQUIRE_FALSE(args);
@@ -221,8 +221,8 @@ TEST_CASE("name: count custom-parser and array diagnostics use the override") {
     SUBCASE("custom parser") {
         struct Custom {
             [[
-                = Name{"amount"},
-                = Parser<int>{[](const std::string_view &) -> std::expected<int, std::string> { return std::unexpected{"invalid amount"}; }}
+                =Name{"amount"},
+                =Parser<int>{[](const std::string_view &) -> std::expected<int, std::string> { return std::unexpected{"invalid amount"}; }}
             ]] int cpp_value{};
         };
         const auto args = parse_from<Custom>({"--amount=bad"});

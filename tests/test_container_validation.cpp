@@ -10,8 +10,8 @@ namespace {
     bool is_valid(const std::string &value) { return value == "hello" || value == "world"; }
 
     struct Args {
-        [[ = Opt{'v'}, = Validator{is_valid} ]] std::vector<std::string> vec;
-        [[ = Opt{'a'}, = Validator{is_valid} ]] std::array<std::string, 2> arr;
+        [[=Opt{'v'}, =Validator{is_valid}]] std::vector<std::string> vec;
+        [[=Opt{'a'}, =Validator{is_valid}]] std::array<std::string, 2> arr;
     };
 } // namespace
 

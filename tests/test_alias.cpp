@@ -6,10 +6,10 @@ using namespace StarParse;
 
 namespace {
     struct Args {
-        [[ = Positional{0}, = Alias{"source"} ]] std::string input;
-        [[ = Opt{'v', "Verbose mode"}, = Alias{"talkative", "q"} ]] bool verbose;
+        [[=Positional{0}, =Alias{"source"}]] std::string input;
+        [[=Opt{'v', "Verbose mode"}, =Alias{"talkative", "q"}]] bool verbose;
         [[=Opt{'k', "Keep temporary files"}]] bool keep;
-        [[ = Positional{1}, = Alias{"count"} ]] int arg2;
+        [[=Positional{1}, =Alias{"count"}]] int arg2;
     };
 } // namespace
 

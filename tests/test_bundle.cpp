@@ -16,8 +16,8 @@ namespace {
     };
 
     struct Jobs {
-        [[ = Opt{'k', "Keep going"}, = Alias{"q"} ]] bool keep;
-        [[ = Opt{'j', "Num jobs"}, = Alias{"n"} ]] int jobs;
+        [[=Opt{'k', "Keep going"}, =Alias{"q"}]] bool keep;
+        [[=Opt{'j', "Num jobs"}, =Alias{"n"}]] int jobs;
     };
 
     struct Values {

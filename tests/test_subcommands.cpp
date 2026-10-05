@@ -15,13 +15,13 @@ namespace {
 
     struct Operation {
         bool verbose{false};
-        [[ = Subcommand, = Alias{"plus"} ]] std::optional<Add> add;
-        [[ = Subcommand, = Alias{"minus"} ]] std::optional<Subtract> subtract;
+        [[=Subcommand, =Alias{"plus"}]] std::optional<Add> add;
+        [[=Subcommand, =Alias{"minus"}]] std::optional<Subtract> subtract;
     };
 
     struct Args {
-        [[ = Required, = Positional{0} ]] int initial;
-        [[ = Subcommand, = Alias{"op"} ]] std::optional<Operation> operation;
+        [[=Required, =Positional{0}]] int initial;
+        [[=Subcommand, =Alias{"op"}]] std::optional<Operation> operation;
     };
 } // namespace
 
