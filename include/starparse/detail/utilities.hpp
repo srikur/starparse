@@ -19,7 +19,6 @@
 #include <starparse/detail/annotations.hpp>
 #include <starparse/detail/errors.hpp>
 #include <starparse/detail/settings.hpp>
-#include "annotations.hpp"
 
 // TODO: split utilities into multiple files?
 namespace StarParse::detail::Utilities {
@@ -283,9 +282,10 @@ namespace StarParse::detail::Utilities {
                 if constexpr (std::convertible_to<T, std::string_view> && std::convertible_to<decltype(choice), std::string_view>) {
                     if (std::string_view{value} == std::string_view{choice} || (allow_case_insensitivity && iequals(value, choice)))
                         return true;
-                } else if constexpr (requires {
-                                         { value == choice } -> std::convertible_to<bool>;
-                                     }) {
+                } else if constexpr (requires
+                {
+                    { value == choice } -> std::convertible_to<bool>;
+                }) {
                     if (value == choice)
                         return true;
                 }
@@ -337,8 +337,9 @@ namespace StarParse::detail::Utilities {
         r = std::meta::dealias(std::meta::remove_cv(r));
         if (is_optional(r))
             r = std::meta::dealias(value_type_of(r));
-        return std::meta::is_integral_type(r) && r != (^^bool) &&!std::meta::extract<bool>(std::meta::substitute(^^is_char_v, {
-                                                                                                                                      r}));
+        return std::meta::is_integral_type(r) && r != (^^bool) && !std::meta::extract<bool>(std::meta::substitute(^^is_char_v, {
+                       r
+                   }));
     }
 
     template<std::meta::info M>
@@ -415,9 +416,9 @@ namespace StarParse::detail::Utilities {
         if (std::ranges::any_of(false_values, [&](auto value) { return iequals(s, value); }))
             return false;
         return std::unexpected(ParseError{
-                .kind = ErrorKind::INVALID_VALUE,
-                .input_value = std::string{s},
-                .current_argument = name_of(M),
+            .kind = ErrorKind::INVALID_VALUE,
+            .input_value = std::string{s},
+            .current_argument = name_of(M),
         });
     }
 
@@ -455,7 +456,8 @@ namespace StarParse::detail::Utilities {
             auto [pointer, error_code] = std::from_chars(s.data(), s.data() + s.size(), v);
             if (error_code != std::errc{} || pointer != s.data() + s.size()) {
                 return std::unexpected(ParseError{
-                        .kind = ErrorKind::INVALID_VALUE, .input_value = std::string{s}, .current_argument = name_of(Mem), .argv_index = index});
+                    .kind = ErrorKind::INVALID_VALUE, .input_value = std::string{s}, .current_argument = name_of(Mem), .argv_index = index
+                });
             }
             return v;
         } else if constexpr (std::is_enum_v<M>) {
@@ -467,7 +469,8 @@ namespace StarParse::detail::Utilities {
             }
             if (!parsed)
                 return std::unexpected(ParseError{
-                        .kind = ErrorKind::INVALID_VALUE, .input_value = std::string{s}, .current_argument = name_of(Mem), .argv_index = index});
+                    .kind = ErrorKind::INVALID_VALUE, .input_value = std::string{s}, .current_argument = name_of(Mem), .argv_index = index
+                });
             return *parsed;
         } else {
             // TODO: can add more info to the msg?
@@ -648,21 +651,25 @@ namespace StarParse::detail::Utilities {
                           "Validator must accept the parsed value type");
 
             if (auto result = validator(value); !result) {
-                errors.push_back({.kind = ErrorKind::VALIDATION_FAILED,
-                                  .input_value = std::string{input},
-                                  .detail = result.error().empty() ? std::string{"validator returned false"} : std::move(result.error()),
-                                  .current_argument = name_of(Mem),
-                                  .argv_index = index});
+                errors.push_back({
+                    .kind = ErrorKind::VALIDATION_FAILED,
+                    .input_value = std::string{input},
+                    .detail = result.error().empty() ? std::string{"validator returned false"} : std::move(result.error()),
+                    .current_argument = name_of(Mem),
+                    .argv_index = index
+                });
                 return false;
             }
         } else if constexpr (choice_annotation.has_value()) {
             static constexpr auto choices = choices_list<Mem>();
             if (!matches_choice<Mem>(value, settings.allow_case_insensitivity)) {
-                errors.push_back({.kind = ErrorKind::INVALID_CHOICE,
-                                  .input_value = std::string{input},
-                                  .detail = std::format("{}", choices),
-                                  .current_argument = name_of(Mem),
-                                  .argv_index = index});
+                errors.push_back({
+                    .kind = ErrorKind::INVALID_CHOICE,
+                    .input_value = std::string{input},
+                    .detail = std::format("{}", choices),
+                    .current_argument = name_of(Mem),
+                    .argv_index = index
+                });
                 return false;
             }
         } else if constexpr (min_annotation.has_value()) {
@@ -670,11 +677,13 @@ namespace StarParse::detail::Utilities {
             constexpr auto mn = std::meta::extract<A>(*min_annotation);
 
             if (numeric_less(value, mn.value)) {
-                errors.push_back({.kind = ErrorKind::OUT_OF_RANGE,
-                                  .input_value = std::string{input},
-                                  .detail = std::format("minimum is {}", mn.value),
-                                  .current_argument = name_of(Mem),
-                                  .argv_index = index});
+                errors.push_back({
+                    .kind = ErrorKind::OUT_OF_RANGE,
+                    .input_value = std::string{input},
+                    .detail = std::format("minimum is {}", mn.value),
+                    .current_argument = name_of(Mem),
+                    .argv_index = index
+                });
                 return false;
             }
         } else if constexpr (max_annotation.has_value()) {
@@ -682,11 +691,13 @@ namespace StarParse::detail::Utilities {
             constexpr auto mx = std::meta::extract<A>(*max_annotation);
 
             if (numeric_less(mx.value, value)) {
-                errors.push_back(ParseError{.kind = ErrorKind::OUT_OF_RANGE,
-                                            .input_value = std::string{input},
-                                            .detail = std::format("maximum is {}", mx.value),
-                                            .current_argument = name_of(Mem),
-                                            .argv_index = index});
+                errors.push_back(ParseError{
+                    .kind = ErrorKind::OUT_OF_RANGE,
+                    .input_value = std::string{input},
+                    .detail = std::format("maximum is {}", mx.value),
+                    .current_argument = name_of(Mem),
+                    .argv_index = index
+                });
                 return false;
             }
         } else if constexpr (range_annotation.has_value()) {
@@ -694,11 +705,13 @@ namespace StarParse::detail::Utilities {
             constexpr auto range = std::meta::extract<A>(*range_annotation);
 
             if (numeric_less(value, range.min) || numeric_less(range.max, value)) {
-                errors.push_back(ParseError{.kind = ErrorKind::OUT_OF_RANGE,
-                                            .input_value = std::string{input},
-                                            .detail = std::format("allowed range is [{}, {}]", range.min, range.max),
-                                            .current_argument = name_of(Mem),
-                                            .argv_index = index});
+                errors.push_back(ParseError{
+                    .kind = ErrorKind::OUT_OF_RANGE,
+                    .input_value = std::string{input},
+                    .detail = std::format("allowed range is [{}, {}]", range.min, range.max),
+                    .current_argument = name_of(Mem),
+                    .argv_index = index
+                });
                 return false;
             }
         }
@@ -714,11 +727,13 @@ namespace StarParse::detail::Utilities {
             field = value;
         } else {
             if (field == std::numeric_limits<M>::max()) {
-                errors.push_back(ParseError{.kind = ErrorKind::OUT_OF_RANGE,
-                                            .input_value = std::string{name},
-                                            .detail = "count would overflow",
-                                            .current_argument = name_of(Mem),
-                                            .argv_index = index});
+                errors.push_back(ParseError{
+                    .kind = ErrorKind::OUT_OF_RANGE,
+                    .input_value = std::string{name},
+                    .detail = "count would overflow",
+                    .current_argument = name_of(Mem),
+                    .argv_index = index
+                });
                 return false;
             }
             const M value = field + M{1};
@@ -738,11 +753,13 @@ namespace StarParse::detail::Utilities {
         static_assert(std::is_invocable_r_v<std::expected<E, std::string>, const V &, const std::string_view>,
                       "Parser must accept a string_view and return std::expected of the parsed value type and std::string");
         if (auto result = parsing_function(s); !result) {
-            return std::unexpected(ParseError{.kind = ErrorKind::CUSTOM_PARSING_FAILED,
-                                              .input_value = std::string{s},
-                                              .detail = result.error().empty() ? std::string{"parsed returned an error"} : std::move(result.error()),
-                                              .current_argument = name_of(Mem),
-                                              .argv_index = index});
+            return std::unexpected(ParseError{
+                .kind = ErrorKind::CUSTOM_PARSING_FAILED,
+                .input_value = std::string{s},
+                .detail = result.error().empty() ? std::string{"parsed returned an error"} : std::move(result.error()),
+                .current_argument = name_of(Mem),
+                .argv_index = index
+            });
         } else
             return *result;
     }
@@ -777,10 +794,12 @@ namespace StarParse::detail::Utilities {
             using E = [:value_type_of(^^M):];
             for_each_value(s, separator, [&](auto piece) {
                 if (count >= std::tuple_size_v<M>) {
-                    errors.push_back(ParseError{.kind = ErrorKind::DUPLICATE_OPTION,
-                                                .input_value = std::string{piece},
-                                                .current_argument = name_of(Mem),
-                                                .argv_index = index});
+                    errors.push_back(ParseError{
+                        .kind = ErrorKind::DUPLICATE_OPTION,
+                        .input_value = std::string{piece},
+                        .current_argument = name_of(Mem),
+                        .argv_index = index
+                    });
                 } else if constexpr (has_custom_parser) {
                     if (auto result = apply_custom_parser<Mem, E>(piece, index)) {
                         if (validate<Mem>(*result, piece, index, errors, settings)) {
@@ -861,9 +880,9 @@ namespace StarParse::detail::Utilities {
                     last_match_col = j;
 
                 auto best = std::min({
-                        at(i - 1, j) + 1, // deletion
-                        at(i, j - 1) + 1, // insertion
-                        at(i - 1, j - 1) + cost // substitution
+                    at(i - 1, j) + 1, // deletion
+                    at(i, j - 1) + 1, // insertion
+                    at(i - 1, j - 1) + cost // substitution
                 });
 
                 if (previous_row != 0 && previous_col != 0) {

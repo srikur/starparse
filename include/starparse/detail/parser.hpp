@@ -21,14 +21,12 @@
 #include <starparse/detail/file.hpp>
 #include <starparse/detail/settings.hpp>
 #include <starparse/detail/utilities.hpp>
-
-#include "assertions.hpp"
-#include "terminal.hpp"
+#include <starparse/detail/terminal.hpp>
 
 namespace StarParse::detail::Parser {
     using namespace StarParse::detail::Utilities;
     using namespace StarParse::detail::Assertions;
-    using DefaultValues = std::vector<std::optional<std::string>>;
+    using DefaultValues = std::vector<std::optional<std::string> >;
 
     struct ArgAttributes {
         size_t argv_index{};
@@ -131,7 +129,7 @@ namespace StarParse::detail::Parser {
     };
 
     template<typename T>
-    std::string format_help(std::span<const size_t> command_path, DefaultValues defaults, const std::string &command_name, std::string usage,
+    std::string format_help(std::span<const size_t> command_path, const DefaultValues &defaults, const std::string &command_name, std::string usage,
                             const Settings &settings) {
         static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
         constexpr auto program = program_of(^^T);
@@ -333,8 +331,8 @@ namespace StarParse::detail::Parser {
     class ParsedArgs {
     public:
         ParsedArgs(T out, DefaultValues defaults, const bool show_help, const bool show_version, const std::string_view argv_name,
-                   std::vector<ParseError> &errors, std::vector<size_t> command_path, const Settings &settings) :
-            out_(std::move(out)), defaults_(std::move(defaults)), show_help_(show_help), show_version_(show_version), errors_(std::move(errors)),
+                   std::vector<ParseError> &errors, std::vector<size_t> command_path, const Settings &settings) : out_(std::move(out)),
+            defaults_(std::move(defaults)), show_help_(show_help), show_version_(show_version), errors_(std::move(errors)),
             command_path_(std::move(command_path)), argv_name_(argv_name), settings_(settings) {}
 
         T &&value() && { return std::move(out_); }
@@ -353,6 +351,7 @@ namespace StarParse::detail::Parser {
 
         [[nodiscard]] bool version_requested() const { return show_version_; }
 
+        // ReSharper disable once CppMemberFunctionMayBeStatic
         [[nodiscard]] std::string version() const {
             constexpr auto program = program_of(^^T);
             if constexpr (program.has_value()) {
@@ -374,7 +373,7 @@ namespace StarParse::detail::Parser {
                 return "";
             }
             const auto error_strings = errors_ | std::views::transform([](const ParseError &error) { return error.to_string(); }) |
-                                       std::ranges::to<std::vector<std::string>>();
+                                       std::ranges::to<std::vector<std::string> >();
             return std::accumulate(error_strings.begin() + 1, error_strings.end(), error_strings[0],
                                    [](std::string a, const std::string &b) { return std::move(a) + '\n' + b; });
         }
@@ -655,8 +654,8 @@ namespace StarParse::detail::Parser {
                                         }
                                     }
                                     errors.push_back({
-                                            .kind = ErrorKind::MISSING_VALUE,
-                                            .current_argument = attrs.name,
+                                        .kind = ErrorKind::MISSING_VALUE,
+                                        .current_argument = attrs.name,
                                     });
                                     continue;
                                 }
@@ -681,10 +680,12 @@ namespace StarParse::detail::Parser {
                                                });
                 const auto max_allowed_distance = std::max<size_t>(1, (name_or_value.size() + 2) / 3);
                 std::string_view suggestion = min_candidate.first <= max_allowed_distance ? min_candidate.second : std::string_view{};
-                errors.push_back({.kind = ErrorKind::UNKNOWN_OPTION,
-                                  .input_value = std::string{name_or_value},
-                                  .detail = suggestion.empty() ? "" : std::format(". Did you mean '{}'?", suggestion),
-                                  .argv_index = attrs.argv_index});
+                errors.push_back({
+                    .kind = ErrorKind::UNKNOWN_OPTION,
+                    .input_value = std::string{name_or_value},
+                    .detail = suggestion.empty() ? "" : std::format(". Did you mean '{}'?", suggestion),
+                    .argv_index = attrs.argv_index
+                });
             }
         }
 
@@ -717,16 +718,16 @@ namespace StarParse::detail::Parser {
                 if (fields_set[index] == 0) {
                     constexpr auto field_name = name_of(m);
                     state.errors.push_back({
-                            .kind = ErrorKind::MISSING_REQUIRED,
-                            .current_argument = std::optional{field_name},
+                        .kind = ErrorKind::MISSING_REQUIRED,
+                        .current_argument = std::optional{field_name},
                     });
                 }
             } else if constexpr (is_array(m)) {
                 if (fields_set[index] < std::meta::tuple_size(m)) {
                     constexpr auto field_name = name_of(m);
                     state.errors.push_back({
-                            .kind = ErrorKind::MISSING_VALUE,
-                            .current_argument = std::optional{field_name},
+                        .kind = ErrorKind::MISSING_VALUE,
+                        .current_argument = std::optional{field_name},
                     });
                 }
             }
@@ -741,7 +742,9 @@ namespace StarParse::detail::Parser {
         const auto attr_array = get_arg_attrs<T>(args, settings);
 
         parse_into<T>(attr_array, out, settings, state);
-        return ParsedArgs<T>{std::move(out), std::move(defaults), state.help_requested,          state.version_requested,
-                             program_name,   state.errors,        std::move(state.command_path), settings};
+        return ParsedArgs<T>{
+            std::move(out), std::move(defaults), state.help_requested, state.version_requested,
+            program_name, state.errors, std::move(state.command_path), settings
+        };
     }
 } // namespace StarParse::detail::Parser

@@ -8,7 +8,7 @@
 
 // when REQUIRE(args) / CHECK(args) fails, show the parse errors instead of "{?}"
 template<typename T>
-struct doctest::StringMaker<StarParse::ParsedArgs<T>> {
+struct doctest::StringMaker<StarParse::ParsedArgs<T> > {
     static String convert(const StarParse::ParsedArgs<T> &args) {
         if (args) {
             return "parsed";

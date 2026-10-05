@@ -362,15 +362,15 @@ namespace StarParse::detail::Assertions {
             if (validator_count > 1)
                 return false;
             const auto min_count = std::ranges::count_if(
-                    annotations, [](const std::meta::info a) { return is_specialization_of(std::meta::remove_cv(std::meta::type_of(a)), ^^Min); });
+                annotations, [](const std::meta::info a) { return is_specialization_of(std::meta::remove_cv(std::meta::type_of(a)), ^^Min); });
             if (min_count > 1)
                 return false;
             const auto max_count = std::ranges::count_if(
-                    annotations, [](const std::meta::info a) { return is_specialization_of(std::meta::remove_cv(std::meta::type_of(a)), ^^Max); });
+                annotations, [](const std::meta::info a) { return is_specialization_of(std::meta::remove_cv(std::meta::type_of(a)), ^^Max); });
             if (max_count > 1)
                 return false;
             const auto range_count = std::ranges::count_if(
-                    annotations, [](const std::meta::info a) { return is_specialization_of(std::meta::remove_cv(std::meta::type_of(a)), ^^Range); });
+                annotations, [](const std::meta::info a) { return is_specialization_of(std::meta::remove_cv(std::meta::type_of(a)), ^^Range); });
             if (range_count > 1)
                 return false;
             const auto choices_count = std::ranges::count_if(annotations, [](const std::meta::info a) {

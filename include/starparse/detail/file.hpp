@@ -52,10 +52,10 @@ namespace StarParse::detail::File {
             const auto equals = line.find('=');
             if (equals == std::string_view::npos) {
                 return std::unexpected(ParseError{
-                        .kind = ErrorKind::INVALID_ENV_VALUE,
-                        .input_value = std::string{line},
-                        .detail = "expected KEY=VALUE",
-                        .argv_index = line_number,
+                    .kind = ErrorKind::INVALID_ENV_VALUE,
+                    .input_value = std::string{line},
+                    .detail = "expected KEY=VALUE",
+                    .argv_index = line_number,
                 });
             }
 
@@ -65,10 +65,10 @@ namespace StarParse::detail::File {
 
             if (key.empty() || (key.front() >= '0' && key.front() <= '9') || key.find_first_not_of(key_chars) != std::string_view::npos) {
                 return std::unexpected(ParseError{
-                        .kind = ErrorKind::INVALID_ENV_VALUE,
-                        .input_value = std::string{line},
-                        .detail = "invalid variable name",
-                        .argv_index = line_number,
+                    .kind = ErrorKind::INVALID_ENV_VALUE,
+                    .input_value = std::string{line},
+                    .detail = "invalid variable name",
+                    .argv_index = line_number,
                 });
             }
 
@@ -76,20 +76,20 @@ namespace StarParse::detail::File {
                 const auto closing = value.find(value.front(), 1);
                 if (closing == std::string_view::npos) {
                     return std::unexpected(ParseError{
-                            .kind = ErrorKind::INVALID_ENV_VALUE,
-                            .input_value = std::string{line},
-                            .detail = "unterminated quote",
-                            .argv_index = line_number,
+                        .kind = ErrorKind::INVALID_ENV_VALUE,
+                        .input_value = std::string{line},
+                        .detail = "unterminated quote",
+                        .argv_index = line_number,
                     });
                 }
 
                 const auto tail = trim(value.substr(closing + 1));
                 if (!tail.empty() && tail.front() != '#') {
                     return std::unexpected(ParseError{
-                            .kind = ErrorKind::INVALID_ENV_VALUE,
-                            .input_value = std::string{line},
-                            .detail = "unexpected text after quoted value",
-                            .argv_index = line_number,
+                        .kind = ErrorKind::INVALID_ENV_VALUE,
+                        .input_value = std::string{line},
+                        .detail = "unexpected text after quoted value",
+                        .argv_index = line_number,
                     });
                 }
 
@@ -98,10 +98,10 @@ namespace StarParse::detail::File {
                 value = trim(value.substr(0, value.find('#')));
                 if (value.find_first_of("\"'") != std::string_view::npos) {
                     return std::unexpected(ParseError{
-                            .kind = ErrorKind::INVALID_ENV_VALUE,
-                            .input_value = std::string{line},
-                            .detail = "quotes must surround the entire value",
-                            .argv_index = line_number,
+                        .kind = ErrorKind::INVALID_ENV_VALUE,
+                        .input_value = std::string{line},
+                        .detail = "quotes must surround the entire value",
+                        .argv_index = line_number,
                     });
                 }
             }
@@ -110,9 +110,9 @@ namespace StarParse::detail::File {
 
         if (ifs.bad() || (ifs.fail() && !ifs.eof())) {
             return std::unexpected(ParseError{
-                    .kind = ErrorKind::READING_ENV_FAILED,
-                    .input_value = path.string(),
-                    .detail = "bad input",
+                .kind = ErrorKind::READING_ENV_FAILED,
+                .input_value = path.string(),
+                .detail = "bad input",
             });
         }
 

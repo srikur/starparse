@@ -10,6 +10,8 @@ namespace StarParse {
         bool autogenerate_negations{true};
         bool allow_repeated_counts{true};
         bool print_help_default_values{true};
+        bool infer_arguments{false};
+        bool infer_subcommands{false};
         std::string_view value_separator{","};
 
         Settings &allowKebabCase(const bool value) {
@@ -44,6 +46,16 @@ namespace StarParse {
 
         Settings &printHelpDefaultValues(const bool value) {
             print_help_default_values = value;
+            return *this;
+        }
+
+        Settings &inferArguments(const bool value) {
+            infer_arguments = value;
+            return *this;
+        }
+
+        Settings &inferSubcommands(const bool value) {
+            infer_subcommands = value;
             return *this;
         }
     };
