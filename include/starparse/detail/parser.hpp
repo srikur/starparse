@@ -554,6 +554,7 @@ namespace StarParse::detail::Parser {
         check_assertions<T>();
         std::array<size_t, members.size()> fields_set{};
         size_t next_positional{0uz};
+        bool subcommand_entered{false};
         size_t final_positional{static_cast<size_t>(get_positional_range<T>().second - 1)};
         auto &errors = state.errors;
         std::vector<std::string_view> candidates = viable_candidate_names<T>(settings);
@@ -585,6 +586,7 @@ namespace StarParse::detail::Parser {
                 constexpr auto pos = positional_index_of<T>(m);
                 if constexpr (is_subcommand(m)) {
                     if (attrs.is_subcommand && !matched && does_match_name<m>(attrs.name, settings, false)) {
+                        subcommand_entered = true;
                         using M = [:std::meta::type_of(m):];
                         using Child = [:value_type_of(^^M):];
                         auto &child = out.[:m:];
@@ -682,6 +684,12 @@ namespace StarParse::detail::Parser {
                 } else if (state.env_vars.contains(name.data())) {
                     assign_from_string<m>(out.[:m:], state.env_vars[name.data()], 0, fields_set[index], errors, settings);
                 }
+            }
+        }
+
+        if constexpr (subcommand_required(^^T)) {
+            if (!subcommand_entered) {
+                state.errors.push_back({.kind = ErrorKind::MISSING_SUBCOMMAND});
             }
         }
 

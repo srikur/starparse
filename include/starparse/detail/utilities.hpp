@@ -19,6 +19,7 @@
 #include <starparse/detail/annotations.hpp>
 #include <starparse/detail/errors.hpp>
 #include <starparse/detail/settings.hpp>
+#include "annotations.hpp"
 
 // TODO: split utilities into multiple files?
 namespace StarParse::detail::Utilities {
@@ -541,6 +542,15 @@ namespace StarParse::detail::Utilities {
     consteval bool is_required(const std::meta::info m) {
         for (const auto a : std::meta::annotations_of(m)) {
             if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^detail::Required_)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    consteval bool subcommand_required(const std::meta::info m) {
+        for (const auto a : std::meta::annotations_of(m)) {
+            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^detail::RequiresSubcommand_)) {
                 return true;
             }
         }

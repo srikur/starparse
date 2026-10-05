@@ -18,7 +18,8 @@ namespace StarParse {
         VALIDATION_FAILED,
         CUSTOM_PARSING_FAILED,
         READING_ENV_FAILED,
-        INVALID_ENV_VALUE
+        INVALID_ENV_VALUE,
+        MISSING_SUBCOMMAND
     };
 
     struct ParseError {
@@ -55,6 +56,8 @@ namespace StarParse {
                     return std::format("Failed to read from dotenv file '{}': {}", input_value, detail);
                 case ErrorKind::INVALID_ENV_VALUE:
                     return std::format("Error at line {} while reading dotenv line '{}': {}", argv_index, input_value, detail);
+                case ErrorKind::MISSING_SUBCOMMAND:
+                    return "At least one subcommand must be specified";
                 default:
                     return std::format("Unknown error: '{}'", input_value);
             }
