@@ -7,17 +7,17 @@
 using namespace StarParse;
 
 namespace {
-    bool is_hello(const std::string &arg) {
-        return arg == "hello";
-    }
+    bool is_hello(const std::string &arg) { return arg == "hello"; }
 
     std::expected<void, std::string> is_hello_expected(const std::string &arg) {
-        if (arg == "hello") return {};
+        if (arg == "hello")
+            return {};
         return std::unexpected{"only 'hello' is a valid option"};
     }
 
     const char *is_hello_cstr(const std::string &arg) {
-        if (arg == "hello") return nullptr;
+        if (arg == "hello")
+            return nullptr;
         return "only 'hello' is a valid option";
     }
 
@@ -30,7 +30,7 @@ namespace {
         [[=Range{1, 3}]] int range;
         [[=Range{0, 255}]] uint8_t range2;
     };
-}
+} // namespace
 
 TEST_CASE("validation: every validator accepts valid input") {
     const auto args = parse_from<Args>({"hello", "hello", "hello", "hello", "a", "2", "255"});

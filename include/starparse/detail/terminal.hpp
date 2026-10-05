@@ -25,14 +25,14 @@ namespace StarParse::detail::Terminal {
 
     constexpr void wrap_line(std::string_view line, const std::size_t width, std::size_t hang, std::string &out) {
         const auto skip = [line](const std::size_t from, const bool space) {
-            return std::min(space ? line.find_first_not_of(whitespace, from) : line.find_first_of(whitespace, from),
-                            line.size());
+            return std::min(space ? line.find_first_not_of(whitespace, from) : line.find_first_of(whitespace, from), line.size());
         };
 
         std::size_t pos = skip(0, true);
         const auto fits = [width](const std::size_t n) { return n <= width / 2; };
         const std::size_t indent = fits(pos) ? pos : 0;
-        if (!fits(hang)) hang = indent;
+        if (!fits(hang))
+            hang = indent;
 
         out.append(line.substr(0, indent));
         std::size_t col = indent;
@@ -54,9 +54,12 @@ namespace StarParse::detail::Terminal {
             }
 
             const std::size_t room = width - col;
-            if (word.size() <= room) out += word;
-            else if (room > 3) out.append(word.substr(0, room - 3)).append("...");
-            else out.append(room, '.');
+            if (word.size() <= room)
+                out += word;
+            else if (room > 3)
+                out.append(word.substr(0, room - 3)).append("...");
+            else
+                out.append(room, '.');
             col += std::min(word.size(), room);
 
             pos = skip(end, true);
@@ -64,17 +67,17 @@ namespace StarParse::detail::Terminal {
         }
     }
 
-    constexpr std::string wrap(std::string_view text, const int width = terminal_width(),
-                               const std::size_t hang = std::string_view::npos) {
+    constexpr std::string wrap(std::string_view text, const int width = terminal_width(), const std::size_t hang = std::string_view::npos) {
         const std::size_t w = width > 0 ? static_cast<std::size_t>(width) : 1;
         std::string out;
         out.reserve(text.size() + text.size() / w);
 
         bool first = true;
         for (auto line : text | std::views::split('\n')) {
-            if (!std::exchange(first, false)) out += '\n';
+            if (!std::exchange(first, false))
+                out += '\n';
             wrap_line(std::string_view{line}, w, hang, out);
         }
         return out;
     }
-}
+} // namespace StarParse::detail::Terminal

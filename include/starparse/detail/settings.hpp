@@ -47,4 +47,4 @@ namespace StarParse {
             return *this;
         }
     };
-}
+} // namespace StarParse

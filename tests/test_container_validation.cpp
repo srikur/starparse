@@ -7,15 +7,13 @@
 using namespace StarParse;
 
 namespace {
-    bool is_valid(const std::string &value) {
-        return value == "hello" || value == "world";
-    }
+    bool is_valid(const std::string &value) { return value == "hello" || value == "world"; }
 
     struct Args {
-        [[=Opt{'v'}, =Validator{is_valid}]] std::vector<std::string> vec;
-        [[=Opt{'a'}, =Validator{is_valid}]] std::array<std::string, 2> arr;
+        [[ = Opt{'v'}, = Validator{is_valid} ]] std::vector<std::string> vec;
+        [[ = Opt{'a'}, = Validator{is_valid} ]] std::array<std::string, 2> arr;
     };
-}
+} // namespace
 
 TEST_CASE("container validation: each delimited value is validated") {
     const auto args = parse_from<Args>({"--vec=hello,world", "--arr=hello,world"});

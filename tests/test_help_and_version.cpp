@@ -18,7 +18,7 @@ namespace {
     };
 
     constexpr Settings settings{.allow_case_insensitivity = true};
-}
+} // namespace
 
 TEST_CASE("help and version: check short form works") {
     const auto args = parse_from<Args>({"-H"}, settings);

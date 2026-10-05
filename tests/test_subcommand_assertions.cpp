@@ -12,8 +12,8 @@ namespace {
 
     struct MixedArgs {
         [[=Positional{0}]] int initial{};
-        [[=Opt{'v'}, =Alias{"run"}]] bool verbose{};
-        [[=Subcommand, =Alias{"r"}]] std::optional<Command> run;
+        [[ = Opt{'v'}, = Alias{"run"} ]] bool verbose{};
+        [[ = Subcommand, = Alias{"r"} ]] std::optional<Command> run;
     };
 
     static_assert(check_annotation_placement<MixedArgs>());
@@ -23,12 +23,12 @@ namespace {
     static_assert(check_subcommand_collisions<MixedArgs>());
 
     struct DuplicateAnnotation {
-        [[=Subcommand, =Subcommand]] std::optional<Command> run;
+        [[ = Subcommand, = Subcommand ]] std::optional<Command> run;
     };
 
     static_assert(!no_duplicate_annotations<DuplicateAnnotation>());
 
-    struct [[=Subcommand]] MisplacedType {};
+    struct[[=Subcommand]] MisplacedType {};
 
     static_assert(!check_annotation_placement<MisplacedType>());
 
@@ -38,9 +38,7 @@ namespace {
 
     static_assert(!check_annotation_placement<MisplacedStaticMember>());
 
-    enum class MisplacedEnumerator {
-        run [[=Subcommand]]
-    };
+    enum class MisplacedEnumerator { run[[=Subcommand]] };
 
     struct EnumArgs {
         MisplacedEnumerator mode{};
@@ -56,14 +54,14 @@ namespace {
     static_assert(!check_subcommand_collisions<CaseCollision>());
 
     struct AliasCollision {
-        [[=Subcommand, =Alias{"go"}]] std::optional<Command> run;
-        [[=Subcommand, =Alias{"GO"}]] std::optional<Command> execute;
+        [[ = Subcommand, = Alias{"go"} ]] std::optional<Command> run;
+        [[ = Subcommand, = Alias{"GO"} ]] std::optional<Command> execute;
     };
 
     static_assert(!check_subcommand_collisions<AliasCollision>());
 
     struct AliasNameCollision {
-        [[=Subcommand, =Alias{"execute"}]] std::optional<Command> run;
+        [[ = Subcommand, = Alias{"execute"} ]] std::optional<Command> run;
         [[=Subcommand]] std::optional<Command> execute;
     };
 
@@ -71,7 +69,7 @@ namespace {
 
     struct KebabCollision {
         [[=Subcommand]] std::optional<Command> dry_run;
-        [[=Subcommand, =Alias{"dry-run"}]] std::optional<Command> execute;
+        [[ = Subcommand, = Alias{"dry-run"} ]] std::optional<Command> execute;
     };
 
     static_assert(!check_subcommand_collisions<KebabCollision>());
@@ -89,7 +87,7 @@ namespace {
     };
 
     static_assert(check_subcommand_collisions<NestedArgs>());
-}
+} // namespace
 
 TEST_CASE("subcommand assertions: valid layouts pass every check") {
     StarParse::detail::Parser::check_assertions<MixedArgs>();

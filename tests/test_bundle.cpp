@@ -16,8 +16,8 @@ namespace {
     };
 
     struct Jobs {
-        [[=Opt{'k', "Keep going"}, =Alias{"q"}]] bool keep;
-        [[=Opt{'j', "Num jobs"}, =Alias{"n"}]] int jobs;
+        [[ = Opt{'k', "Keep going"}, = Alias{"q"} ]] bool keep;
+        [[ = Opt{'j', "Num jobs"}, = Alias{"n"} ]] int jobs;
     };
 
     struct Values {
@@ -27,7 +27,7 @@ namespace {
         [[=Opt{'o'}]] std::optional<std::string> output_file;
         [[=Opt{'I'}]] std::vector<std::string> include_paths;
     };
-}
+} // namespace
 
 TEST_CASE("bundle: flags mixed with positionals") {
     const auto args = parse_from<Flags>({"-kvf", "hello", "42"});

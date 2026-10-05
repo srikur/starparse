@@ -1,11 +1,11 @@
 #pragma once
 
+#include <array>
 #include <concepts>
-#include <string_view>
+#include <expected>
 #include <meta>
 #include <string>
-#include <array>
-#include <expected>
+#include <string_view>
 #include <type_traits>
 
 namespace StarParse::inline annotations {
@@ -29,31 +29,31 @@ namespace StarParse::inline annotations {
         };
 
         template<typename R, typename A>
-        struct first_arg<R (A)> {
+        struct first_arg<R(A)> {
             using type = std::remove_cvref_t<A>;
         };
 
         template<typename F>
-        using first_arg_t = first_arg<std::remove_cvref_t<F> >::type;
+        using first_arg_t = first_arg<std::remove_cvref_t<F>>::type;
 
         struct Subcommand_ final {};
 
         struct Required_ final {};
 
         struct Hidden_ final {};
-    }
+
+        struct RequiredSubcommand_ final {};
+    } // namespace detail
 
     struct Opt final {
         char short_name{0};
         const char *help_{};
         const char *metavar_{}; // TODO: support multiple
 
-        explicit consteval Opt(const char s, std::string_view h, std::string_view m) : short_name(s),
-                                                                                       help_(std::define_static_string(h)),
-                                                                                       metavar_(std::define_static_string(m)) {}
+        explicit consteval Opt(const char s, std::string_view h, std::string_view m) :
+            short_name(s), help_(std::define_static_string(h)), metavar_(std::define_static_string(m)) {}
 
-        explicit consteval Opt(const char s, std::string_view h) : short_name(s),
-                                                                   help_(std::define_static_string(h)) {}
+        explicit consteval Opt(const char s, std::string_view h) : short_name(s), help_(std::define_static_string(h)) {}
 
         explicit consteval Opt(std::string_view h) : help_(std::define_static_string(h)) {}
 
@@ -72,8 +72,7 @@ namespace StarParse::inline annotations {
         size_t index{};
         const char *help_{};
 
-        explicit consteval
-        Positional(const size_t i, std::string_view h) : index(i), help_(std::define_static_string(h)) {}
+        explicit consteval Positional(const size_t i, std::string_view h) : index(i), help_(std::define_static_string(h)) {}
 
         explicit consteval Positional(const size_t i) : index(i) {}
 
@@ -87,22 +86,18 @@ namespace StarParse::inline annotations {
     };
 
     struct Alias final {
-        const char *const*names_{};
+        const char *const *names_{};
         size_t count_{};
 
         template<std::convertible_to<std::string_view>... Ts>
-            requires (sizeof...(Ts) > 0)
-        explicit consteval Alias(Ts... ns)
-            : names_(std::define_static_array(
-                  std::array{std::define_static_string(std::string_view{ns})...}).data()),
-              count_(sizeof...(ns)) {}
+            requires(sizeof...(Ts) > 0)
+        explicit consteval Alias(Ts... ns) :
+            names_(std::define_static_array(std::array{std::define_static_string(std::string_view{ns})...}).data()), count_(sizeof...(ns)) {}
     };
 
     struct Program final {
-        explicit consteval
-        Program(std::string_view n, std::string_view d, std::string_view v) : name(std::define_static_string(n)),
-                                                                              description(std::define_static_string(d)),
-                                                                              version(std::define_static_string(v)) {}
+        explicit consteval Program(std::string_view n, std::string_view d, std::string_view v) :
+            name(std::define_static_string(n)), description(std::define_static_string(d)), version(std::define_static_string(v)) {}
 
         const char *name{};
         const char *description{};
@@ -131,8 +126,7 @@ namespace StarParse::inline annotations {
     inline constexpr bool is_any_of_v = (std::is_same_v<T, Ts> || ...);
 
     template<typename T>
-    struct is_char : std::bool_constant<
-                is_any_of_v<std::remove_cv_t<T>, char, wchar_t, char8_t, char16_t, char32_t> > {};
+    struct is_char : std::bool_constant<is_any_of_v<std::remove_cv_t<T>, char, wchar_t, char8_t, char16_t, char32_t>> {};
 
     template<typename T>
     inline constexpr bool is_char_v = is_char<T>::value;
@@ -171,27 +165,24 @@ namespace StarParse::inline annotations {
         size_t count_{};
 
         template<std::convertible_to<std::string_view>... Ts>
-            requires (sizeof...(Ts) > 0 && std::convertible_to<T, std::string_view>)
-        explicit consteval Choices(Ts... ns)
-            : values_(std::define_static_array(
-                  std::array{std::define_static_string(std::string_view{ns})...}).data()),
-              count_(sizeof...(ns)) {}
+            requires(sizeof...(Ts) > 0 && std::convertible_to<T, std::string_view>)
+        explicit consteval Choices(Ts... ns) :
+            values_(std::define_static_array(std::array{std::define_static_string(std::string_view{ns})...}).data()), count_(sizeof...(ns)) {}
 
         template<std::convertible_to<T>... Ts>
-            requires (sizeof...(Ts) > 0 && !std::convertible_to<T, std::string_view>)
-        explicit consteval Choices(Ts... ns)
-            : values_(std::define_static_array(std::array<T, sizeof...(Ts)>{T{ns}...}).data()),
-              count_(sizeof...(ns)) {}
+            requires(sizeof...(Ts) > 0 && !std::convertible_to<T, std::string_view>)
+        explicit consteval Choices(Ts... ns) :
+            values_(std::define_static_array(std::array<T, sizeof...(Ts)>{T{ns}...}).data()), count_(sizeof...(ns)) {}
     };
 
     template<typename... Ts>
-    Choices(Ts...) -> Choices<std::common_type_t<Ts...> >;
+    Choices(Ts...) -> Choices<std::common_type_t<Ts...>>;
 
     template<typename T>
     struct Validator final {
         using Result = std::expected<void, std::string>;
         using BoolFn = bool (*)(const T &);
-        using CStrFn = const char *(*)(const T &);
+        using CStrFn = const char *(*) (const T &);
         using ExpectedFn = Result (*)(const T &);
 
         BoolFn bool_fn{};
@@ -203,26 +194,28 @@ namespace StarParse::inline annotations {
         explicit consteval Validator(const ExpectedFn f) : expected_fn(f) {}
 
         [[nodiscard]] constexpr Result operator()(const T &v) const {
-            if (expected_fn) return expected_fn(v);
+            if (expected_fn)
+                return expected_fn(v);
             if (cstr_fn) {
                 if (const char *msg = cstr_fn(v)) {
                     return std::unexpected{std::string{msg}};
                 }
                 return {};
             }
-            if (bool_fn(v)) return {};
+            if (bool_fn(v))
+                return {};
             return std::unexpected{std::string{}};
         }
     };
 
     template<typename F>
-    Validator(F) -> Validator<detail::first_arg_t<F> >;
+    Validator(F) -> Validator<detail::first_arg_t<F>>;
 
     constexpr detail::Subcommand_ Subcommand{};
 
     constexpr detail::Required_ Required{};
 
-    // TODO: need to add constructors for other signatures  
+    // TODO: need to add constructors for other signatures
     template<typename T>
     struct Parser final {
         using Result = std::expected<T, std::string>;
@@ -233,13 +226,14 @@ namespace StarParse::inline annotations {
         explicit consteval Parser(const ExpectedFn f) : expected_fn(f) {}
 
         [[nodiscard]] constexpr Result operator()(const std::string_view &s) const {
-            if (expected_fn) return expected_fn(s);
+            if (expected_fn)
+                return expected_fn(s);
             return std::unexpected{std::string{}};
         }
     };
 
     template<typename F>
-    Parser(F) -> Parser<detail::first_arg_t<F> >;
+    Parser(F) -> Parser<detail::first_arg_t<F>>;
 
     struct Env final {
         const char *name{};
@@ -254,4 +248,6 @@ namespace StarParse::inline annotations {
     };
 
     constexpr detail::Hidden_ Hidden{};
-}
+
+    constexpr detail::RequiredSubcommand_ RequiresSubcommand{};
+} // namespace StarParse::inline annotations

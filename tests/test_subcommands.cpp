@@ -15,15 +15,15 @@ namespace {
 
     struct Operation {
         bool verbose{false};
-        [[=Subcommand, =Alias{"plus"}]] std::optional<Add> add;
-        [[=Subcommand, =Alias{"minus"}]] std::optional<Subtract> subtract;
+        [[ = Subcommand, = Alias{"plus"} ]] std::optional<Add> add;
+        [[ = Subcommand, = Alias{"minus"} ]] std::optional<Subtract> subtract;
     };
 
     struct Args {
-        [[=Required, =Positional{0}]] int initial;
-        [[=Subcommand, =Alias{"op"}]] std::optional<Operation> operation;
+        [[ = Required, = Positional{0} ]] int initial;
+        [[ = Subcommand, = Alias{"op"} ]] std::optional<Operation> operation;
     };
-}
+} // namespace
 
 TEST_CASE("subcommands: nested subcommand with its own positional") {
     const auto check_add = [](const ParsedArgs<Args> &args) {
@@ -34,18 +34,10 @@ TEST_CASE("subcommands: nested subcommand with its own positional") {
         CHECK(args->operation->add->value == 5);
         CHECK_FALSE(args->operation->subtract.has_value());
     };
-    SUBCASE("10 operation add 5") {
-        check_add(parse_from<Args>({"10", "operation", "add", "5"}));
-    }
-    SUBCASE("named values at each level") {
-        check_add(parse_from<Args>({"--initial=10", "operation", "add", "--value=5"}));
-    }
-    SUBCASE("subcommand names are case-insensitive") {
-        check_add(parse_from<Args>({"10", "OPERATION", "ADD", "5"}));
-    }
-    SUBCASE("subcommand aliases") {
-        check_add(parse_from<Args>({"10", "op", "plus", "5"}));
-    }
+    SUBCASE("10 operation add 5") { check_add(parse_from<Args>({"10", "operation", "add", "5"})); }
+    SUBCASE("named values at each level") { check_add(parse_from<Args>({"--initial=10", "operation", "add", "--value=5"})); }
+    SUBCASE("subcommand names are case-insensitive") { check_add(parse_from<Args>({"10", "OPERATION", "ADD", "5"})); }
+    SUBCASE("subcommand aliases") { check_add(parse_from<Args>({"10", "op", "plus", "5"})); }
 }
 
 TEST_CASE("subcommands: sibling subcommands are exclusive") {
@@ -56,12 +48,8 @@ TEST_CASE("subcommands: sibling subcommands are exclusive") {
         REQUIRE(args->operation->subtract.has_value());
         CHECK(args->operation->subtract->value == 5);
     };
-    SUBCASE("10 operation subtract 5") {
-        check_subtract(parse_from<Args>({"10", "operation", "subtract", "5"}));
-    }
-    SUBCASE("10 op minus 5") {
-        check_subtract(parse_from<Args>({"10", "op", "minus", "5"}));
-    }
+    SUBCASE("10 operation subtract 5") { check_subtract(parse_from<Args>({"10", "operation", "subtract", "5"})); }
+    SUBCASE("10 op minus 5") { check_subtract(parse_from<Args>({"10", "op", "minus", "5"})); }
 }
 
 TEST_CASE("subcommands: absent subcommand leaves the optional empty") {

@@ -9,9 +9,9 @@ using namespace StarParse;
 namespace {
     struct Args {
         [[=Opt{'v', "Vector test"}]] std::vector<std::string> vec;
-        [[=Opt{'a', "Array test"}, =Separator{","}]] std::array<std::string, 4> arr;
+        [[ = Opt{'a', "Array test"}, = Separator{","} ]] std::array<std::string, 4> arr;
     };
-}
+} // namespace
 
 TEST_CASE("container: delimited values fill vectors and arrays") {
     const auto args = parse_from<Args>({"--vec=1,2,3,4", "--arr=1,2,3,4"});

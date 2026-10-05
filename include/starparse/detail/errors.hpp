@@ -1,14 +1,23 @@
 #pragma once
 
-#include <string_view>
-#include <string>
-#include <optional>
 #include <format>
+#include <optional>
+#include <string>
+#include <string_view>
 
 namespace StarParse {
     enum class ErrorKind {
-        UNKNOWN_OPTION, MISSING_VALUE, INVALID_VALUE, MISSING_REQUIRED, DUPLICATE_OPTION,
-        EXCEPTION, OUT_OF_RANGE, INVALID_CHOICE, VALIDATION_FAILED, CUSTOM_PARSING_FAILED, READING_ENV_FAILED,
+        UNKNOWN_OPTION,
+        MISSING_VALUE,
+        INVALID_VALUE,
+        MISSING_REQUIRED,
+        DUPLICATE_OPTION,
+        EXCEPTION,
+        OUT_OF_RANGE,
+        INVALID_CHOICE,
+        VALIDATION_FAILED,
+        CUSTOM_PARSING_FAILED,
+        READING_ENV_FAILED,
         INVALID_ENV_VALUE
     };
 
@@ -51,7 +60,7 @@ namespace StarParse {
             }
         }
     };
-}
+} // namespace StarParse
 
 template<>
 struct std::formatter<StarParse::ParseError> : std::formatter<std::string> {
