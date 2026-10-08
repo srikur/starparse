@@ -12,7 +12,9 @@ namespace {
         [[=Positional{1}]] int arg2;
     };
 
-    Flags defaults() { return {.arg1 = "default1", .keep = true, .verbose = false, .arg2 = 99}; }
+    Flags defaults() {
+        return {.arg1 = "default1", .keep = true, .verbose = false, .arg2 = 99};
+    }
 } // namespace
 
 TEST_CASE("prefill: defaults survive when nothing is passed") {

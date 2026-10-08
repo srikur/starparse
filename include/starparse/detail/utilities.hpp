@@ -221,7 +221,9 @@ namespace StarParse::detail::Utilities {
         return false;
     }
 
-    constexpr char ascii_lower(const char c) { return c >= 'A' && c <= 'Z' ? static_cast<char>(c + ('a' - 'A')) : c; }
+    constexpr char ascii_lower(const char c) {
+        return c >= 'A' && c <= 'Z' ? static_cast<char>(c + ('a' - 'A')) : c;
+    }
 
     template<std::meta::info M>
     bool matches_short_name(const std::string_view value, const bool allow_case_insensitivity = false) {
@@ -237,7 +239,9 @@ namespace StarParse::detail::Utilities {
             return false;
         }
         return std::equal(a.begin(), a.end(), b.begin(),
-                          [](const unsigned char ac, const unsigned char bc) { return std::tolower(ac) == std::tolower(bc); });
+                          [](const unsigned char ac, const unsigned char bc) {
+                              return std::tolower(ac) == std::tolower(bc);
+                          });
     }
 
     consteval std::vector<const char *> alias_name_list(const std::meta::info m) {
@@ -282,10 +286,9 @@ namespace StarParse::detail::Utilities {
                 if constexpr (std::convertible_to<T, std::string_view> && std::convertible_to<decltype(choice), std::string_view>) {
                     if (std::string_view{value} == std::string_view{choice} || (allow_case_insensitivity && iequals(value, choice)))
                         return true;
-                } else if constexpr (requires
-                {
-                    { value == choice } -> std::convertible_to<bool>;
-                }) {
+                } else if constexpr (requires {
+                                         { value == choice } -> std::convertible_to<bool>;
+                                     }) {
                     if (value == choice)
                         return true;
                 }
@@ -323,7 +326,9 @@ namespace StarParse::detail::Utilities {
         return std::meta::has_template_arguments(r) && std::meta::template_of(r) == ^^std::optional;
     }
 
-    consteval std::meta::info value_type_of(const std::meta::info r) { return std::meta::template_arguments_of(std::meta::dealias(r))[0]; }
+    consteval std::meta::info value_type_of(const std::meta::info r) {
+        return std::meta::template_arguments_of(std::meta::dealias(r))[0];
+    }
 
     consteval bool is_flag_type(std::meta::info r) {
         r = std::meta::dealias(std::meta::remove_cv(r));
@@ -337,9 +342,8 @@ namespace StarParse::detail::Utilities {
         r = std::meta::dealias(std::meta::remove_cv(r));
         if (is_optional(r))
             r = std::meta::dealias(value_type_of(r));
-        return std::meta::is_integral_type(r) && r != (^^bool) && !std::meta::extract<bool>(std::meta::substitute(^^is_char_v, {
-                       r
-                   }));
+        return std::meta::is_integral_type(r) && r != (^^bool)&&!std::meta::extract<bool>(std::meta::substitute(^^is_char_v, {
+                                                                                                                                 r}));
     }
 
     template<std::meta::info M>
@@ -402,18 +406,28 @@ namespace StarParse::detail::Utilities {
         return false;
     }
 
-    consteval bool is_vector(const std::meta::info r) { return is_specialization_of(r, ^^std::vector); }
-    consteval bool is_array(const std::meta::info r) { return is_specialization_of(r, ^^std::array); }
-    consteval bool is_container(const std::meta::info m) { return is_vector(m) || is_array(m); }
+    consteval bool is_vector(const std::meta::info r) {
+        return is_specialization_of(r, ^^std::vector);
+    }
+    consteval bool is_array(const std::meta::info r) {
+        return is_specialization_of(r, ^^std::array);
+    }
+    consteval bool is_container(const std::meta::info m) {
+        return is_vector(m) || is_array(m);
+    }
 
     template<std::meta::info M>
     constexpr std::expected<bool, ParseError> bool_from_string(const std::string_view s) {
         using namespace std::literals;
         constexpr std::array true_values{"yes"sv, "1"sv, "on"sv, "true"sv, "t"sv};
         constexpr std::array false_values{"no"sv, "0"sv, "off"sv, "false"sv, "f"sv};
-        if (std::ranges::any_of(true_values, [&](auto value) { return iequals(s, value); }))
+        if (std::ranges::any_of(true_values, [&](auto value) {
+                return iequals(s, value);
+            }))
             return true;
-        if (std::ranges::any_of(false_values, [&](auto value) { return iequals(s, value); }))
+        if (std::ranges::any_of(false_values, [&](auto value) {
+                return iequals(s, value);
+            }))
             return false;
         return std::unexpected(ParseError{
             .kind = ErrorKind::INVALID_VALUE,
@@ -456,8 +470,7 @@ namespace StarParse::detail::Utilities {
             auto [pointer, error_code] = std::from_chars(s.data(), s.data() + s.size(), v);
             if (error_code != std::errc{} || pointer != s.data() + s.size()) {
                 return std::unexpected(ParseError{
-                    .kind = ErrorKind::INVALID_VALUE, .input_value = std::string{s}, .current_argument = name_of(Mem), .argv_index = index
-                });
+                    .kind = ErrorKind::INVALID_VALUE, .input_value = std::string{s}, .current_argument = name_of(Mem), .argv_index = index});
             }
             return v;
         } else if constexpr (std::is_enum_v<M>) {
@@ -469,8 +482,7 @@ namespace StarParse::detail::Utilities {
             }
             if (!parsed)
                 return std::unexpected(ParseError{
-                    .kind = ErrorKind::INVALID_VALUE, .input_value = std::string{s}, .current_argument = name_of(Mem), .argv_index = index
-                });
+                    .kind = ErrorKind::INVALID_VALUE, .input_value = std::string{s}, .current_argument = name_of(Mem), .argv_index = index});
             return *parsed;
         } else {
             // TODO: can add more info to the msg?
@@ -586,7 +598,9 @@ namespace StarParse::detail::Utilities {
 
     [[nodiscard]] inline std::string to_uppercase(const std::string_view sv) {
         std::string result{sv};
-        std::ranges::transform(result, result.begin(), [](unsigned char c) { return std::toupper(c); });
+        std::ranges::transform(result, result.begin(), [](unsigned char c) {
+            return std::toupper(c);
+        });
         return result;
     }
 
@@ -651,25 +665,21 @@ namespace StarParse::detail::Utilities {
                           "Validator must accept the parsed value type");
 
             if (auto result = validator(value); !result) {
-                errors.push_back({
-                    .kind = ErrorKind::VALIDATION_FAILED,
-                    .input_value = std::string{input},
-                    .detail = result.error().empty() ? std::string{"validator returned false"} : std::move(result.error()),
-                    .current_argument = name_of(Mem),
-                    .argv_index = index
-                });
+                errors.push_back({.kind = ErrorKind::VALIDATION_FAILED,
+                                  .input_value = std::string{input},
+                                  .detail = result.error().empty() ? std::string{"validator returned false"} : std::move(result.error()),
+                                  .current_argument = name_of(Mem),
+                                  .argv_index = index});
                 return false;
             }
         } else if constexpr (choice_annotation.has_value()) {
             static constexpr auto choices = choices_list<Mem>();
             if (!matches_choice<Mem>(value, settings.allow_case_insensitivity)) {
-                errors.push_back({
-                    .kind = ErrorKind::INVALID_CHOICE,
-                    .input_value = std::string{input},
-                    .detail = std::format("{}", choices),
-                    .current_argument = name_of(Mem),
-                    .argv_index = index
-                });
+                errors.push_back({.kind = ErrorKind::INVALID_CHOICE,
+                                  .input_value = std::string{input},
+                                  .detail = std::format("{}", choices),
+                                  .current_argument = name_of(Mem),
+                                  .argv_index = index});
                 return false;
             }
         } else if constexpr (min_annotation.has_value()) {
@@ -677,13 +687,11 @@ namespace StarParse::detail::Utilities {
             constexpr auto mn = std::meta::extract<A>(*min_annotation);
 
             if (numeric_less(value, mn.value)) {
-                errors.push_back({
-                    .kind = ErrorKind::OUT_OF_RANGE,
-                    .input_value = std::string{input},
-                    .detail = std::format("minimum is {}", mn.value),
-                    .current_argument = name_of(Mem),
-                    .argv_index = index
-                });
+                errors.push_back({.kind = ErrorKind::OUT_OF_RANGE,
+                                  .input_value = std::string{input},
+                                  .detail = std::format("minimum is {}", mn.value),
+                                  .current_argument = name_of(Mem),
+                                  .argv_index = index});
                 return false;
             }
         } else if constexpr (max_annotation.has_value()) {
@@ -696,8 +704,7 @@ namespace StarParse::detail::Utilities {
                     .input_value = std::string{input},
                     .detail = std::format("maximum is {}", mx.value),
                     .current_argument = name_of(Mem),
-                    .argv_index = index
-                });
+                    .argv_index = index});
                 return false;
             }
         } else if constexpr (range_annotation.has_value()) {
@@ -710,8 +717,7 @@ namespace StarParse::detail::Utilities {
                     .input_value = std::string{input},
                     .detail = std::format("allowed range is [{}, {}]", range.min, range.max),
                     .current_argument = name_of(Mem),
-                    .argv_index = index
-                });
+                    .argv_index = index});
                 return false;
             }
         }
@@ -732,8 +738,7 @@ namespace StarParse::detail::Utilities {
                     .input_value = std::string{name},
                     .detail = "count would overflow",
                     .current_argument = name_of(Mem),
-                    .argv_index = index
-                });
+                    .argv_index = index});
                 return false;
             }
             const M value = field + M{1};
@@ -758,8 +763,7 @@ namespace StarParse::detail::Utilities {
                 .input_value = std::string{s},
                 .detail = result.error().empty() ? std::string{"parsed returned an error"} : std::move(result.error()),
                 .current_argument = name_of(Mem),
-                .argv_index = index
-            });
+                .argv_index = index});
         } else
             return *result;
     }
@@ -798,8 +802,7 @@ namespace StarParse::detail::Utilities {
                         .kind = ErrorKind::DUPLICATE_OPTION,
                         .input_value = std::string{piece},
                         .current_argument = name_of(Mem),
-                        .argv_index = index
-                    });
+                        .argv_index = index});
                 } else if constexpr (has_custom_parser) {
                     if (auto result = apply_custom_parser<Mem, E>(piece, index)) {
                         if (validate<Mem>(*result, piece, index, errors, settings)) {
@@ -855,7 +858,9 @@ namespace StarParse::detail::Utilities {
             return 0;
         matrix.resize(rows * cols);
 
-        const auto at = [&matrix, cols](const size_t i, const size_t j) -> size_t & { return matrix[i * cols + j]; };
+        const auto at = [&matrix, cols](const size_t i, const size_t j) -> size_t & {
+            return matrix[i * cols + j];
+        };
 
         for (auto i{0uz}; i <= m; ++i)
             at(i, 0) = i;

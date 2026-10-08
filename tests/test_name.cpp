@@ -198,7 +198,9 @@ TEST_CASE("name: validation diagnostics use the override") {
         [[=Name{"maximum"}, =Max{2}]] int cpp_max{};
         [[=Name{"interval"}, =Range{1, 2}]] int cpp_range{};
         [[=Name{"choice"}, =Choices{1, 2}]] int cpp_choice{};
-        [[=Name{"positive"}, =Validator{[](const int &value) { return value > 0; }}]] int cpp_validator{};
+        [[=Name{"positive"}, =Validator{[](const int &value) {
+                                   return value > 0;
+                               }}]] int cpp_validator{};
     };
     const auto args = parse_from<Validated>({"--minimum=1", "--maximum=3", "--interval=3", "--choice=3", "--positive=-1"});
     REQUIRE_FALSE(args);
@@ -222,7 +224,9 @@ TEST_CASE("name: count custom-parser and array diagnostics use the override") {
         struct Custom {
             [[
                 =Name{"amount"},
-                =Parser<int>{[](const std::string_view &) -> std::expected<int, std::string> { return std::unexpected{"invalid amount"}; }}
+                =Parser<int>{[](const std::string_view &) -> std::expected<int, std::string> {
+                      return std::unexpected{"invalid amount"};
+                  }}
             ]] int cpp_value{};
         };
         const auto args = parse_from<Custom>({"--amount=bad"});

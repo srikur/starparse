@@ -38,7 +38,9 @@ namespace {
 
     static_assert(!check_annotation_placement<MisplacedStaticMember>());
 
-    enum class MisplacedEnumerator { run[[=Subcommand]] };
+    enum class MisplacedEnumerator {
+        run[[=Subcommand]]
+    };
 
     struct EnumArgs {
         MisplacedEnumerator mode{};

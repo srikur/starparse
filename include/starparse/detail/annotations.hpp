@@ -61,7 +61,9 @@ namespace StarParse::inline annotations {
 
         explicit consteval Opt(const char s) : short_name(s) {}
 
-        [[nodiscard]] constexpr std::string_view help() const { return help_; }
+        [[nodiscard]] constexpr std::string_view help() const {
+            return help_;
+        }
     };
 
     struct Name final {
@@ -78,7 +80,9 @@ namespace StarParse::inline annotations {
 
         explicit consteval Positional(const size_t i) : index(i) {}
 
-        [[nodiscard]] constexpr std::string_view help() const { return help_; }
+        [[nodiscard]] constexpr std::string_view help() const {
+            return help_;
+        }
     };
 
     struct Separator final {
@@ -169,9 +173,8 @@ namespace StarParse::inline annotations {
 
         template<std::convertible_to<std::string_view>... Ts>
             requires(sizeof...(Ts) > 0 && std::convertible_to<T, std::string_view>)
-        explicit consteval
-        Choices(Ts... ns) : values_(std::define_static_array(std::array{std::define_static_string(std::string_view{ns})...}).data()),
-                            count_(sizeof...(ns)) {}
+        explicit consteval Choices(Ts... ns) : values_(std::define_static_array(std::array{std::define_static_string(std::string_view{ns})...}).data()),
+                                               count_(sizeof...(ns)) {}
 
         template<std::convertible_to<T>... Ts>
             requires(sizeof...(Ts) > 0 && !std::convertible_to<T, std::string_view>)

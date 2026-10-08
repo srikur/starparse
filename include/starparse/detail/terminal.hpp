@@ -29,7 +29,9 @@ namespace StarParse::detail::Terminal {
         };
 
         std::size_t pos = skip(0, true);
-        const auto fits = [width](const std::size_t n) { return n <= width / 2; };
+        const auto fits = [width](const std::size_t n) {
+            return n <= width / 2;
+        };
         const std::size_t indent = fits(pos) ? pos : 0;
         if (!fits(hang))
             hang = indent;

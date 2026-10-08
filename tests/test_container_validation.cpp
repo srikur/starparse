@@ -7,7 +7,9 @@
 using namespace StarParse;
 
 namespace {
-    bool is_valid(const std::string &value) { return value == "hello" || value == "world"; }
+    bool is_valid(const std::string &value) {
+        return value == "hello" || value == "world";
+    }
 
     struct Args {
         [[=Opt{'v'}, =Validator{is_valid}]] std::vector<std::string> vec;
