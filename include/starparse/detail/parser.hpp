@@ -95,6 +95,104 @@ namespace StarParse::detail::Parser {
     }
 
     template<typename T>
+    bool matches_subcommand_name(const std::string_view name, const Settings &settings) {
+        static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
+        bool found{false};
+        template for (constexpr auto m : members) {
+            if constexpr (is_subcommand(m)) {
+                if (does_match_name<m>(name, settings, false))
+                    found = true;
+            }
+        }
+        return found;
+    }
+
+    inline bool istarts_with(const std::string_view text, const std::string_view prefix) {
+        return text.size() >= prefix.size() && iequals(text.substr(0, prefix.size()), prefix);
+    }
+
+    // the first long spelling of M (name, kebab name, alias, or negation) that begins with prefix
+    template<std::meta::info M>
+    std::optional<std::string_view> spelling_with_prefix(const std::string_view prefix, const Settings &settings, const bool allow_short_aliases) {
+        const auto has_prefix = [&](const std::string_view spelling) {
+            return spelling.starts_with(prefix) || (settings.allow_case_insensitivity && istarts_with(spelling, prefix));
+        };
+        if (has_prefix(snake_name_v<M>))
+            return snake_name_v<M>;
+        if (settings.allow_kebab_casing && has_prefix(kebab_name_v<M>))
+            return kebab_name_v<M>;
+        if (settings.allow_aliases) {
+            for (const char *alias : alias_names<M>()) {
+                if (const std::string_view spelling{alias}; (allow_short_aliases || spelling.size() > 1) && has_prefix(spelling))
+                    return spelling;
+            }
+        }
+        if constexpr (is_flag_type(std::meta::type_of(M))) {
+            if (settings.autogenerate_negations) {
+                if (has_prefix(snake_negated_name_v<M>))
+                    return snake_negated_name_v<M>;
+                if (settings.allow_kebab_casing && has_prefix(kebab_negated_name_v<M>))
+                    return kebab_negated_name_v<M>;
+            }
+        }
+        return std::nullopt;
+    }
+
+    template<typename T>
+    std::vector<std::string_view> inferred_option_matches(const std::string_view prefix, const Settings &settings) {
+        static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
+        std::vector<std::string_view> matches;
+        template for (constexpr auto m : members) {
+            if constexpr (is_named_option<T>(m)) {
+                if (const auto spelling = spelling_with_prefix<m>(prefix, settings, false))
+                    matches.push_back(*spelling);
+            }
+        }
+        for (const std::string_view builtin : {std::string_view{"help"}, std::string_view{"version"}}) {
+            if (builtin.starts_with(prefix) || (settings.allow_case_insensitivity && istarts_with(builtin, prefix)))
+                matches.push_back(builtin);
+        }
+        return matches;
+    }
+
+    template<typename T>
+    std::optional<std::string_view> inferred_subcommand_name(const std::string_view prefix, const Settings &settings) {
+        static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
+        std::optional<std::string_view> found;
+        auto count{0uz};
+        template for (constexpr auto m : members) {
+            if constexpr (is_subcommand(m)) {
+                if (const auto spelling = spelling_with_prefix<m>(prefix, settings, true)) {
+                    found = *spelling;
+                    ++count;
+                }
+            }
+        }
+        return count == 1 ? found : std::nullopt;
+    }
+
+    // rewrites a.name to the full option spelling when a is an unambiguous abbreviation of exactly one long option
+    template<typename T>
+    void resolve_inferred_option(ArgAttributes &a, const Settings &settings) {
+        if (!settings.infer_arguments || !a.double_dashed || a.is_help || a.is_version || matches_full_name<T>(a.name, settings))
+            return;
+        if (const auto matches = inferred_option_matches<T>(a.name, settings); matches.size() == 1) {
+            a.name = matches.front();
+            a.is_help = a.name == "help";
+            a.is_version = a.name == "version";
+        }
+    }
+
+    // rewrites a.name to the full subcommand spelling when a is an unambiguous abbreviation of exactly one subcommand
+    template<typename T>
+    void resolve_inferred_subcommand(ArgAttributes &a, const Settings &settings) {
+        if (!settings.infer_subcommands || !a.is_positional || a.dashed || matches_subcommand_name<T>(a.name, settings))
+            return;
+        if (const auto inferred = inferred_subcommand_name<T>(a.name, settings))
+            a.name = *inferred;
+    }
+
+    template<typename T>
     bool is_flag(const char c, const Settings &settings) {
         static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
         template for (constexpr auto m : members) {
@@ -398,13 +496,10 @@ namespace StarParse::detail::Parser {
             if (!numeric || short_name_exists<T>(next.substr(1, 1), settings.allow_case_insensitivity))
                 return false;
         }
-        static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
-        template for (constexpr auto m : members) {
-            if constexpr (is_subcommand(m)) {
-                if (does_match_name<m>(next, settings, false))
-                    return false;
-            }
-        }
+        if (matches_subcommand_name<T>(next, settings))
+            return false;
+        if (settings.infer_subcommands && inferred_subcommand_name<T>(next, settings))
+            return false;
         return true;
     }
 
@@ -448,6 +543,7 @@ namespace StarParse::detail::Parser {
                     continue;
                 }
             }
+            resolve_inferred_option<T>(a, settings);
             if ((a.dashed || a.double_dashed) && !a.has_value && Utilities::option_takes_value<T>(a.name, a.dashed, settings) &&
                 i + 1 < args.size() && takes_next_value<T>(a, args[i + 1], settings)) {
                 a.value = args[++i];
@@ -468,6 +564,7 @@ namespace StarParse::detail::Parser {
 
             // check for subcommand
             if (a.is_positional && !separator_seen) {
+                resolve_inferred_subcommand<T>(a, settings);
                 template for (constexpr auto m : members) {
                     if constexpr (is_subcommand(m)) {
                         using M = [:std::meta::type_of(m):];
@@ -672,19 +769,19 @@ namespace StarParse::detail::Parser {
             if (!matched) {
                 const auto name_or_value = attrs.has_value ? attrs.value : attrs.name;
 
-                // check for inferred args/subcommands
-                if (attrs.double_dashed) {
-                    const auto potential_matches = candidates | std::views::filter([name_or_value](const std::string_view &candidate) {
-                        return candidate.starts_with(name_or_value);
-                    }) | std::ranges::to<std::vector<std::string_view> >();
-                    if (potential_matches.size() == 1) {
-                        attrs.value = potential_matches[0];
-                    } else {
+                // an abbreviation that fits several options was left unresolved by get_arg_attrs_into
+                if (attrs.double_dashed && settings.infer_arguments) {
+                    if (const auto matches = inferred_option_matches<T>(attrs.name, settings); matches.size() > 1) {
+                        std::string detail;
+                        for (const auto spelling : matches)
+                            detail += std::format("{}--{}", detail.empty() ? "" : ", ", spelling);
                         errors.push_back({
                             .kind = ErrorKind::AMBIGUOUS_OPTION,
-                            .input_value = std::string{name_or_value},
-                            .detail = potential_matches | std::views::join_with(", "),
+                            .input_value = std::string{attrs.name},
+                            .detail = std::move(detail),
+                            .argv_index = attrs.argv_index
                         });
+                        continue;
                     }
                 }
 

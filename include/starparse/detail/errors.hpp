@@ -60,7 +60,7 @@ namespace StarParse {
                 case ErrorKind::MISSING_SUBCOMMAND:
                     return "At least one subcommand must be specified";
                 case ErrorKind::AMBIGUOUS_OPTION:
-                    return std::format("Ambiguous prefix '{}'. Potential matches are {}", option, detail);
+                    return std::format("Ambiguous option '{}'. Potential matches are {}", input_value, detail);
                 default:
                     return std::format("Unknown error: '{}'", input_value);
             }

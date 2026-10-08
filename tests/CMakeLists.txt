@@ -24,6 +24,7 @@ add_executable(starparse_tests
         test_enum.cpp
         test_errors.cpp
         test_help_and_version.cpp
+        test_infer.cpp
         test_kebab.cpp
         test_name.cpp
         test_parse.cpp
