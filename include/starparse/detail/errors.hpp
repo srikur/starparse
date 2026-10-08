@@ -19,7 +19,8 @@ namespace StarParse {
         CUSTOM_PARSING_FAILED,
         READING_ENV_FAILED,
         INVALID_ENV_VALUE,
-        MISSING_SUBCOMMAND
+        MISSING_SUBCOMMAND,
+        AMBIGUOUS_OPTION,
     };
 
     struct ParseError {
@@ -58,6 +59,8 @@ namespace StarParse {
                     return std::format("Error at line {} while reading dotenv line '{}': {}", argv_index, input_value, detail);
                 case ErrorKind::MISSING_SUBCOMMAND:
                     return "At least one subcommand must be specified";
+                case ErrorKind::AMBIGUOUS_OPTION:
+                    return std::format("Ambiguous prefix '{}'. Potential matches are {}", option, detail);
                 default:
                     return std::format("Unknown error: '{}'", input_value);
             }

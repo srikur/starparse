@@ -670,8 +670,25 @@ namespace StarParse::detail::Parser {
             if (entered_child)
                 break;
             if (!matched) {
-                // compute edit distance candidates
                 const auto name_or_value = attrs.has_value ? attrs.value : attrs.name;
+
+                // check for inferred args/subcommands
+                if (attrs.double_dashed) {
+                    const auto potential_matches = candidates | std::views::filter([name_or_value](const std::string_view &candidate) {
+                        return candidate.starts_with(name_or_value);
+                    }) | std::ranges::to<std::vector<std::string_view> >();
+                    if (potential_matches.size() == 1) {
+                        attrs.value = potential_matches[0];
+                    } else {
+                        errors.push_back({
+                            .kind = ErrorKind::AMBIGUOUS_OPTION,
+                            .input_value = std::string{name_or_value},
+                            .detail = potential_matches | std::views::join_with(", "),
+                        });
+                    }
+                }
+
+                // compute edit distance candidates
                 const auto min_candidate =
                         std::ranges::fold_left(candidates, std::pair{std::numeric_limits<size_t>::max(), ""},
                                                [&](const std::pair<size_t, std::string_view> &best, const std::string_view candidate) {

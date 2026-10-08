@@ -10,7 +10,7 @@ namespace StarParse {
         bool autogenerate_negations{true};
         bool allow_repeated_counts{true};
         bool print_help_default_values{true};
-        bool infer_arguments{false};
+        bool infer_arguments{true};
         bool infer_subcommands{false};
         std::string_view value_separator{","};
 
