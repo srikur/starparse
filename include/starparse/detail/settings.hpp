@@ -7,7 +7,7 @@ namespace StarParse {
         LAST_WINS,
         FIRST_WINS,
         ERROR
-    }
+    };
 
     struct Settings {
         bool allow_kebab_casing{true};

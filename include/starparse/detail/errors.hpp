@@ -11,6 +11,7 @@ namespace StarParse {
         MISSING_VALUE,
         INVALID_VALUE,
         MISSING_REQUIRED,
+        DUPLICATE_VALUE,
         DUPLICATE_OPTION,
         EXCEPTION,
         OUT_OF_RANGE,
@@ -41,8 +42,10 @@ namespace StarParse {
                     return std::format("Could not parse input '{}' for argument '{}'", input_value, option);
                 case ErrorKind::MISSING_REQUIRED:
                     return std::format("Missing value for required option '{}'", option);
-                case ErrorKind::DUPLICATE_OPTION:
+                case ErrorKind::DUPLICATE_VALUE:
                     return std::format("Duplicate value '{}' provided for option '{}'", input_value, option);
+                case ErrorKind::DUPLICATE_OPTION:
+                    return std::format("Duplicate option '{}' provided", option);
                 case ErrorKind::EXCEPTION:
                     return std::format("Exception thrown while validating input '{}': {}", input_value, detail);
                 case ErrorKind::OUT_OF_RANGE:

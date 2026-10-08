@@ -799,7 +799,7 @@ namespace StarParse::detail::Utilities {
             for_each_value(s, separator, [&](auto piece) {
                 if (count >= std::tuple_size_v<M>) {
                     errors.push_back(ParseError{
-                        .kind = ErrorKind::DUPLICATE_OPTION,
+                        .kind = ErrorKind::DUPLICATE_VALUE,
                         .input_value = std::string{piece},
                         .current_argument = name_of(Mem),
                         .argv_index = index});

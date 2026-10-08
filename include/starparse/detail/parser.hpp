@@ -738,7 +738,6 @@ namespace StarParse::detail::Parser {
                         entered_child = true;
                     }
                 } else {
-                    // TODO: bugfix — when a positional is specified via name, don't consider it for future positionals
                     if (attrs.is_positional) {
                         if constexpr (pos.has_value()) {
                             using V = [:std::meta::remove_cv(std::meta::type_of(m)):];
@@ -753,6 +752,21 @@ namespace StarParse::detail::Parser {
                         constexpr bool named = is_named_option<T>(m);
                         const bool matching_string = named && does_match_name<m>(attrs.name, settings);
                         if (!matched && matching_string) {
+                            // check duplicate option setting
+                            switch (settings.duplicate_option_policy) {
+                                case DuplicateOptionPolicy::LAST_WINS:
+                                    break; // continue processing as normal
+                                case DuplicateOptionPolicy::FIRST_WINS:
+                                    continue; // skip this arg
+                                case DuplicateOptionPolicy::ERROR:
+                                    errors.push_back({
+                                        .kind = ErrorKind::DUPLICATE_OPTION,
+                                        .current_argument = attrs.name,
+                                    });
+                                    continue;
+                                default:
+                                    break;
+                            }
                             matched = true;
                             if constexpr (is_flag_type(^^M)) {
                                 if (attrs.has_value) {
