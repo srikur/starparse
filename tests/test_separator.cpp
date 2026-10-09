@@ -10,7 +10,7 @@ namespace {
         [[=Opt{"dry run"}]] bool dry_run;
         [[=Opt{'d', "super dry run"}]] bool super_dry_run;
     };
-}
+} // namespace
 
 TEST_CASE("separator: everything after -- is positional") {
     SUBCASE("-- --foo=bar") {

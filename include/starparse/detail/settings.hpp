@@ -3,6 +3,12 @@
 #include <string_view>
 
 namespace StarParse {
+    enum class DuplicateOptionPolicy {
+        LAST_WINS,
+        FIRST_WINS,
+        ERROR
+    };
+
     struct Settings {
         bool allow_kebab_casing{true};
         bool allow_aliases{true};
@@ -10,6 +16,9 @@ namespace StarParse {
         bool autogenerate_negations{true};
         bool allow_repeated_counts{true};
         bool print_help_default_values{true};
+        bool infer_arguments{true};
+        bool infer_subcommands{false};
+        DuplicateOptionPolicy duplicate_option_policy{DuplicateOptionPolicy::LAST_WINS};
         std::string_view value_separator{","};
 
         Settings &allowKebabCase(const bool value) {
@@ -46,5 +55,15 @@ namespace StarParse {
             print_help_default_values = value;
             return *this;
         }
+
+        Settings &inferArguments(const bool value) {
+            infer_arguments = value;
+            return *this;
+        }
+
+        Settings &inferSubcommands(const bool value) {
+            infer_subcommands = value;
+            return *this;
+        }
     };
-}
+} // namespace StarParse

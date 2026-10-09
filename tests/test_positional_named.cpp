@@ -10,7 +10,7 @@ namespace {
         [[=Opt{'v', "Verbose mode"}]] bool verbose;
         [[=Positional{1}]] int arg2;
     };
-}
+} // namespace
 
 TEST_CASE("positional: filled in order around options") {
     const auto args = parse_from<Args>({"hello", "-v", "42"});

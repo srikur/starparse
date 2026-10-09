@@ -6,6 +6,11 @@ AlignConsecutiveAssignments: false
 AlignConsecutiveDeclarations: false
 AlignOperands: true
 AlignTrailingComments: false
+AlignAfterOpenBracket: Align
+# Keep every nonempty function/lambda body multiline; empty bodies stay compact.
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortLambdasOnASingleLine: Empty
+AllowShortEnumsOnASingleLine: false
 AlwaysBreakTemplateDeclarations: Yes
 BraceWrapping: 
   AfterCaseLabel: false
@@ -27,9 +32,15 @@ BraceWrapping:
 BreakBeforeBraces: Custom
 BreakConstructorInitializers: AfterColon
 BreakConstructorInitializersBeforeComma: false
-ColumnLimit: 150
+# Preserve manual wrapping instead of repacking statements to a fixed width.
+ColumnLimit: 0
 ConstructorInitializerAllOnOneLineOrOnePerLine: false
-ContinuationIndentWidth: 8
+ContinuationIndentWidth: 4
+BracedInitializerIndentWidth: 4
+# Preserve include order, existing namespace comments, and comment wrapping.
+SortIncludes: Never
+FixNamespaceComments: false
+ReflowComments: Never
 IncludeCategories: 
   - Regex: '^<.*'
     Priority: 1
@@ -45,10 +56,11 @@ MacroBlockBegin: ''
 MacroBlockEnd: ''
 MaxEmptyLinesToKeep: 2
 NamespaceIndentation: All
-SpaceAfterCStyleCast: true
+SpaceAfterCStyleCast: false
 SpaceAfterTemplateKeyword: false
 SpaceInEmptyParentheses: false
-SpacesInAngles: false
+# Preserve the existing spacing in nested template closers (> >).
+SpacesInAngles: Leave
 SpacesInConditionalStatement: false
 SpacesInCStyleCastParentheses: false
 SpacesInParentheses: false

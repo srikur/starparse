@@ -9,7 +9,7 @@ namespace {
     };
 
     constexpr Settings settings{.allow_repeated_counts = false};
-}
+} // namespace
 
 TEST_CASE("errors: unknown option") {
     const auto args = parse_from<Args>({"--nope"}, settings);

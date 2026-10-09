@@ -11,7 +11,7 @@ struct Options {
     [[=StarParse::Opt{'j', "Number of worker threads"}]] int jobs;
 };
 
-auto main(int argc, char** argv) -> int {
+auto main(int argc, char **argv) -> int {
     // Fields not mentioned on the command line keep these values
     Options defaults{.output = "archive.out", .jobs = 1};
     const auto opts{StarParse::parse_or_throw(argc, argv, defaults)};

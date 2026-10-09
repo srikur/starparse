@@ -8,10 +8,24 @@ namespace {
     // Models from StarGBC
     enum class Model : std::uint8_t {
         Auto,
-        DMG0, DMGA, DMGB, DMGC,
-        MGB, SGB, SGB2,
-        CGB0, CGBA, CGBB, CGBC, CGBD, CGBE,
-        AGB0, AGBA, AGBAE, AGBB, AGBBE,
+        DMG0,
+        DMGA,
+        DMGB,
+        DMGC,
+        MGB,
+        SGB,
+        SGB2,
+        CGB0,
+        CGBA,
+        CGBB,
+        CGBC,
+        CGBD,
+        CGBE,
+        AGB0,
+        AGBA,
+        AGBAE,
+        AGBB,
+        AGBBE,
     };
 
     struct ModelArgs {
@@ -21,7 +35,7 @@ namespace {
     struct KebabArgs {
         int dry_run;
     };
-}
+} // namespace
 
 TEST_CASE("settings: allow_case_insensitivity") {
     SUBCASE("enabled: enum values match in any case") {

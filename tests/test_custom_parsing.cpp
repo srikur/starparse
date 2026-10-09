@@ -13,7 +13,8 @@ using namespace StarParse;
 namespace {
     std::expected<std::chrono::seconds, std::string> parse_duration(const std::string_view &text) {
         using namespace std::chrono;
-        if (text.size() < 2) return std::unexpected{"Duration too short"};
+        if (text.size() < 2)
+            return std::unexpected{"Duration too short"};
 
         const char unit = text.back();
         if (unit != 's' && unit != 'm')
@@ -45,7 +46,7 @@ namespace {
         [[=Parser{parse_duration}, =Validator{is_positive}]] std::vector<std::chrono::seconds> vec;
         [[=Parser{parse_duration}, =Validator{is_positive}]] std::array<std::chrono::seconds, 2> arr;
     };
-}
+} // namespace
 
 TEST_CASE("custom parsing: the annotated parser converts the value") {
     SUBCASE("seconds") {
@@ -65,8 +66,7 @@ TEST_CASE("custom parsing: the parser's error message is reported") {
         const auto args = parse_from<Args>({"abc"});
         REQUIRE_FALSE(args);
         CHECK(args.errors()[0].kind == ErrorKind::CUSTOM_PARSING_FAILED);
-        CHECK(args.error_message() ==
-            "Annotated parser failed for input 'abc': Incorrect seconds format. Must end with 's' or 'm'");
+        CHECK(args.error_message() == "Annotated parser failed for input 'abc': Incorrect seconds format. Must end with 's' or 'm'");
     }
     SUBCASE("too short") {
         const auto args = parse_from<Args>({"s"});
@@ -76,8 +76,7 @@ TEST_CASE("custom parsing: the parser's error message is reported") {
     SUBCASE("bad digits") {
         const auto args = parse_from<Args>({"x5s"});
         REQUIRE_FALSE(args);
-        CHECK(args.error_message() ==
-            "Annotated parser failed for input 'x5s': Unable to parse duration: expected digits before unit");
+        CHECK(args.error_message() == "Annotated parser failed for input 'x5s': Unable to parse duration: expected digits before unit");
     }
 }
 
@@ -85,9 +84,7 @@ TEST_CASE("custom parsing: vectors and arrays have each value parsed") {
     SUBCASE("vector") {
         const auto args = parse_from<ContainerArgs>({"--vec_durations=90s,2m,45s"});
         REQUIRE(args);
-        const std::vector expected{
-            std::chrono::seconds{90}, std::chrono::seconds{120}, std::chrono::seconds{45}
-        };
+        const std::vector expected{std::chrono::seconds{90}, std::chrono::seconds{120}, std::chrono::seconds{45}};
         CHECK(args->vec_durations == expected);
     }
     SUBCASE("array") {
@@ -99,14 +96,9 @@ TEST_CASE("custom parsing: vectors and arrays have each value parsed") {
 }
 
 TEST_CASE("custom parsing: repeated options append parsed elements") {
-    const auto args = parse_from<ContainerArgs>({
-        "--vec_durations=90s", "--vec_durations=2m,45s",
-        "--arr_durations=90s", "--arr_durations=2m,45s"
-    });
+    const auto args = parse_from<ContainerArgs>({"--vec_durations=90s", "--vec_durations=2m,45s", "--arr_durations=90s", "--arr_durations=2m,45s"});
     REQUIRE(args);
-    const std::vector expected_vec{
-        std::chrono::seconds{90}, std::chrono::seconds{120}, std::chrono::seconds{45}
-    };
+    const std::vector expected_vec{std::chrono::seconds{90}, std::chrono::seconds{120}, std::chrono::seconds{45}};
     constexpr std::array expected_arr{std::chrono::seconds{90}, std::chrono::seconds{120}, std::chrono::seconds{45}};
     CHECK(args->vec_durations == expected_vec);
     CHECK(args->arr_durations == expected_arr);
@@ -131,8 +123,7 @@ TEST_CASE("custom parsing: container errors identify the failing element and opt
     CHECK(error.input_value == "x5s");
     CHECK(error.current_argument == name);
     CHECK(error.argv_index == 2);
-    CHECK(args.error_message() ==
-        "Annotated parser failed for input 'x5s': Unable to parse duration: expected digits before unit");
+    CHECK(args.error_message() == "Annotated parser failed for input 'x5s': Unable to parse duration: expected digits before unit");
 }
 
 TEST_CASE("custom parsing: validators check each parsed container element") {

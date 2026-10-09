@@ -10,7 +10,9 @@
 template<typename T>
 struct doctest::StringMaker<StarParse::ParsedArgs<T> > {
     static String convert(const StarParse::ParsedArgs<T> &args) {
-        if (args) { return "parsed"; }
+        if (args) {
+            return "parsed";
+        }
         const std::string message = args.error_message();
         return message.c_str();
     }

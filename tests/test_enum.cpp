@@ -6,16 +6,16 @@ using namespace StarParse;
 
 namespace {
     enum class Mode {
-        fast [[=Alias{"quick"}]],
+        fast[[=Alias{"quick"}]],
         safe,
-        dry_run [[=Alias{"dry", "n"}]],
+        dry_run[[=Alias{"dry", "n"}]],
     };
 
     struct Args {
         [[=Opt{'m', "Archive mode"}]] Mode mode;
         [[=Positional{0}]] std::string input;
     };
-}
+} // namespace
 
 TEST_CASE("enum: value by enumerator name") {
     const auto args = parse_from<Args>({"--mode=safe", "hello"});

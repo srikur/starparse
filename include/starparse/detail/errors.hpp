@@ -1,15 +1,27 @@
 #pragma once
 
-#include <string_view>
-#include <string>
-#include <optional>
 #include <format>
+#include <optional>
+#include <string>
+#include <string_view>
 
 namespace StarParse {
     enum class ErrorKind {
-        UNKNOWN_OPTION, MISSING_VALUE, INVALID_VALUE, MISSING_REQUIRED, DUPLICATE_OPTION,
-        EXCEPTION, OUT_OF_RANGE, INVALID_CHOICE, VALIDATION_FAILED, CUSTOM_PARSING_FAILED, READING_ENV_FAILED,
-        INVALID_ENV_VALUE
+        UNKNOWN_OPTION,
+        MISSING_VALUE,
+        INVALID_VALUE,
+        MISSING_REQUIRED,
+        DUPLICATE_VALUE,
+        DUPLICATE_OPTION,
+        EXCEPTION,
+        OUT_OF_RANGE,
+        INVALID_CHOICE,
+        VALIDATION_FAILED,
+        CUSTOM_PARSING_FAILED,
+        READING_ENV_FAILED,
+        INVALID_ENV_VALUE,
+        MISSING_SUBCOMMAND,
+        AMBIGUOUS_OPTION,
     };
 
     struct ParseError {
@@ -30,8 +42,10 @@ namespace StarParse {
                     return std::format("Could not parse input '{}' for argument '{}'", input_value, option);
                 case ErrorKind::MISSING_REQUIRED:
                     return std::format("Missing value for required option '{}'", option);
-                case ErrorKind::DUPLICATE_OPTION:
+                case ErrorKind::DUPLICATE_VALUE:
                     return std::format("Duplicate value '{}' provided for option '{}'", input_value, option);
+                case ErrorKind::DUPLICATE_OPTION:
+                    return std::format("Duplicate option '{}' provided", option);
                 case ErrorKind::EXCEPTION:
                     return std::format("Exception thrown while validating input '{}': {}", input_value, detail);
                 case ErrorKind::OUT_OF_RANGE:
@@ -46,12 +60,16 @@ namespace StarParse {
                     return std::format("Failed to read from dotenv file '{}': {}", input_value, detail);
                 case ErrorKind::INVALID_ENV_VALUE:
                     return std::format("Error at line {} while reading dotenv line '{}': {}", argv_index, input_value, detail);
+                case ErrorKind::MISSING_SUBCOMMAND:
+                    return "At least one subcommand must be specified";
+                case ErrorKind::AMBIGUOUS_OPTION:
+                    return std::format("Ambiguous option '{}'. Potential matches are {}", input_value, detail);
                 default:
                     return std::format("Unknown error: '{}'", input_value);
             }
         }
     };
-}
+} // namespace StarParse
 
 template<>
 struct std::formatter<StarParse::ParseError> : std::formatter<std::string> {

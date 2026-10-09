@@ -1,10 +1,10 @@
 #pragma once
 
 #include <algorithm>
-#include <ranges>
+#include <cstdlib>
 #include <initializer_list>
 #include <print>
-#include <cstdlib>
+#include <ranges>
 
 #include <starparse/detail/parser.hpp>
 #include <starparse/detail/settings.hpp>
@@ -13,13 +13,12 @@ namespace StarParse {
     using detail::Parser::ParsedArgs;
 
     template<typename T>
-    ParsedArgs<T> parse(const int argc, const char *const*argv, const Settings settings) {
+    ParsedArgs<T> parse(const int argc, const char *const *argv, const Settings settings) {
         return parse<T>(argc, argv, T{}, settings);
     }
 
     template<typename T>
-    ParsedArgs<T> parse(const int argc, const char *const*argv, T initial = {},
-                        const Settings settings = {}) {
+    ParsedArgs<T> parse(const int argc, const char *const *argv, T initial = {}, const Settings settings = {}) {
         std::vector<std::string_view> args;
         if (argc > 1) {
             args.assign(argv + 1, argv + argc);
@@ -28,12 +27,12 @@ namespace StarParse {
     }
 
     template<typename T>
-    ParsedArgs<T> parse_or_exit(const int argc, const char *const*argv, const Settings settings) {
+    ParsedArgs<T> parse_or_exit(const int argc, const char *const *argv, const Settings settings) {
         return parse_or_exit<T>(argc, argv, T{}, settings);
     }
 
     template<typename T>
-    ParsedArgs<T> parse_or_exit(const int argc, const char *const*argv, T initial = {}, const Settings settings = {}) {
+    ParsedArgs<T> parse_or_exit(const int argc, const char *const *argv, T initial = {}, const Settings settings = {}) {
         std::vector<std::string_view> args;
         if (argc > 1) {
             args.assign(argv + 1, argv + argc);
@@ -49,13 +48,12 @@ namespace StarParse {
     }
 
     template<typename T>
-    ParsedArgs<T> parse_or_throw(const int argc, const char *const*argv, const Settings settings) {
+    ParsedArgs<T> parse_or_throw(const int argc, const char *const *argv, const Settings settings) {
         return parse_or_throw<T>(argc, argv, T{}, settings);
     }
 
     template<typename T>
-    ParsedArgs<T> parse_or_throw(const int argc, const char *const*argv, T initial = {},
-                                 const Settings settings = {}) {
+    ParsedArgs<T> parse_or_throw(const int argc, const char *const *argv, T initial = {}, const Settings settings = {}) {
         std::vector<std::string_view> args;
         if (argc > 1) {
             args.assign(argv + 1, argv + argc);
@@ -73,8 +71,7 @@ namespace StarParse {
     }
 
     template<typename T>
-    ParsedArgs<T> parse_from(const std::initializer_list<std::string_view> args, T initial = {},
-                             const Settings settings = {}) {
+    ParsedArgs<T> parse_from(const std::initializer_list<std::string_view> args, T initial = {}, const Settings settings = {}) {
         return detail::Parser::parse<T>(std::span{args.begin(), args.size()}, "", std::move(initial), settings);
     }
-}
+} // namespace StarParse

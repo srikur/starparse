@@ -8,10 +8,13 @@ using namespace StarParse;
 
 namespace {
     enum class Mode {
-        MODE_0, MODE_1, MODE_2, MODE_3 [[=Alias{"m3", "3", "mode3"}]]
+        MODE_0,
+        MODE_1,
+        MODE_2,
+        MODE_3[[=Alias{"m3", "3", "mode3"}]]
     };
 
-    struct [[=Program{"starparse", "CMD line arg parser", "0.0.1"}]] Args {
+    struct[[=Program{"starparse", "CMD line arg parser", "0.0.1"}]] Args {
         [[=Positional{0}]] std::string arg1;
         [[=Opt{'v', "Verbose mode"}]] bool verbose;
         [[=Opt{'k', "Flag k"}]] bool kay;
@@ -20,7 +23,7 @@ namespace {
         [[=Opt{'m'}]] std::optional<Mode> mode;
         [[=Opt{'I'}]] std::vector<std::string> include_paths;
     };
-}
+} // namespace
 
 TEST_CASE("parse: no arguments leaves every field at its default") {
     const auto args = parse_from<Args>({});

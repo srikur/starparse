@@ -11,7 +11,7 @@ namespace {
         [[=Opt{'k', "Keep temporary files"}]] bool keep;
         [[=Positional{1}, =Alias{"count"}]] int arg2;
     };
-}
+} // namespace
 
 TEST_CASE("alias: long alias for an option") {
     const auto args = parse_from<Args>({"--talkative", "hello", "42"});

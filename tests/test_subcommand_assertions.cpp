@@ -28,7 +28,7 @@ namespace {
 
     static_assert(!no_duplicate_annotations<DuplicateAnnotation>());
 
-    struct [[=Subcommand]] MisplacedType {};
+    struct[[=Subcommand]] MisplacedType {};
 
     static_assert(!check_annotation_placement<MisplacedType>());
 
@@ -39,7 +39,7 @@ namespace {
     static_assert(!check_annotation_placement<MisplacedStaticMember>());
 
     enum class MisplacedEnumerator {
-        run [[=Subcommand]]
+        run[[=Subcommand]]
     };
 
     struct EnumArgs {
@@ -89,7 +89,7 @@ namespace {
     };
 
     static_assert(check_subcommand_collisions<NestedArgs>());
-}
+} // namespace
 
 TEST_CASE("subcommand assertions: valid layouts pass every check") {
     StarParse::detail::Parser::check_assertions<MixedArgs>();

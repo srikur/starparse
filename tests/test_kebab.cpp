@@ -6,7 +6,7 @@ namespace {
     struct Args {
         int dry_run;
     };
-}
+} // namespace
 
 TEST_CASE("kebab: snake_case fields accept kebab-case spellings") {
     SUBCASE("--dry-run=42") {

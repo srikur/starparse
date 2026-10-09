@@ -23,7 +23,7 @@ namespace {
         [[=Required, =Positional{0}]] int initial;
         [[=Subcommand, =Alias{"op"}]] std::optional<Operation> operation;
     };
-}
+} // namespace
 
 TEST_CASE("subcommands: nested subcommand with its own positional") {
     const auto check_add = [](const ParsedArgs<Args> &args) {
