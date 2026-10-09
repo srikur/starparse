@@ -90,7 +90,7 @@ TEST_CASE("infer: ambiguous prefix is reported with the candidates") {
     REQUIRE(args.errors().size() == 1uz);
     CHECK(args.errors()[0].kind == ErrorKind::AMBIGUOUS_OPTION);
     CHECK(args.errors()[0].argv_index == 1uz);
-    CHECK(args.error_message() == "Ambiguous option 'ver'; it could be --verbose, --version");
+    CHECK(args.error_message() == "Ambiguous option 'ver'. Potential matches are --verbose, --version");
     const auto negations = parse_from<Args>({"--no", "in.txt"});
     REQUIRE_FALSE(negations);
     REQUIRE(negations.errors().size() == 1uz);

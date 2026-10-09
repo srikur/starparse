@@ -240,7 +240,7 @@ TEST_CASE("name: count custom-parser and array diagnostics use the override") {
         };
         const auto args = parse_from<Array>({"--values=1,2,3"});
         REQUIRE_FALSE(args);
-        CHECK(args.errors()[0].kind == ErrorKind::DUPLICATE_OPTION);
+        CHECK(args.errors()[0].kind == ErrorKind::DUPLICATE_VALUE);
         CHECK(args.errors()[0].current_argument == "values");
     }
 }
