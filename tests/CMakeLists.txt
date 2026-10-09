@@ -20,6 +20,7 @@ add_executable(starparse_tests
         test_container.cpp
         test_container_validation.cpp
         test_custom_parsing.cpp
+        test_duplicate_policy.cpp
         test_entry_points.cpp
         test_enum.cpp
         test_errors.cpp
