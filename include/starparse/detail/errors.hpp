@@ -22,7 +22,7 @@ namespace StarParse {
         INVALID_ENV_VALUE,
         MISSING_SUBCOMMAND,
         AMBIGUOUS_OPTION,
-        MISSING_DEPENDECY, // Needs{}
+        MISSING_DEPENDENCY, // Needs{}
         INVALID_OVERLAP, // Excludes{}
     };
 
@@ -66,8 +66,8 @@ namespace StarParse {
                     return "At least one subcommand must be specified";
                 case ErrorKind::AMBIGUOUS_OPTION:
                     return std::format("Ambiguous option '{}'. Potential matches are {}", input_value, detail);
-                case ErrorKind::MISSING_DEPENDECY:
-                    return std::format("Must specify a value for option(s): {}", detail);
+                case ErrorKind::MISSING_DEPENDENCY:
+                    return std::format("Must specify a value for option: {}", detail);
                 case ErrorKind::INVALID_OVERLAP:
                     return std::format("Option {} cannot be used in conjunction with: {}", option, detail);
                 default:

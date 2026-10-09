@@ -277,6 +277,9 @@ namespace StarParse::inline annotations {
                                              count_(sizeof...(ns)) {}
     };
 
+    template<typename... Ts>
+    Needs(Ts...) -> Needs<std::common_type_t<Ts...> >;
+
     template<typename T>
     struct Excludes final {
         using value_type = std::conditional_t<std::convertible_to<T, std::string_view>, const char *, T>;
@@ -294,6 +297,9 @@ namespace StarParse::inline annotations {
                                                 count_(sizeof...(ns)) {}
     };
 
+    template<typename... Ts>
+    Excludes(Ts...) -> Excludes<std::common_type_t<Ts...> >;
+
     template<typename T>
     struct Groups final {
         using value_type = std::conditional_t<std::convertible_to<T, std::string_view>, const char *, T>;
@@ -310,5 +316,8 @@ namespace StarParse::inline annotations {
         explicit consteval Groups(Ts... ns) : values_(std::define_static_array(std::array<T, sizeof...(Ts)>{T{ns}...}).data()),
                                               count_(sizeof...(ns)) {}
     };
+
+    template<typename... Ts>
+    Groups(Ts...) -> Groups<std::common_type_t<Ts...> >;
 
 } // namespace StarParse::inline annotations

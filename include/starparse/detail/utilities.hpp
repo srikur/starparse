@@ -152,6 +152,17 @@ namespace StarParse::detail::Utilities {
         return std::nullopt;
     }
 
+    template<std::meta::info T>
+    consteval std::optional<std::meta::info> extraction_of(const std::meta::info m) {
+        for (const std::meta::info a : std::meta::annotations_of(m)) {
+            auto type = std::meta::remove_cv(std::meta::type_of(a));
+            if (is_specialization_of(type, T)) {
+                return a;
+            }
+        }
+        return std::nullopt;
+    }
+
     consteval std::optional<detail::Subcommand_> subcommand_of(const std::meta::info m) {
         for (const std::meta::info a : std::meta::annotations_of(m)) {
             if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^detail::Subcommand_)) {
@@ -274,6 +285,14 @@ namespace StarParse::detail::Utilities {
         using C = [:std::meta::remove_cv(std::meta::type_of(*annotation)):];
         constexpr auto choices = std::meta::extract<C>(*annotation);
         return std::span{choices.values_, choices.count_};
+    }
+
+    template<std::meta::info M, std::meta::info T>
+    consteval auto get_annotation_list_values() {
+        constexpr auto annotation = extraction_of<T>(M);
+        using C = [:std::meta::remove_cv(std::meta::type_of(*annotation)):];
+        constexpr auto values = std::meta::extract<C>(*annotation);
+        return std::span{values.values_, values.count_};
     }
 
     template<std::meta::info M, typename T>
@@ -917,5 +936,15 @@ namespace StarParse::detail::Utilities {
             }
         }
         return n;
+    }
+
+    template<typename T>
+    consteval std::optional<std::meta::info> member_named(const std::string_view name) {
+        for (const auto m : std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current())) {
+            if (name_of(m) == name) {
+                return m;
+            }
+        }
+        return std::nullopt;
     }
 } // namespace StarParse::detail::Utilities
