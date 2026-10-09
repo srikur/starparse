@@ -887,7 +887,8 @@ namespace StarParse::detail::Parser {
                         .current_argument = std::optional{field_name},
                     });
                 }
-            } else if constexpr (extraction_of<^^Needs>(m).has_value()) {
+            }
+            if constexpr (extraction_of<^^Needs>(m).has_value()) {
                 static constexpr auto needs = get_annotation_list_values<m, ^^Needs>();
                 template for (constexpr auto value : needs) {
                     if (constexpr auto needs_member = member_named<T>(value)) {
@@ -896,6 +897,22 @@ namespace StarParse::detail::Parser {
                             state.errors.push_back({
                                 .kind = ErrorKind::MISSING_DEPENDENCY,
                                 .detail = value,
+                            });
+                        }
+                    }
+                }
+            }
+            if constexpr (extraction_of<^^Excludes>(m).has_value()) {
+                static constexpr auto excludes = get_annotation_list_values<m, ^^Excludes>();
+                constexpr auto field_name = name_of(m);
+                template for (constexpr auto value : excludes) {
+                    if (constexpr auto excludes_member = member_named<T>(value)) {
+                        const size_t excludes_index = member_index_of<T>(*excludes_member);
+                        if (fields_set[excludes_index]) {
+                            state.errors.push_back({
+                                .kind = ErrorKind::INVALID_OVERLAP,
+                                .detail = value,
+                                .current_argument = std::optional{field_name},
                             });
                         }
                     }
