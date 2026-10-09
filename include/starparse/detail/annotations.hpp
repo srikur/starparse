@@ -259,4 +259,56 @@ namespace StarParse::inline annotations {
     constexpr detail::RequiresSubcommand_ RequiresSubcommand{};
 
     constexpr detail::Nargs_ Nargs{};
+
+    template<typename T>
+    struct Needs final {
+        using value_type = std::conditional_t<std::convertible_to<T, std::string_view>, const char *, T>;
+        const value_type *values_{};
+        size_t count_{};
+
+        template<std::convertible_to<std::string_view>... Ts>
+            requires(sizeof...(Ts) > 0 && std::convertible_to<T, std::string_view>)
+        explicit consteval Needs(Ts... ns) : values_(std::define_static_array(std::array{std::define_static_string(std::string_view{ns})...}).data()),
+                                             count_(sizeof...(ns)) {}
+
+        template<std::convertible_to<T>... Ts>
+            requires(sizeof...(Ts) > 0 && !std::convertible_to<T, std::string_view>)
+        explicit consteval Needs(Ts... ns) : values_(std::define_static_array(std::array<T, sizeof...(Ts)>{T{ns}...}).data()),
+                                             count_(sizeof...(ns)) {}
+    };
+
+    template<typename T>
+    struct Excludes final {
+        using value_type = std::conditional_t<std::convertible_to<T, std::string_view>, const char *, T>;
+        const value_type *values_{};
+        size_t count_{};
+
+        template<std::convertible_to<std::string_view>... Ts>
+            requires(sizeof...(Ts) > 0 && std::convertible_to<T, std::string_view>)
+        explicit consteval Excludes(Ts... ns) : values_(std::define_static_array(std::array{std::define_static_string(std::string_view{ns})...}).data()),
+                                                count_(sizeof...(ns)) {}
+
+        template<std::convertible_to<T>... Ts>
+            requires(sizeof...(Ts) > 0 && !std::convertible_to<T, std::string_view>)
+        explicit consteval Excludes(Ts... ns) : values_(std::define_static_array(std::array<T, sizeof...(Ts)>{T{ns}...}).data()),
+                                                count_(sizeof...(ns)) {}
+    };
+
+    template<typename T>
+    struct Groups final {
+        using value_type = std::conditional_t<std::convertible_to<T, std::string_view>, const char *, T>;
+        const value_type *values_{};
+        size_t count_{};
+
+        template<std::convertible_to<std::string_view>... Ts>
+            requires(sizeof...(Ts) > 0 && std::convertible_to<T, std::string_view>)
+        explicit consteval Groups(Ts... ns) : values_(std::define_static_array(std::array{std::define_static_string(std::string_view{ns})...}).data()),
+                                              count_(sizeof...(ns)) {}
+
+        template<std::convertible_to<T>... Ts>
+            requires(sizeof...(Ts) > 0 && !std::convertible_to<T, std::string_view>)
+        explicit consteval Groups(Ts... ns) : values_(std::define_static_array(std::array<T, sizeof...(Ts)>{T{ns}...}).data()),
+                                              count_(sizeof...(ns)) {}
+    };
+
 } // namespace StarParse::inline annotations

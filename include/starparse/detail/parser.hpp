@@ -642,6 +642,7 @@ namespace StarParse::detail::Parser {
         static_assert(Assertions::check_enum_alias_collisions<T>(), "enum aliases or enumerator names collide (including case and kebab spellings)");
         // TODO: Env + File annotation assertions and tests
         static_assert(Assertions::check_requires_subcommand<T>(), "RequiresSubcommand belongs on the argument type, not a field");
+        // TODO: Needs, Excludes, Groups assertions — need to verify each supplied name exists, names can't overlap with fields, etc.
     }
 
     struct ParseState {
@@ -884,6 +885,8 @@ namespace StarParse::detail::Parser {
                 }
             }
         }
+
+        // check needs, excludes, groups
     }
 
     template<typename T>
