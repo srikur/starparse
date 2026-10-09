@@ -939,9 +939,9 @@ namespace StarParse::detail::Utilities {
     }
 
     template<typename T>
-    consteval std::optional<std::meta::info> member_named(const std::string_view name) {
+    consteval std::optional<std::meta::info> member_named(const char *name) {
         for (const auto m : std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current())) {
-            if (name_of(m) == name) {
+            if (name_of(m) == std::string_view{name}) {
                 return m;
             }
         }

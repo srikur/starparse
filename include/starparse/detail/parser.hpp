@@ -888,15 +888,16 @@ namespace StarParse::detail::Parser {
                     });
                 }
             } else if constexpr (extraction_of<^^Needs>(m).has_value()) {
-                constexpr auto needs = get_annotation_list_values<m, ^^Needs>();
-                for (const auto &value : needs) {
-                    constexpr auto needs_member = member_named<T>(std::string_view{value});
-                    const size_t needs_index = member_index_of<T>(needs_member);
-                    if (!fields_set[needs_index]) {
-                        state.errors.push_back({
-                            .kind = ErrorKind::MISSING_DEPENDENCY,
-                            .detail = value,
-                        });
+                static constexpr auto needs = get_annotation_list_values<m, ^^Needs>();
+                template for (constexpr auto value : needs) {
+                    if (constexpr auto needs_member = member_named<T>(value)) {
+                        const size_t needs_index = member_index_of<T>(*needs_member);
+                        if (!fields_set[needs_index]) {
+                            state.errors.push_back({
+                                .kind = ErrorKind::MISSING_DEPENDENCY,
+                                .detail = value,
+                            });
+                        }
                     }
                 }
             }
