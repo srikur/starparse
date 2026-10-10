@@ -727,7 +727,7 @@ namespace StarParse::detail::Utilities {
         }
     }
 
-    [[nodiscard]] constexpr size_t edit_distance(const std::string_view a, const std::string_view b) {
+    [[nodiscard]] constexpr size_t edit_distance(const std::string_view a, const std::string_view b, const Settings &settings) {
         const auto m = a.size();
         const auto n = b.size();
         if (m == 0)
@@ -760,7 +760,10 @@ namespace StarParse::detail::Utilities {
         constexpr size_t alphabet_size = static_cast<size_t>(std::numeric_limits<unsigned char>::max()) + 1;
         std::array<size_t, alphabet_size> last_row{};
 
-        // TODO: modification — need to treat _ and - as equal when kebab casing is enabled
+        const auto chars_equal = [&settings](const unsigned char ac, const unsigned char bc) {
+            return ac == bc || (settings.allow_kebab_casing && ((ac == '_' && bc == '-') || (ac == '-' && bc == '_')));
+        };
+
         for (auto i{1uz}; i <= m; ++i) {
             auto last_match_col{0uz};
             const auto ac = static_cast<unsigned char>(a[i - 1]);
@@ -769,7 +772,7 @@ namespace StarParse::detail::Utilities {
                 const auto bc = static_cast<unsigned char>(b[j - 1]);
                 const auto previous_row = last_row[bc];
                 const auto previous_col = last_match_col;
-                const auto cost = ac == bc ? 0uz : 1uz;
+                const auto cost = chars_equal(ac, bc) ? 0uz : 1uz;
 
                 if (cost == 0)
                     last_match_col = j;

@@ -852,7 +852,7 @@ namespace StarParse::detail::Parser {
                 const auto min_candidate =
                         std::ranges::fold_left(candidates, std::pair{std::numeric_limits<size_t>::max(), ""},
                                                [&](const std::pair<size_t, std::string_view> &best, const std::string_view candidate) {
-                                                   const auto distance = edit_distance(name_or_value, candidate);
+                                                   const auto distance = edit_distance(name_or_value, candidate, settings);
                                                    return distance < best.first ? std::pair{distance, candidate} : best;
                                                });
                 const auto max_allowed_distance = std::max<size_t>(1, (name_or_value.size() + 2) / 3);
