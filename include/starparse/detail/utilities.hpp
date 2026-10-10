@@ -662,7 +662,9 @@ namespace StarParse::detail::Utilities {
                             const Settings &settings) {
         constexpr auto annotated = extraction_of<Separator>(Mem);
         constexpr bool has_custom_parser = specialization_of<^^Parser>(Mem).has_value();
-        const std::string_view separator = annotated.has_value() ? std::string_view{annotated->value} : settings.value_separator;
+        // lifetime of the char should be okay I think
+        const unsigned char raw_sep = annotated.has_value() ? annotated->value : settings.value_separator;
+        const std::string_view separator = std::string_view{reinterpret_cast<const char *>(&raw_sep), 1};
         if constexpr (is_vector(std::meta::remove_cv(^^M))) {
             using E = [:value_type_of(^^M):];
             if (count == 0)

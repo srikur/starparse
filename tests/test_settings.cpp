@@ -1,7 +1,5 @@
 #include "test_support.hpp"
 
-#include <cstdint>
-
 using namespace StarParse;
 
 namespace {
@@ -39,15 +37,15 @@ namespace {
 
 TEST_CASE("settings: allow_case_insensitivity") {
     SUBCASE("enabled: enum values match in any case") {
-        const auto args = parse_from<ModelArgs>({"--model=cgb0"}, Settings{.allow_case_insensitivity = true});
+        const auto args = parse_from<ModelArgs, {.allow_case_insensitivity = true}>({"--model=cgb0"});
         REQUIRE(args);
         CHECK(args->model == Model::CGB0);
     }
     SUBCASE("disabled: enum values must match exactly") {
-        const auto args = parse_from<ModelArgs>({"--model=cgb0"}, Settings{.allow_case_insensitivity = false});
+        const auto args = parse_from<ModelArgs, {.allow_case_insensitivity = false}>({"--model=cgb0"});
         REQUIRE_FALSE(args);
         CHECK(args.errors()[0].kind == ErrorKind::INVALID_VALUE);
-        const auto exact = parse_from<ModelArgs>({"--model=CGB0"}, Settings{.allow_case_insensitivity = false});
+        const auto exact = parse_from<ModelArgs, {.allow_case_insensitivity = false}>({"--model=CGB0"});
         REQUIRE(exact);
         CHECK(exact->model == Model::CGB0);
     }
@@ -55,15 +53,15 @@ TEST_CASE("settings: allow_case_insensitivity") {
 
 TEST_CASE("settings: allow_kebab_casing") {
     SUBCASE("enabled: snake_case fields accept kebab-case") {
-        const auto args = parse_from<KebabArgs>({"--dry-run=42"}, Settings{.allow_kebab_casing = true});
+        const auto args = parse_from<KebabArgs, {.allow_kebab_casing = true}>({"--dry-run=42"});
         REQUIRE(args);
         CHECK(args->dry_run == 42);
     }
     SUBCASE("disabled: only the snake_case spelling is known") {
-        const auto args = parse_from<KebabArgs>({"--dry-run=42"}, Settings{.allow_kebab_casing = false});
+        const auto args = parse_from<KebabArgs, {.allow_kebab_casing = false}>({"--dry-run=42"});
         REQUIRE_FALSE(args);
         CHECK(args.errors()[0].kind == ErrorKind::UNKNOWN_OPTION);
-        const auto exact = parse_from<KebabArgs>({"--dry_run=42"}, Settings{.allow_kebab_casing = false});
+        const auto exact = parse_from<KebabArgs, {.allow_kebab_casing = false}>({"--dry_run=42"});
         REQUIRE(exact);
         CHECK(exact->dry_run == 42);
     }

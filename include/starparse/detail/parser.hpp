@@ -433,16 +433,16 @@ namespace StarParse::detail::Parser {
         return text;
     }
 
-    template<typename T>
+    template<typename T, Settings S = Settings{}>
     class ParsedArgs {
     public:
         ParsedArgs(T out, DefaultValues defaults, const bool show_help, const bool show_version, const std::string_view argv_name,
-                   std::vector<ParseError> &errors, std::vector<size_t> command_path, const Settings &settings,
+                   std::vector<ParseError> &errors, std::vector<size_t> command_path,
                    std::vector<std::string> response_args = {}) : response_args_(std::move(response_args)), out_(std::move(out)),
                                                                   defaults_(std::move(defaults)), show_help_(show_help), show_version_(show_version),
                                                                   errors_(std::move(errors)),
                                                                   command_path_(std::move(command_path)), argv_name_(argv_name),
-                                                                  settings_(settings) {}
+                                                                  settings_(S) {}
 
         ParsedArgs(const ParsedArgs &) = delete;
 
@@ -637,8 +637,8 @@ namespace StarParse::detail::Parser {
         return attr_array;
     }
 
-    template<typename T>
-    void check_assertions(const Settings &settings) {
+    template<typename T, Settings S = Settings{}>
+    void check_assertions() {
         static_assert(Assertions::check_annotation_placement<T>(),
                       "misplaced annotation: Program belongs on the argument type; enum values only accept Alias");
         static_assert(Assertions::no_annotations_on_ignored_fields<T>(),
@@ -663,7 +663,8 @@ namespace StarParse::detail::Parser {
         static_assert(Assertions::check_requires_subcommand<T>(), "RequiresSubcommand belongs on the argument type, not a field");
         static_assert(Assertions::check_exclusion_groups<T>(), "Needs and Excludes values must either denote valid fields or group names");
         static_assert(Assertions::check_group_name_collisions<T>(), "Group names cannot collide with field names");
-        static_assert(Assertions::check_negated_name_collisions<T>(settings), "When negated names are enabled, fields cannot overlap with negated names");
+        static_assert(Assertions::check_negated_name_collisions<T>(S),
+                      "When negated names are enabled, fields cannot overlap with negated names");
     }
 
     struct ParseState {
@@ -708,10 +709,10 @@ namespace StarParse::detail::Parser {
         return defaults;
     }
 
-    template<typename T>
-    void parse_into(std::span<const ArgAttributes> attributes, T &out, const Settings &settings, ParseState &state) {
+    template<typename T, Settings settings>
+    void parse_into(std::span<const ArgAttributes> attributes, T &out, ParseState &state) {
         static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
-        check_assertions<T>(settings);
+        check_assertions<T, settings>();
         std::array<size_t, members.size()> fields_set{};
         size_t next_positional{0uz};
         bool subcommand_entered{false};
@@ -756,7 +757,7 @@ namespace StarParse::detail::Parser {
                         ++fields_set[idx];
 
                         state.command_path.push_back(idx);
-                        parse_into<Child>(attributes.subspan(i + 1), *child, settings, state);
+                        parse_into<Child, settings>(attributes.subspan(i + 1), *child, state);
                         entered_child = true;
                     }
                 } else {
@@ -972,8 +973,10 @@ namespace StarParse::detail::Parser {
         }
     }
 
-    template<typename T>
-    ParsedArgs<T> parse(const std::span<const std::string_view> args, const std::string_view program_name, T initial = {}, Settings settings = {}) {
+    template<typename T, Settings settings>
+    ParsedArgs<T, settings> parse(const std::span<const std::string_view> args,
+                                  const std::string_view program_name,
+                                  T initial = {}) {
         auto defaults = capture_defaults<T>(initial);
         T out{std::move(initial)};
         ParseState state{};
@@ -994,10 +997,10 @@ namespace StarParse::detail::Parser {
         }
 
         if (state.errors.empty())
-            parse_into<T>(attr_array, out, settings, state);
-        return ParsedArgs<T>{
+            parse_into<T, settings>(attr_array, out, state);
+        return ParsedArgs<T, settings>{
             std::move(out), std::move(defaults), state.help_requested, state.version_requested,
-            program_name, state.errors, std::move(state.command_path), settings, std::move(response_storage)
+            program_name, state.errors, std::move(state.command_path), std::move(response_storage)
         };
     }
 } // namespace StarParse::detail::Parser

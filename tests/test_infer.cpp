@@ -2,7 +2,6 @@
 
 #include <optional>
 #include <string>
-#include <vector>
 
 using namespace StarParse;
 
@@ -109,28 +108,29 @@ TEST_CASE("infer: an exact spelling wins over a longer option it prefixes") {
 }
 
 TEST_CASE("infer: disabled setting keeps abbreviations unknown") {
-    const auto args = parse_from<Args>({"--verb", "in.txt"}, Settings{.infer_arguments = false});
+    constexpr Settings settings{.infer_arguments = false};
+    const auto args = parse_from<Args, settings>({"--verb", "in.txt"});
     REQUIRE_FALSE(args);
     REQUIRE(args.errors().size() == 1uz);
     CHECK(args.errors()[0].kind == ErrorKind::UNKNOWN_OPTION);
     CHECK(args.error_message() == "Unknown option 'verb'");
-    const auto close = parse_from<Args>({"--verbos", "in.txt"}, Settings{.infer_arguments = false});
+    const auto close = parse_from<Args, settings>({"--verbos", "in.txt"});
     REQUIRE_FALSE(close);
     CHECK(close.error_message() == "Unknown option 'verbos'. Did you mean 'verbose'?");
-    const auto ambiguous = parse_from<Args>({"--ver", "in.txt"}, Settings{.infer_arguments = false});
+    const auto ambiguous = parse_from<Args, settings>({"--ver", "in.txt"});
     REQUIRE_FALSE(ambiguous);
     CHECK(ambiguous.errors()[0].kind == ErrorKind::UNKNOWN_OPTION);
 }
 
 TEST_CASE("infer: case-insensitive prefixes follow the case setting") {
-    const auto exact = parse_from<Args>({"--VERB", "in.txt"}, Settings{.allow_case_insensitivity = false});
+    const auto exact = parse_from<Args, Settings{.allow_case_insensitivity = false}>({"--VERB", "in.txt"});
     REQUIRE_FALSE(exact);
     CHECK(exact.errors()[0].kind == ErrorKind::UNKNOWN_OPTION);
 }
 
 TEST_CASE("infer: subcommand prefixes") {
     SUBCASE("unique prefix enters the subcommand") {
-        const auto args = parse_from<Commands>({"--verbose", "bu", "all"}, infer_subcommands);
+        const auto args = parse_from<Commands, infer_subcommands>({"--verbose", "bu", "all"});
         REQUIRE(args);
         CHECK(args->verbose);
         REQUIRE(args->build.has_value());
@@ -138,13 +138,13 @@ TEST_CASE("infer: subcommand prefixes") {
         CHECK_FALSE(args->bench.has_value());
     }
     SUBCASE("subcommand aliases are inferable") {
-        const auto args = parse_from<Commands>({"sh", "--force"}, infer_subcommands);
+        const auto args = parse_from<Commands, infer_subcommands>({"sh", "--force"});
         REQUIRE(args);
         REQUIRE(args->deploy.has_value());
         CHECK(args->deploy->force);
     }
     SUBCASE("ambiguous prefix is not a subcommand") {
-        const auto args = parse_from<Commands>({"b"}, infer_subcommands);
+        const auto args = parse_from<Commands, infer_subcommands>({"b"});
         REQUIRE_FALSE(args);
         CHECK(args.errors()[0].kind == ErrorKind::UNKNOWN_OPTION);
         CHECK_FALSE(args->build.has_value());

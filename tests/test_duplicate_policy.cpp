@@ -1,8 +1,6 @@
 #include "test_support.hpp"
 
-#include <optional>
 #include <string>
-#include <vector>
 
 using namespace StarParse;
 
@@ -27,21 +25,21 @@ TEST_CASE("duplicate policy: with no override, last wins") {
 }
 
 TEST_CASE("duplicate policy: explicit last wins passed") {
-    const auto args = parse_from<Args>({"--jobs", "6", "--jobs", "9"}, last_wins);
+    const auto args = parse_from<Args, last_wins>({"--jobs", "6", "--jobs", "9"});
     REQUIRE(args);
     CHECK(args.errors().size() == 0);
     CHECK(args->jobs == 9);
 }
 
 TEST_CASE("duplicate policy: explicit first wins passed") {
-    const auto args = parse_from<Args>({"--jobs", "6", "--jobs", "9"}, first_wins);
+    const auto args = parse_from<Args, first_wins>({"--jobs", "6", "--jobs", "9"});
     REQUIRE(args);
     CHECK(args.errors().size() == 0);
     CHECK(args->jobs == 6);
 }
 
 TEST_CASE("duplicate policy: explicit error on duplicate") {
-    const auto args = parse_from<Args>({"--jobs", "6", "--jobs", "9"}, errors);
+    const auto args = parse_from<Args, errors>({"--jobs", "6", "--jobs", "9"});
     REQUIRE_FALSE(args);
     CHECK(args.errors().size() == 1);
     CHECK(args.errors()[0].kind == ErrorKind::DUPLICATE_OPTION);

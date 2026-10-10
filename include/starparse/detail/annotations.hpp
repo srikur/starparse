@@ -86,9 +86,9 @@ namespace StarParse::inline annotations {
     };
 
     struct Separator final {
-        const char *value{};
+        unsigned char value{};
 
-        explicit consteval Separator(std::string_view s) : value(std::define_static_string(s)) {}
+        explicit consteval Separator(const unsigned char c) : value(c) {}
     };
 
     struct Alias final {
