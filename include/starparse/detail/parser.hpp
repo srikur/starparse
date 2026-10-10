@@ -638,7 +638,7 @@ namespace StarParse::detail::Parser {
     }
 
     template<typename T>
-    void check_assertions() {
+    void check_assertions(const Settings &settings) {
         static_assert(Assertions::check_annotation_placement<T>(),
                       "misplaced annotation: Program belongs on the argument type; enum values only accept Alias");
         static_assert(Assertions::no_annotations_on_ignored_fields<T>(),
@@ -663,6 +663,7 @@ namespace StarParse::detail::Parser {
         static_assert(Assertions::check_requires_subcommand<T>(), "RequiresSubcommand belongs on the argument type, not a field");
         static_assert(Assertions::check_exclusion_groups<T>(), "Needs and Excludes values must either denote valid fields or group names");
         static_assert(Assertions::check_group_name_collisions<T>(), "Group names cannot collide with field names");
+        static_assert(Assertions::check_negated_name_collisions<T>(settings), "When negated names are enabled, fields cannot overlap with negated names");
     }
 
     struct ParseState {
@@ -710,7 +711,7 @@ namespace StarParse::detail::Parser {
     template<typename T>
     void parse_into(std::span<const ArgAttributes> attributes, T &out, const Settings &settings, ParseState &state) {
         static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
-        check_assertions<T>();
+        check_assertions<T>(settings);
         std::array<size_t, members.size()> fields_set{};
         size_t next_positional{0uz};
         bool subcommand_entered{false};

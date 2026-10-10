@@ -491,4 +491,17 @@ namespace StarParse::detail::Assertions {
         }
         return true;
     }
+
+    template<typename T>
+    consteval bool check_negated_name_collisions(const Settings &settings) {
+        if (!settings.autogenerate_negations) return true;
+        static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
+        template for (constexpr auto member : members) {
+            template for (constexpr auto inner_mem : members) {
+                if (name_of(member) == snake_negated_name_v<inner_mem>) return false;
+                if (settings.allow_kebab_casing && name_of(member) == kebab_negated_name_v<inner_mem>) return false;
+            }
+        }
+        return true;
+    }
 } // namespace StarParse::detail::Assertions
