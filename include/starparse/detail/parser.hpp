@@ -920,7 +920,9 @@ namespace StarParse::detail::Parser {
                 static constexpr auto excludes = get_annotation_list_values<m, ^^Excludes>();
                 constexpr auto field_name = name_of(m);
                 template for (constexpr auto value : excludes) {
-                    if (constexpr auto excludes_member = member_named<T>(value)) {
+                    constexpr auto excludes_member = member_named<T>(value);
+                    static constexpr auto excludes_group = std::define_static_array(group_named<T>(value));
+                    if constexpr (excludes_member.has_value()) {
                         const size_t excludes_index = member_index_of<T>(*excludes_member);
                         if (fields_set[excludes_index]) {
                             state.errors.push_back({
@@ -928,6 +930,18 @@ namespace StarParse::detail::Parser {
                                 .detail = value,
                                 .current_argument = std::optional{field_name},
                             });
+                        }
+                    } else if constexpr (!excludes_group.empty()) {
+                        template for (constexpr auto group_member : excludes_group) {
+                            const size_t group_member_index = member_index_of<T>(group_member);
+                            constexpr auto group_field_name = name_of(group_member);
+                            if (fields_set[group_member_index]) {
+                                state.errors.push_back({
+                                    .kind = ErrorKind::INVALID_OVERLAP,
+                                    .detail = std::string{group_field_name},
+                                    .current_argument = std::optional{field_name},
+                                });
+                            }
                         }
                     }
                 }
