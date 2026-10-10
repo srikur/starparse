@@ -173,7 +173,8 @@ namespace StarParse::inline annotations {
 
         template<std::convertible_to<std::string_view>... Ts>
             requires(sizeof...(Ts) > 0 && std::convertible_to<T, std::string_view>)
-        explicit consteval Choices(Ts... ns) : values_(std::define_static_array(std::array{std::define_static_string(std::string_view{ns})...}).data()),
+        explicit consteval Choices(Ts... ns) : values_(
+                                                   std::define_static_array(std::array{std::define_static_string(std::string_view{ns})...}).data()),
                                                count_(sizeof...(ns)) {}
 
         template<std::convertible_to<T>... Ts>
@@ -222,19 +223,30 @@ namespace StarParse::inline annotations {
 
     constexpr detail::Required_ Required{};
 
-    // TODO: need to add constructors for other signatures
     template<typename T>
     struct Parser final {
-        using Result = std::expected<T, std::string>;
-        using ExpectedFn = Result (*)(const std::string_view &);
+        using value_type = std::conditional_t<std::convertible_to<T, std::string_view>, const char *, T>;
+        using Result = std::expected<T, value_type>;
+        using ValueFn = Result (*)(std::string_view);
+        using RefFn = Result(*)(const std::string_view &);
+        using RawFn = Result(*)(const char *);
+        using StringFn = Result(*)(std::string);
 
-        ExpectedFn expected_fn{};
+        ValueFn value_fn{};
+        RefFn ref_fn{};
+        RawFn raw_fn{};
+        StringFn string_fn{};
 
-        explicit consteval Parser(const ExpectedFn f) : expected_fn(f) {}
+        explicit consteval Parser(const RefFn f) : ref_fn(f) {}
+        explicit consteval Parser(const ValueFn f) : value_fn(f) {}
+        explicit consteval Parser(const RawFn f) : raw_fn(f) {}
+        explicit consteval Parser(const StringFn f) : string_fn(f) {}
 
-        [[nodiscard]] constexpr Result operator()(const std::string_view &s) const {
-            if (expected_fn)
-                return expected_fn(s);
+        [[nodiscard]] constexpr Result operator()(const std::string_view s) const {
+            if (value_fn) return value_fn(s);
+            if (ref_fn) return ref_fn(s);
+            if (raw_fn) return raw_fn(s.data());
+            if (string_fn) return string_fn(std::string{s});
             return std::unexpected{std::string{}};
         }
     };
@@ -288,7 +300,8 @@ namespace StarParse::inline annotations {
 
         template<std::convertible_to<std::string_view>... Ts>
             requires(sizeof...(Ts) > 0 && std::convertible_to<T, std::string_view>)
-        explicit consteval Excludes(Ts... ns) : values_(std::define_static_array(std::array{std::define_static_string(std::string_view{ns})...}).data()),
+        explicit consteval Excludes(Ts... ns) : values_(
+                                                    std::define_static_array(std::array{std::define_static_string(std::string_view{ns})...}).data()),
                                                 count_(sizeof...(ns)) {}
 
         template<std::convertible_to<T>... Ts>
@@ -308,8 +321,9 @@ namespace StarParse::inline annotations {
 
         template<std::convertible_to<std::string_view>... Ts>
             requires(sizeof...(Ts) > 0 && std::convertible_to<T, std::string_view>)
-        explicit consteval Groups(Ts... ns) : values_(std::define_static_array(std::array{std::define_static_string(std::string_view{ns})...}).data()),
-                                              count_(sizeof...(ns)) {}
+        explicit consteval
+        Groups(Ts... ns) : values_(std::define_static_array(std::array{std::define_static_string(std::string_view{ns})...}).data()),
+                           count_(sizeof...(ns)) {}
 
         template<std::convertible_to<T>... Ts>
             requires(sizeof...(Ts) > 0 && !std::convertible_to<T, std::string_view>)
@@ -319,5 +333,4 @@ namespace StarParse::inline annotations {
 
     template<typename... Ts>
     Groups(Ts...) -> Groups<std::common_type_t<Ts...> >;
-
 } // namespace StarParse::inline annotations
