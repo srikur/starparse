@@ -32,6 +32,7 @@ add_executable(starparse_tests
         test_parse.cpp
         test_positional_named.cpp
         test_prefill.cpp
+        test_response_file.cpp
         test_separator.cpp
         test_settings.cpp
         test_subcommand_assertions.cpp
