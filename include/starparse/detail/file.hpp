@@ -5,7 +5,11 @@
 #include <filesystem>
 #include <fstream>
 #include <optional>
+#include <string>
+#include <string_view>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 #include "starparse/detail/errors.hpp"
 #include "utilities.hpp"
@@ -13,6 +17,76 @@
 
 namespace StarParse::detail::File {
     using EnvMap = std::unordered_map<std::string, std::string>;
+
+    [[nodiscard]] inline std::expected<std::vector<std::string>, ParseError> read_response_file(const std::string_view filename) {
+        const std::filesystem::path path{filename};
+        std::ifstream ifs{path, std::ios::binary};
+        if (!ifs.is_open()) {
+            return std::unexpected(ParseError{
+                .kind = ErrorKind::READING_RESPONSE_FAILED,
+                .input_value = path.string(),
+                .detail = "could not open file",
+            });
+        }
+
+        std::string storage;
+        for (char c; ifs.get(c);)
+            storage += c;
+        if (ifs.bad() || !ifs.eof()) {
+            return std::unexpected(ParseError{
+                .kind = ErrorKind::READING_RESPONSE_FAILED,
+                .input_value = path.string(),
+                .detail = "bad input",
+            });
+        }
+
+        std::string_view text{storage};
+        if (text.starts_with("\xEF\xBB\xBF"))
+            text.remove_prefix(3);
+
+        std::vector<std::string> result;
+        std::string token;
+        char quote{};
+        bool escaped{};
+        bool token_started{};
+        for (const char c : text) {
+            if (escaped) {
+                token += c;
+                escaped = false;
+            } else if (c == '\\') {
+                escaped = true;
+                token_started = true;
+            } else if (quote != '\0') {
+                if (c == quote)
+                    quote = '\0';
+                else
+                    token += c;
+            } else if (c == '\'' || c == '"') {
+                quote = c;
+                token_started = true;
+            } else if (std::string_view{" \t\r\n\v\f"}.find(c) != std::string_view::npos) {
+                if (token_started) {
+                    result.push_back(std::move(token));
+                    token.clear();
+                    token_started = false;
+                }
+            } else {
+                token += c;
+                token_started = true;
+            }
+        }
+
+        if (escaped || quote != '\0') {
+            return std::unexpected(ParseError{
+                .kind = ErrorKind::INVALID_RESPONSE_FILE,
+                .input_value = path.string(),
+                .detail = escaped ? "trailing escape" : "unterminated quote",
+            });
+        }
+        if (token_started)
+            result.push_back(std::move(token));
+        return result;
+    }
 
     [[nodiscard]] inline std::expected<EnvMap, ParseError> read_env_file(const std::string_view filename) {
         const std::filesystem::path path{filename};

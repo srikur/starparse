@@ -24,6 +24,8 @@ namespace StarParse {
         AMBIGUOUS_OPTION,
         MISSING_DEPENDENCY, // Needs{}
         INVALID_OVERLAP, // Excludes{}
+        READING_RESPONSE_FAILED,
+        INVALID_RESPONSE_FILE,
     };
 
     struct ParseError {
@@ -70,6 +72,10 @@ namespace StarParse {
                     return std::format("Must specify a value for option: '{}'", detail);
                 case ErrorKind::INVALID_OVERLAP:
                     return std::format("Option '{}' cannot be used in conjunction with: '{}'", option, detail);
+                case ErrorKind::READING_RESPONSE_FAILED:
+                    return std::format("Failed to read response file '{}': {}", input_value, detail);
+                case ErrorKind::INVALID_RESPONSE_FILE:
+                    return std::format("Invalid response file '{}': {}", input_value, detail);
                 default:
                     return std::format("Unknown error: '{}'", input_value);
             }
