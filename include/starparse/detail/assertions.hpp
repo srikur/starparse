@@ -428,4 +428,56 @@ namespace StarParse::detail::Assertions {
         }
         return true;
     }
+
+    template<typename T>
+    consteval bool check_exclusion_groups() {
+        // verify that all Needs and Excludes values are either a valid field or valid group name
+        static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
+        template for (constexpr auto m : members) {
+            if constexpr (extraction_of<^^Needs>(m).has_value()) {
+                static constexpr auto needs = get_annotation_list_values<m, ^^Needs>();
+                template for (constexpr auto need : needs) {
+                    if constexpr (name_of(m) == std::string_view{need}) return false;
+                    bool found{false};
+                    template for (constexpr auto inner_mem : members) {
+                        static constexpr auto needs_group = std::define_static_array(group_named<T>(need));
+                        if constexpr (name_of(inner_mem) == std::string_view{need}) found = true;
+                        else if constexpr (!needs_group.empty()) found = true;
+                    }
+                    if (!found) return false;
+                }
+            }
+            if constexpr (extraction_of<^^Excludes>(m).has_value()) {
+                static constexpr auto excludes = get_annotation_list_values<m, ^^Excludes>();
+                template for (constexpr auto exclude : excludes) {
+                    if constexpr (name_of(m) == std::string_view{exclude}) return false;
+                    bool found{false};
+                    template for (constexpr auto inner_mem : members) {
+                        static constexpr auto excludes_group = std::define_static_array(group_named<T>(exclude));
+                        if constexpr (name_of(inner_mem) == std::string_view{exclude}) found = true;
+                        else if constexpr (!excludes_group.empty()) found = true;
+                    }
+                    if (!found) return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    template<typename T>
+    consteval bool check_group_name_collisions() {
+        // ensure Groups values do not collide with any resolved field names
+        static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
+        template for (constexpr auto m : members) {
+            if constexpr (extraction_of<^^Groups>(m).has_value()) {
+                static constexpr auto groups = get_annotation_list_values<m, ^^Groups>();
+                template for (constexpr auto group : groups) {
+                    template for (constexpr auto inner_mem : members) {
+                        if constexpr (name_of(inner_mem) == std::string_view{group}) return false;
+                    }
+                }
+            }
+        }
+        return true;
+    }
 } // namespace StarParse::detail::Assertions

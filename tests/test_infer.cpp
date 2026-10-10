@@ -9,10 +9,10 @@ using namespace StarParse;
 namespace {
     struct Args {
         [[=Opt{'V', "Verbose mode"}]] bool verbose{false};
-        [[=Opt{'o', "Output file"}]] std::string output;
+        [[=Opt{'o', "Output file"}]] std::string output{};
         [[=Opt{'c', "Colorize"}, =Alias{"colour"}]] bool color{true};
         [[=Opt{'d', "Dry run level"}]] int dry_run{0};
-        [[=Positional{0}]] std::string file;
+        [[=Positional{0}]] std::string file{};
     };
 
     struct Overlap {

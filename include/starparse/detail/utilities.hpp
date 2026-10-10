@@ -152,6 +152,17 @@ namespace StarParse::detail::Utilities {
         return std::nullopt;
     }
 
+    template<std::meta::info T>
+    consteval std::optional<std::meta::info> extraction_of(const std::meta::info m) {
+        for (const std::meta::info a : std::meta::annotations_of(m)) {
+            auto type = std::meta::remove_cv(std::meta::type_of(a));
+            if (is_specialization_of(type, T)) {
+                return a;
+            }
+        }
+        return std::nullopt;
+    }
+
     consteval std::optional<detail::Subcommand_> subcommand_of(const std::meta::info m) {
         for (const std::meta::info a : std::meta::annotations_of(m)) {
             if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^detail::Subcommand_)) {
@@ -276,6 +287,14 @@ namespace StarParse::detail::Utilities {
         return std::span{choices.values_, choices.count_};
     }
 
+    template<std::meta::info M, std::meta::info T>
+    consteval auto get_annotation_list_values() {
+        constexpr auto annotation = extraction_of<T>(M);
+        using C = [:std::meta::remove_cv(std::meta::type_of(*annotation)):];
+        constexpr auto values = std::meta::extract<C>(*annotation);
+        return std::span{values.values_, values.count_};
+    }
+
     template<std::meta::info M, typename T>
     bool matches_choice(const T &value, const bool allow_case_insensitivity = false) {
         if constexpr (!choices_of(M).has_value()) {
@@ -286,9 +305,10 @@ namespace StarParse::detail::Utilities {
                 if constexpr (std::convertible_to<T, std::string_view> && std::convertible_to<decltype(choice), std::string_view>) {
                     if (std::string_view{value} == std::string_view{choice} || (allow_case_insensitivity && iequals(value, choice)))
                         return true;
-                } else if constexpr (requires {
-                                         { value == choice } -> std::convertible_to<bool>;
-                                     }) {
+                } else if constexpr (requires
+                {
+                    { value == choice } -> std::convertible_to<bool>;
+                }) {
                     if (value == choice)
                         return true;
                 }
@@ -342,8 +362,9 @@ namespace StarParse::detail::Utilities {
         r = std::meta::dealias(std::meta::remove_cv(r));
         if (is_optional(r))
             r = std::meta::dealias(value_type_of(r));
-        return std::meta::is_integral_type(r) && r != (^^bool)&&!std::meta::extract<bool>(std::meta::substitute(^^is_char_v, {
-                                                                                                                                 r}));
+        return std::meta::is_integral_type(r) && r != (^^bool) && !std::meta::extract<bool>(std::meta::substitute(^^is_char_v, {
+                       r
+                   }));
     }
 
     template<std::meta::info M>
@@ -398,7 +419,8 @@ namespace StarParse::detail::Utilities {
     constexpr bool does_match_name(const std::string_view name, const Settings &settings, const bool allow_short = true) {
         if (matches_non_negated_name<M>(name, settings, allow_short))
             return true;
-        if (settings.autogenerate_negations && name.starts_with("no-") && is_flag_type(std::meta::type_of(M))) {
+        // checking name size >= 3 prevents GCC complaining about removing a prefix of size 3
+        if (settings.autogenerate_negations && name.size() >= 3 && name.starts_with("no-") && is_flag_type(std::meta::type_of(M))) {
             std::string_view negated{name};
             negated.remove_prefix(3);
             return check_snake_case<M>(negated, settings) || check_kebab_case<M>(negated, settings);
@@ -409,9 +431,11 @@ namespace StarParse::detail::Utilities {
     consteval bool is_vector(const std::meta::info r) {
         return is_specialization_of(r, ^^std::vector);
     }
+
     consteval bool is_array(const std::meta::info r) {
         return is_specialization_of(r, ^^std::array);
     }
+
     consteval bool is_container(const std::meta::info m) {
         return is_vector(m) || is_array(m);
     }
@@ -422,12 +446,12 @@ namespace StarParse::detail::Utilities {
         constexpr std::array true_values{"yes"sv, "1"sv, "on"sv, "true"sv, "t"sv};
         constexpr std::array false_values{"no"sv, "0"sv, "off"sv, "false"sv, "f"sv};
         if (std::ranges::any_of(true_values, [&](auto value) {
-                return iequals(s, value);
-            }))
+            return iequals(s, value);
+        }))
             return true;
         if (std::ranges::any_of(false_values, [&](auto value) {
-                return iequals(s, value);
-            }))
+            return iequals(s, value);
+        }))
             return false;
         return std::unexpected(ParseError{
             .kind = ErrorKind::INVALID_VALUE,
@@ -470,7 +494,8 @@ namespace StarParse::detail::Utilities {
             auto [pointer, error_code] = std::from_chars(s.data(), s.data() + s.size(), v);
             if (error_code != std::errc{} || pointer != s.data() + s.size()) {
                 return std::unexpected(ParseError{
-                    .kind = ErrorKind::INVALID_VALUE, .input_value = std::string{s}, .current_argument = name_of(Mem), .argv_index = index});
+                    .kind = ErrorKind::INVALID_VALUE, .input_value = std::string{s}, .current_argument = name_of(Mem), .argv_index = index
+                });
             }
             return v;
         } else if constexpr (std::is_enum_v<M>) {
@@ -482,7 +507,8 @@ namespace StarParse::detail::Utilities {
             }
             if (!parsed)
                 return std::unexpected(ParseError{
-                    .kind = ErrorKind::INVALID_VALUE, .input_value = std::string{s}, .current_argument = name_of(Mem), .argv_index = index});
+                    .kind = ErrorKind::INVALID_VALUE, .input_value = std::string{s}, .current_argument = name_of(Mem), .argv_index = index
+                });
             return *parsed;
         } else {
             // TODO: can add more info to the msg?
@@ -665,21 +691,25 @@ namespace StarParse::detail::Utilities {
                           "Validator must accept the parsed value type");
 
             if (auto result = validator(value); !result) {
-                errors.push_back({.kind = ErrorKind::VALIDATION_FAILED,
-                                  .input_value = std::string{input},
-                                  .detail = result.error().empty() ? std::string{"validator returned false"} : std::move(result.error()),
-                                  .current_argument = name_of(Mem),
-                                  .argv_index = index});
+                errors.push_back({
+                    .kind = ErrorKind::VALIDATION_FAILED,
+                    .input_value = std::string{input},
+                    .detail = result.error().empty() ? std::string{"validator returned false"} : std::move(result.error()),
+                    .current_argument = name_of(Mem),
+                    .argv_index = index
+                });
                 return false;
             }
         } else if constexpr (choice_annotation.has_value()) {
             static constexpr auto choices = choices_list<Mem>();
             if (!matches_choice<Mem>(value, settings.allow_case_insensitivity)) {
-                errors.push_back({.kind = ErrorKind::INVALID_CHOICE,
-                                  .input_value = std::string{input},
-                                  .detail = std::format("{}", choices),
-                                  .current_argument = name_of(Mem),
-                                  .argv_index = index});
+                errors.push_back({
+                    .kind = ErrorKind::INVALID_CHOICE,
+                    .input_value = std::string{input},
+                    .detail = std::format("{}", choices),
+                    .current_argument = name_of(Mem),
+                    .argv_index = index
+                });
                 return false;
             }
         } else if constexpr (min_annotation.has_value()) {
@@ -687,11 +717,13 @@ namespace StarParse::detail::Utilities {
             constexpr auto mn = std::meta::extract<A>(*min_annotation);
 
             if (numeric_less(value, mn.value)) {
-                errors.push_back({.kind = ErrorKind::OUT_OF_RANGE,
-                                  .input_value = std::string{input},
-                                  .detail = std::format("minimum is {}", mn.value),
-                                  .current_argument = name_of(Mem),
-                                  .argv_index = index});
+                errors.push_back({
+                    .kind = ErrorKind::OUT_OF_RANGE,
+                    .input_value = std::string{input},
+                    .detail = std::format("minimum is {}", mn.value),
+                    .current_argument = name_of(Mem),
+                    .argv_index = index
+                });
                 return false;
             }
         } else if constexpr (max_annotation.has_value()) {
@@ -704,7 +736,8 @@ namespace StarParse::detail::Utilities {
                     .input_value = std::string{input},
                     .detail = std::format("maximum is {}", mx.value),
                     .current_argument = name_of(Mem),
-                    .argv_index = index});
+                    .argv_index = index
+                });
                 return false;
             }
         } else if constexpr (range_annotation.has_value()) {
@@ -717,7 +750,8 @@ namespace StarParse::detail::Utilities {
                     .input_value = std::string{input},
                     .detail = std::format("allowed range is [{}, {}]", range.min, range.max),
                     .current_argument = name_of(Mem),
-                    .argv_index = index});
+                    .argv_index = index
+                });
                 return false;
             }
         }
@@ -738,7 +772,8 @@ namespace StarParse::detail::Utilities {
                     .input_value = std::string{name},
                     .detail = "count would overflow",
                     .current_argument = name_of(Mem),
-                    .argv_index = index});
+                    .argv_index = index
+                });
                 return false;
             }
             const M value = field + M{1};
@@ -763,7 +798,8 @@ namespace StarParse::detail::Utilities {
                 .input_value = std::string{s},
                 .detail = result.error().empty() ? std::string{"parsed returned an error"} : std::move(result.error()),
                 .current_argument = name_of(Mem),
-                .argv_index = index});
+                .argv_index = index
+            });
         } else
             return *result;
     }
@@ -802,7 +838,8 @@ namespace StarParse::detail::Utilities {
                         .kind = ErrorKind::DUPLICATE_VALUE,
                         .input_value = std::string{piece},
                         .current_argument = name_of(Mem),
-                        .argv_index = index});
+                        .argv_index = index
+                    });
                 } else if constexpr (has_custom_parser) {
                     if (auto result = apply_custom_parser<Mem, E>(piece, index)) {
                         if (validate<Mem>(*result, piece, index, errors, settings)) {
@@ -917,5 +954,33 @@ namespace StarParse::detail::Utilities {
             }
         }
         return n;
+    }
+
+    template<typename T>
+    consteval std::optional<std::meta::info> member_named(const char *name) {
+        for (const auto m : std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current())) {
+            if (name_of(m) == std::string_view{name}) {
+                return m;
+            }
+        }
+        return std::nullopt;
+    }
+
+    template<typename T>
+    consteval std::vector<std::meta::info> group_named(const char *name) {
+        static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
+        std::vector<std::meta::info> result;
+        template for (constexpr auto m : members) {
+            constexpr auto groups = extraction_of<^^Groups>(m);
+            if constexpr (groups.has_value()) {
+                static constexpr auto values = get_annotation_list_values<m, ^^Groups>();
+                template for (constexpr auto value : values) {
+                    if (std::string_view{value} == std::string_view{name}) {
+                        result.emplace_back(m);
+                    }
+                }
+            }
+        }
+        return result;
     }
 } // namespace StarParse::detail::Utilities
