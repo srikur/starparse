@@ -38,62 +38,18 @@ namespace StarParse::detail::Utilities {
         return std::meta::identifier_of(entity);
     }
 
-    consteval std::optional<Positional> positional_of(const std::meta::info m) {
+    template<typename T>
+    consteval std::optional<T> extraction_of(const std::meta::info m) {
         for (const std::meta::info a : std::meta::annotations_of(m)) {
-            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^Positional)) {
-                return std::meta::extract<Positional>(a);
-            }
-        }
-        return std::nullopt;
-    }
-
-    consteval std::optional<Program> program_of(const std::meta::info r) {
-        for (const std::meta::info a : std::meta::annotations_of(r)) {
-            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^Program)) {
-                return std::meta::extract<Program>(a);
-            }
-        }
-        return std::nullopt;
-    }
-
-    consteval std::optional<Prologue> prologue_of(const std::meta::info r) {
-        for (const std::meta::info a : std::meta::annotations_of(r)) {
-            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^Prologue)) {
-                return std::meta::extract<Prologue>(a);
-            }
-        }
-        return std::nullopt;
-    }
-
-    consteval std::optional<Epilogue> epilogue_of(const std::meta::info r) {
-        for (const std::meta::info a : std::meta::annotations_of(r)) {
-            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^Epilogue)) {
-                return std::meta::extract<Epilogue>(a);
-            }
-        }
-        return std::nullopt;
-    }
-
-    consteval std::optional<Usage> usage_of(const std::meta::info r) {
-        for (const std::meta::info a : std::meta::annotations_of(r)) {
-            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^Usage)) {
-                return std::meta::extract<Usage>(a);
-            }
-        }
-        return std::nullopt;
-    }
-
-    consteval std::optional<Separator> separator_of(const std::meta::info m) {
-        for (const std::meta::info a : std::meta::annotations_of(m)) {
-            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^Separator)) {
-                return std::meta::extract<Separator>(a);
+            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^T)) {
+                return std::meta::extract<T>(a);
             }
         }
         return std::nullopt;
     }
 
     template<std::meta::info T>
-    consteval std::optional<std::meta::info> extraction_of(const std::meta::info m) {
+    consteval std::optional<std::meta::info> specialization_of(const std::meta::info m) {
         for (const std::meta::info a : std::meta::annotations_of(m)) {
             auto type = std::meta::remove_cv(std::meta::type_of(a));
             if (is_specialization_of(type, T)) {
@@ -103,45 +59,10 @@ namespace StarParse::detail::Utilities {
         return std::nullopt;
     }
 
-    consteval std::optional<detail::Subcommand_> subcommand_of(const std::meta::info m) {
-        for (const std::meta::info a : std::meta::annotations_of(m)) {
-            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^detail::Subcommand_)) {
-                return std::meta::extract<detail::Subcommand_>(a);
-            }
-        }
-        return std::nullopt;
-    }
-
-    consteval std::optional<File> file_of(const std::meta::info m) {
-        for (const std::meta::info a : std::meta::annotations_of(m)) {
-            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^File)) {
-                return std::meta::extract<File>(a);
-            }
-        }
-        return std::nullopt;
-    }
-
-    consteval std::optional<Env> env_of(const std::meta::info m) {
-        for (const std::meta::info a : std::meta::annotations_of(m)) {
-            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^Env)) {
-                return std::meta::extract<Env>(a);
-            }
-        }
-        return std::nullopt;
-    }
-
-    consteval std::optional<Opt> opt_of(const std::meta::info m) {
-        for (const std::meta::info a : std::meta::annotations_of(m)) {
-            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^Opt)) {
-                return std::meta::extract<Opt>(a);
-            }
-        }
-        return std::nullopt;
-    }
-
-    consteval bool is_subcommand(const std::meta::info m) {
+    template<typename Annotation>
+    consteval bool has_annotation(const std::meta::info m) {
         for (const auto a : std::meta::annotations_of(m)) {
-            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^detail::Subcommand_)) {
+            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^Annotation)) {
                 return true;
             }
         }
@@ -151,7 +72,7 @@ namespace StarParse::detail::Utilities {
     template<typename T>
     consteval bool is_bare() {
         for (const std::meta::info m : std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current())) {
-            if (opt_of(m).has_value() || positional_of(m).has_value()) {
+            if (extraction_of<Opt>(m).has_value() || extraction_of<Positional>(m).has_value()) {
                 return false;
             }
         }
@@ -160,7 +81,9 @@ namespace StarParse::detail::Utilities {
 
     template<typename T>
     consteval bool is_named_option(const std::meta::info m) {
-        return !is_subcommand(m) && (opt_of(m).has_value() || positional_of(m).has_value() || is_bare<T>());
+        return !has_annotation<detail::Subcommand_>(m) && (extraction_of<Opt>(m).has_value()
+                                                           || extraction_of<Positional>(m).has_value()
+                                                           || is_bare<T>());
     }
 
     consteval bool is_hidden(const std::meta::info m) {
@@ -178,7 +101,7 @@ namespace StarParse::detail::Utilities {
 
     template<std::meta::info M>
     bool matches_short_name(const std::string_view value, const bool allow_case_insensitivity = false) {
-        constexpr std::optional<Opt> opt = opt_of(M);
+        constexpr std::optional<Opt> opt = extraction_of<Opt>(M);
         if (opt.has_value() && value.size() == 1) {
             return allow_case_insensitivity ? ascii_lower(value[0]) == ascii_lower(opt->short_name) : value[0] == opt->short_name;
         }
@@ -221,7 +144,7 @@ namespace StarParse::detail::Utilities {
 
     template<std::meta::info M>
     consteval auto choices_list() {
-        constexpr auto annotation = extraction_of<^^Choices>(M);
+        constexpr auto annotation = specialization_of<^^Choices>(M);
         using C = [:std::meta::remove_cv(std::meta::type_of(*annotation)):];
         constexpr auto choices = std::meta::extract<C>(*annotation);
         return std::span{choices.values_, choices.count_};
@@ -229,7 +152,7 @@ namespace StarParse::detail::Utilities {
 
     template<std::meta::info M, std::meta::info T>
     consteval auto get_annotation_list_values() {
-        constexpr auto annotation = extraction_of<T>(M);
+        constexpr auto annotation = specialization_of<T>(M);
         using C = [:std::meta::remove_cv(std::meta::type_of(*annotation)):];
         constexpr auto values = std::meta::extract<C>(*annotation);
         return std::span{values.values_, values.count_};
@@ -237,7 +160,7 @@ namespace StarParse::detail::Utilities {
 
     template<std::meta::info M, typename T>
     bool matches_choice(const T &value, const bool allow_case_insensitivity = false) {
-        if constexpr (!extraction_of<^^Choices>(M).has_value()) {
+        if constexpr (!specialization_of<^^Choices>(M).has_value()) {
             return false;
         } else {
             static constexpr auto choices = choices_list<M>();
@@ -458,7 +381,7 @@ namespace StarParse::detail::Utilities {
 
     template<std::meta::info M>
     inline constexpr std::string_view env_name_v = [] {
-        constexpr auto env = env_of(M);
+        constexpr auto env = extraction_of<Env>(M);
         static_assert(env.has_value(), "member requires an Env annotation");
         std::string s{env->name};
         for (auto &c : s) {
@@ -471,10 +394,10 @@ namespace StarParse::detail::Utilities {
 
     template<typename T>
     consteval std::optional<size_t> positional_index_of(const std::meta::info m) {
-        if (is_subcommand(m)) {
+        if (has_annotation<detail::Subcommand_>(m)) {
             return std::nullopt;
         }
-        if (auto pos = positional_of(m)) {
+        if (auto pos = extraction_of<Positional>(m)) {
             return pos->index;
         }
         if (!is_bare<T>() || is_flag_type(std::meta::type_of(m))) {
@@ -523,16 +446,6 @@ namespace StarParse::detail::Utilities {
     consteval bool is_required(const std::meta::info m) {
         for (const auto a : std::meta::annotations_of(m)) {
             if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^detail::Required_)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    template<typename Annotation>
-    consteval bool has_annotation(const std::meta::info m) {
-        for (const auto a : std::meta::annotations_of(m)) {
-            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^Annotation)) {
                 return true;
             }
         }
@@ -617,11 +530,11 @@ namespace StarParse::detail::Utilities {
 
     template<std::meta::info Mem, typename M>
     bool validate(const M &value, const std::string_view input, const size_t index, std::vector<ParseError> &errors, const Settings &settings) {
-        constexpr auto validator_annotation = extraction_of<^^Validator>(Mem);
-        constexpr auto choice_annotation = extraction_of<^^Choices>(Mem);
-        constexpr auto min_annotation = extraction_of<^^Min>(Mem);
-        constexpr auto max_annotation = extraction_of<^^Max>(Mem);
-        constexpr auto range_annotation = extraction_of<^^Range>(Mem);
+        constexpr auto validator_annotation = specialization_of<^^Validator>(Mem);
+        constexpr auto choice_annotation = specialization_of<^^Choices>(Mem);
+        constexpr auto min_annotation = specialization_of<^^Min>(Mem);
+        constexpr auto max_annotation = specialization_of<^^Max>(Mem);
+        constexpr auto range_annotation = specialization_of<^^Range>(Mem);
 
         if constexpr (validator_annotation.has_value()) {
             using V = [:std::meta::remove_cv(std::meta::type_of(*validator_annotation)):];
@@ -726,7 +639,7 @@ namespace StarParse::detail::Utilities {
 
     template<std::meta::info Mem, typename E>
     std::expected<E, ParseError> apply_custom_parser(const std::string_view s, const size_t index) {
-        constexpr auto parser = *extraction_of<^^Parser>(Mem);
+        constexpr auto parser = *specialization_of<^^Parser>(Mem);
         using V = [:std::meta::remove_cv(std::meta::type_of(parser)):];
         constexpr auto parsing_function = std::meta::extract<V>(parser);
 
@@ -747,8 +660,8 @@ namespace StarParse::detail::Utilities {
     template<std::meta::info Mem, typename M>
     void assign_from_string(M &field, const std::string_view s, const size_t index, size_t &count, std::vector<ParseError> &errors,
                             const Settings &settings) {
-        constexpr auto annotated = separator_of(Mem);
-        constexpr bool has_custom_parser = extraction_of<^^Parser>(Mem).has_value();
+        constexpr auto annotated = extraction_of<Separator>(Mem);
+        constexpr bool has_custom_parser = specialization_of<^^Parser>(Mem).has_value();
         const std::string_view separator = annotated.has_value() ? std::string_view{annotated->value} : settings.value_separator;
         if constexpr (is_vector(std::meta::remove_cv(^^M))) {
             using E = [:value_type_of(^^M):];
@@ -911,7 +824,7 @@ namespace StarParse::detail::Utilities {
         static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
         std::vector<std::meta::info> result;
         template for (constexpr auto m : members) {
-            constexpr auto groups = extraction_of<^^Groups>(m);
+            constexpr auto groups = specialization_of<^^Groups>(m);
             if constexpr (groups.has_value()) {
                 static constexpr auto values = get_annotation_list_values<m, ^^Groups>();
                 template for (constexpr auto value : values) {

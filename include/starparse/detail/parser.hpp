@@ -105,7 +105,7 @@ namespace StarParse::detail::Parser {
         static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
         bool found{false};
         template for (constexpr auto m : members) {
-            if constexpr (is_subcommand(m)) {
+            if constexpr (has_annotation<detail::Subcommand_>(m)) {
                 if (does_match_name<m>(name, settings, false))
                     found = true;
             }
@@ -167,7 +167,7 @@ namespace StarParse::detail::Parser {
         std::optional<std::string_view> found;
         auto count{0uz};
         template for (constexpr auto m : members) {
-            if constexpr (is_subcommand(m)) {
+            if constexpr (has_annotation<detail::Subcommand_>(m)) {
                 if (const auto spelling = spelling_with_prefix<m>(prefix, settings, true)) {
                     found = *spelling;
                     ++count;
@@ -236,9 +236,9 @@ namespace StarParse::detail::Parser {
     std::string format_help(std::span<const size_t> command_path, const DefaultValues &defaults, const std::string &command_name, std::string usage,
                             const Settings &settings) {
         static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
-        constexpr auto program = program_of(^^T);
-        constexpr auto prologue = prologue_of(^^T);
-        constexpr auto epilogue = epilogue_of(^^T);
+        constexpr auto program = extraction_of<Program>(^^T);
+        constexpr auto prologue = extraction_of<Prologue>(^^T);
+        constexpr auto epilogue = extraction_of<Epilogue>(^^T);
 
         struct ArgumentRow {
             size_t index{};
@@ -257,11 +257,11 @@ namespace StarParse::detail::Parser {
         template for (constexpr auto m : members) {
             if constexpr (!is_hidden(m)) {
                 using M = [:std::meta::type_of(m):];
-                constexpr auto opt = opt_of(m);
-                constexpr auto pos = positional_of(m);
+                constexpr auto opt = extraction_of<Opt>(m);
+                constexpr auto pos = extraction_of<Positional>(m);
                 constexpr auto position = positional_index_of<T>(m);
                 constexpr auto name = name_of(m);
-                constexpr auto env = env_of(m);
+                constexpr auto env = extraction_of<Env>(m);
                 constexpr bool required = is_required(m);
 
                 std::string description;
@@ -284,9 +284,9 @@ namespace StarParse::detail::Parser {
                     description += description.empty() ? "(required)" : " (required)";
                 }
 
-                if constexpr (is_subcommand(m)) {
+                if constexpr (has_annotation<detail::Subcommand_>(m)) {
                     using Child = [:value_type_of(^^M):];
-                    constexpr auto child_program = program_of(^^Child);
+                    constexpr auto child_program = extraction_of<Program>(^^Child);
                     if constexpr (child_program.has_value()) {
                         if (child_program->description != nullptr)
                             description = child_program->description;
@@ -322,19 +322,19 @@ namespace StarParse::detail::Parser {
                             }
                         }
                         if constexpr (!is_flag_type(^^M)) {
-                            if constexpr (constexpr auto range_annotation = extraction_of<^^Range>(m)) {
+                            if constexpr (constexpr auto range_annotation = specialization_of<^^Range>(m)) {
                                 using A = [:std::meta::remove_cv(std::meta::type_of(*range_annotation)):];
                                 const auto range = std::meta::extract<A>(*range_annotation);
                                 invocation += std::format(" <{}..{}>", range.min, range.max);
-                            } else if constexpr (constexpr auto min_annotation = extraction_of<^^Min>(m)) {
+                            } else if constexpr (constexpr auto min_annotation = specialization_of<^^Min>(m)) {
                                 using A = [:std::meta::remove_cv(std::meta::type_of(*min_annotation)):];
                                 const auto mn = std::meta::extract<A>(*min_annotation);
                                 invocation += std::format(" <{}..>", mn.value);
-                            } else if constexpr (constexpr auto max_annotation = extraction_of<^^Max>(m)) {
+                            } else if constexpr (constexpr auto max_annotation = specialization_of<^^Max>(m)) {
                                 using A = [:std::meta::remove_cv(std::meta::type_of(*max_annotation)):];
                                 const auto mx = std::meta::extract<A>(*max_annotation);
                                 invocation += std::format(" <..{}>", mx.value);
-                            } else if constexpr (extraction_of<^^Choices>(m).has_value()) {
+                            } else if constexpr (specialization_of<^^Choices>(m).has_value()) {
                                 constexpr auto choices = choices_list<m>();
                                 invocation += " <";
                                 invocation.append_range(choices | std::views::transform([](const char *s) {
@@ -365,7 +365,7 @@ namespace StarParse::detail::Parser {
 
         if (!command_path.empty()) {
             template for (constexpr auto m : members) {
-                if constexpr (is_subcommand(m)) {
+                if constexpr (has_annotation<detail::Subcommand_>(m)) {
                     if (command_path.front() == member_index_of<T>(m)) {
                         using Child = [:value_type_of(std::meta::type_of(m)):];
                         constexpr auto name = name_of(m);
@@ -402,7 +402,7 @@ namespace StarParse::detail::Parser {
                 text += std::format("{}\n\n", command_name);
             }
         }
-        constexpr auto usage_override = usage_of(^^T);
+        constexpr auto usage_override = extraction_of<Usage>(^^T);
         text += std::format("Usage: {}\n", usage_override ? usage_override->value : usage);
         if constexpr (prologue.has_value()) {
             if (prologue->value != nullptr && *prologue->value != '\0') {
@@ -486,7 +486,7 @@ namespace StarParse::detail::Parser {
 
         // ReSharper disable once CppMemberFunctionMayBeStatic
         [[nodiscard]] std::string version() const {
-            constexpr auto program = program_of(^^T);
+            constexpr auto program = extraction_of<Program>(^^T);
             if constexpr (program.has_value()) {
                 return Terminal::wrap(std::format("{} version {}", program->name, program->version));
             } else {
@@ -495,7 +495,7 @@ namespace StarParse::detail::Parser {
         }
 
         [[nodiscard]] std::string help() const {
-            constexpr auto program = program_of(^^T);
+            constexpr auto program = extraction_of<Program>(^^T);
             const std::string program_name = program.has_value() ? program->name : std::string{argv_name_};
             const std::string raw_help = format_help<T>(command_path_, defaults_, program_name, program_name, settings_);
             return Terminal::wrap(raw_help);
@@ -607,7 +607,7 @@ namespace StarParse::detail::Parser {
             if (a.is_positional && !separator_seen) {
                 resolve_inferred_subcommand<T>(a, settings);
                 template for (constexpr auto m : members) {
-                    if constexpr (is_subcommand(m)) {
+                    if constexpr (has_annotation<detail::Subcommand_>(m)) {
                         using M = [:std::meta::type_of(m):];
                         static_assert(is_optional(^^M));
                         using Child = [:value_type_of(^^M):];
@@ -718,7 +718,7 @@ namespace StarParse::detail::Parser {
         auto &errors = state.errors;
         std::vector<std::string_view> candidates = viable_candidate_names<T>(settings);
 
-        if constexpr (constexpr auto file = file_of(^^T)) {
+        if constexpr (constexpr auto file = extraction_of<annotations::File>(^^T)) {
             if (const auto parse_result = File::read_env_file(std::string_view{file->filename})) {
                 state.env_vars = std::move(*parse_result);
             } else {
@@ -743,7 +743,7 @@ namespace StarParse::detail::Parser {
                 using M = [:std::meta::type_of(m):];
                 constexpr auto idx = member_index_of<T>(m);
                 constexpr auto pos = positional_index_of<T>(m);
-                if constexpr (is_subcommand(m)) {
+                if constexpr (has_annotation<detail::Subcommand_>(m)) {
                     if (attrs.is_subcommand && !matched && does_match_name<m>(attrs.name, settings, false)) {
                         subcommand_entered = true;
                         using M = [:std::meta::type_of(m):];
@@ -769,7 +769,7 @@ namespace StarParse::detail::Parser {
                             }
                         }
                     } else if (attrs.dashed || attrs.double_dashed) {
-                        constexpr auto opt = opt_of(m);
+                        constexpr auto opt = extraction_of<Opt>(m);
                         constexpr bool named = is_named_option<T>(m);
                         const bool matching_string = named && does_match_name<m>(attrs.name, settings);
                         if (!matched && matching_string) {
@@ -871,7 +871,7 @@ namespace StarParse::detail::Parser {
 
         template for (constexpr auto m : members) {
             const size_t index = member_index_of<T>(m);
-            if constexpr (constexpr auto env = env_of(m)) {
+            if constexpr (constexpr auto env = extraction_of<Env>(m)) {
                 constexpr std::string_view name = env_name_v<m>;
                 if (fields_set[index] != 0)
                     continue;
@@ -909,7 +909,7 @@ namespace StarParse::detail::Parser {
                 }
             }
             if (fields_set[index]) {
-                if constexpr (extraction_of<^^Needs>(m).has_value()) {
+                if constexpr (specialization_of<^^Needs>(m).has_value()) {
                     static constexpr auto needs = get_annotation_list_values<m, ^^Needs>();
                     // can either be a field or a group
                     template for (constexpr auto value : needs) {
@@ -937,7 +937,7 @@ namespace StarParse::detail::Parser {
                         }
                     }
                 }
-                if constexpr (extraction_of<^^Excludes>(m).has_value()) {
+                if constexpr (specialization_of<^^Excludes>(m).has_value()) {
                     static constexpr auto excludes = get_annotation_list_values<m, ^^Excludes>();
                     constexpr auto field_name = name_of(m);
                     template for (constexpr auto value : excludes) {
