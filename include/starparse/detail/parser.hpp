@@ -659,7 +659,7 @@ namespace StarParse::detail::Parser {
                       "option names, short names, or aliases collide, or use reserved help/version names (including case and kebab spellings)");
         static_assert(Assertions::check_subcommand_collisions<T>(), "subcommand names or aliases collide (including case and kebab spellings)");
         static_assert(Assertions::check_enum_alias_collisions<T>(), "enum aliases or enumerator names collide (including case and kebab spellings)");
-        // TODO: Env + File annotation assertions and tests
+        static_assert(Assertions::check_subcommand_annotations<T>(), "Env cannot be used on a Subcommand-annotated field");
         static_assert(Assertions::check_requires_subcommand<T>(), "RequiresSubcommand belongs on the argument type, not a field");
         static_assert(Assertions::check_exclusion_groups<T>(), "Needs and Excludes values must either denote valid fields or group names");
         static_assert(Assertions::check_group_name_collisions<T>(), "Group names cannot collide with field names");
