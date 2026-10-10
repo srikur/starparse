@@ -38,5 +38,46 @@ add_executable(starparse_tests
         test_subcommands.cpp
         test_validations.cpp)
 target_link_libraries(starparse_tests PRIVATE starparse::starparse doctest::doctest)
-target_compile_options(starparse_tests PRIVATE -Wall -Werror -Wextra -Wpedantic)
+target_compile_options(starparse_tests PRIVATE
+        -Wall
+        -Wextra
+        -Werror
+        -Wpedantic
+        -Wconversion
+        -Wsign-conversion
+        -Wdouble-promotion
+        -Wcast-align
+        -Wcast-qual
+        -Wold-style-cast
+        -Wzero-as-null-pointer-constant
+        -Wnon-virtual-dtor
+        -Woverloaded-virtual
+        -Wnull-dereference
+        -Wimplicit-fallthrough
+        -Wswitch-enum
+        -Wshadow
+        -Wformat=2
+        -Wextra-semi
+        -Wmissing-declarations
+        -Wundef)
+
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    target_compile_options(starparse_tests PRIVATE
+            -Wduplicated-cond
+            -Wduplicated-branches
+            -Wlogical-op
+            -Wuseless-cast
+            -Wcast-align=strict
+    )
+    target_compile_options(starparse_tests PRIVATE
+            $<$<CONFIG:Debug>:-fanalyzer>
+            $<$<CONFIG:Debug>:-fsanitize=address,undefined>
+            $<$<CONFIG:Debug>:-fno-omit-frame-pointer>
+    )
+
+    target_link_options(starparse_tests PRIVATE
+            $<$<CONFIG:Debug>:-fsanitize=address,undefined>
+    )
+endif ()
+
 doctest_discover_tests(starparse_tests)

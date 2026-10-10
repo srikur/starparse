@@ -11,6 +11,8 @@ AlignAfterOpenBracket: Align
 AllowShortFunctionsOnASingleLine: Empty
 AllowShortLambdasOnASingleLine: Empty
 AllowShortEnumsOnASingleLine: false
+# With ColumnLimit: 0, preserve both compact and multiline if statements.
+AllowShortIfStatementsOnASingleLine: AllIfsAndElse
 AlwaysBreakTemplateDeclarations: Yes
 BraceWrapping: 
   AfterCaseLabel: false

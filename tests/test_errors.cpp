@@ -12,7 +12,7 @@ namespace {
 } // namespace
 
 TEST_CASE("errors: unknown option") {
-    const auto args = parse_from<Args>({"--nope"}, settings);
+    const auto args = parse_from<Args, settings>({"--nope"});
     REQUIRE_FALSE(args);
     REQUIRE(args.errors().size() == 1uz);
     CHECK(args.errors()[0].kind == ErrorKind::UNKNOWN_OPTION);
@@ -20,7 +20,7 @@ TEST_CASE("errors: unknown option") {
 }
 
 TEST_CASE("errors: option without value") {
-    const auto args = parse_from<Args>({"--arg1"}, settings);
+    const auto args = parse_from<Args, settings>({"--arg1"});
     REQUIRE_FALSE(args);
     REQUIRE(args.errors().size() == 1uz);
     CHECK(args.errors()[0].kind == ErrorKind::MISSING_VALUE);
@@ -28,7 +28,7 @@ TEST_CASE("errors: option without value") {
 }
 
 TEST_CASE("errors: value that does not parse") {
-    const auto args = parse_from<Args>({"abc"}, settings);
+    const auto args = parse_from<Args, settings>({"abc"});
     REQUIRE_FALSE(args);
     REQUIRE(args.errors().size() == 1uz);
     CHECK(args.errors()[0].kind == ErrorKind::INVALID_VALUE);

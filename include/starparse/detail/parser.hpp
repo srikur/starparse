@@ -105,7 +105,7 @@ namespace StarParse::detail::Parser {
         static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
         bool found{false};
         template for (constexpr auto m : members) {
-            if constexpr (is_subcommand(m)) {
+            if constexpr (has_annotation<detail::Subcommand_>(m)) {
                 if (does_match_name<m>(name, settings, false))
                     found = true;
             }
@@ -128,7 +128,7 @@ namespace StarParse::detail::Parser {
         if (settings.allow_kebab_casing && has_prefix(kebab_name_v<M>))
             return kebab_name_v<M>;
         if (settings.allow_aliases) {
-            for (const char *alias : alias_names<M>()) {
+            for (const auto &alias : alias_names<M>()) {
                 if (const std::string_view spelling{alias}; (allow_short_aliases || spelling.size() > 1) && has_prefix(spelling))
                     return spelling;
             }
@@ -167,7 +167,7 @@ namespace StarParse::detail::Parser {
         std::optional<std::string_view> found;
         auto count{0uz};
         template for (constexpr auto m : members) {
-            if constexpr (is_subcommand(m)) {
+            if constexpr (has_annotation<detail::Subcommand_>(m)) {
                 if (const auto spelling = spelling_with_prefix<m>(prefix, settings, true)) {
                     found = *spelling;
                     ++count;
@@ -236,9 +236,9 @@ namespace StarParse::detail::Parser {
     std::string format_help(std::span<const size_t> command_path, const DefaultValues &defaults, const std::string &command_name, std::string usage,
                             const Settings &settings) {
         static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
-        constexpr auto program = program_of(^^T);
-        constexpr auto prologue = prologue_of(^^T);
-        constexpr auto epilogue = epilogue_of(^^T);
+        constexpr auto program = extraction_of<Program>(^^T);
+        constexpr auto prologue = extraction_of<Prologue>(^^T);
+        constexpr auto epilogue = extraction_of<Epilogue>(^^T);
 
         struct ArgumentRow {
             size_t index{};
@@ -257,11 +257,11 @@ namespace StarParse::detail::Parser {
         template for (constexpr auto m : members) {
             if constexpr (!is_hidden(m)) {
                 using M = [:std::meta::type_of(m):];
-                constexpr auto opt = opt_of(m);
-                constexpr auto pos = positional_of(m);
+                constexpr auto opt = extraction_of<Opt>(m);
+                constexpr auto pos = extraction_of<Positional>(m);
                 constexpr auto position = positional_index_of<T>(m);
                 constexpr auto name = name_of(m);
-                constexpr auto env = env_of(m);
+                constexpr auto env = extraction_of<Env>(m);
                 constexpr bool required = is_required(m);
 
                 std::string description;
@@ -284,16 +284,16 @@ namespace StarParse::detail::Parser {
                     description += description.empty() ? "(required)" : " (required)";
                 }
 
-                if constexpr (is_subcommand(m)) {
+                if constexpr (has_annotation<detail::Subcommand_>(m)) {
                     using Child = [:value_type_of(^^M):];
-                    constexpr auto child_program = program_of(^^Child);
+                    constexpr auto child_program = extraction_of<Program>(^^Child);
                     if constexpr (child_program.has_value()) {
                         if (child_program->description != nullptr)
                             description = child_program->description;
                     }
                     std::string invocation{name};
                     if (settings.allow_aliases) {
-                        for (const char *alias : alias_names<m>()) {
+                        for (const auto &alias : alias_names<m>()) {
                             invocation += std::format(", {}", alias);
                         }
                     }
@@ -316,25 +316,25 @@ namespace StarParse::detail::Parser {
                             }
                         }
                         if (settings.allow_aliases) {
-                            for (const char *alias : alias_names<m>()) {
+                            for (const auto &alias : alias_names<m>()) {
                                 const std::string_view a{alias};
                                 invocation += std::format(", {}{}", a.size() == 1 ? "-" : "--", a);
                             }
                         }
                         if constexpr (!is_flag_type(^^M)) {
-                            if constexpr (constexpr auto range_annotation = range_of(m)) {
+                            if constexpr (constexpr auto range_annotation = specialization_of<^^Range>(m)) {
                                 using A = [:std::meta::remove_cv(std::meta::type_of(*range_annotation)):];
                                 const auto range = std::meta::extract<A>(*range_annotation);
                                 invocation += std::format(" <{}..{}>", range.min, range.max);
-                            } else if constexpr (constexpr auto min_annotation = min_of(m)) {
+                            } else if constexpr (constexpr auto min_annotation = specialization_of<^^Min>(m)) {
                                 using A = [:std::meta::remove_cv(std::meta::type_of(*min_annotation)):];
                                 const auto mn = std::meta::extract<A>(*min_annotation);
                                 invocation += std::format(" <{}..>", mn.value);
-                            } else if constexpr (constexpr auto max_annotation = max_of(m)) {
+                            } else if constexpr (constexpr auto max_annotation = specialization_of<^^Max>(m)) {
                                 using A = [:std::meta::remove_cv(std::meta::type_of(*max_annotation)):];
                                 const auto mx = std::meta::extract<A>(*max_annotation);
                                 invocation += std::format(" <..{}>", mx.value);
-                            } else if constexpr (choices_of(m).has_value()) {
+                            } else if constexpr (specialization_of<^^Choices>(m).has_value()) {
                                 constexpr auto choices = choices_list<m>();
                                 invocation += " <";
                                 invocation.append_range(choices | std::views::transform([](const char *s) {
@@ -365,7 +365,7 @@ namespace StarParse::detail::Parser {
 
         if (!command_path.empty()) {
             template for (constexpr auto m : members) {
-                if constexpr (is_subcommand(m)) {
+                if constexpr (has_annotation<detail::Subcommand_>(m)) {
                     if (command_path.front() == member_index_of<T>(m)) {
                         using Child = [:value_type_of(std::meta::type_of(m)):];
                         constexpr auto name = name_of(m);
@@ -402,7 +402,7 @@ namespace StarParse::detail::Parser {
                 text += std::format("{}\n\n", command_name);
             }
         }
-        constexpr auto usage_override = usage_of(^^T);
+        constexpr auto usage_override = extraction_of<Usage>(^^T);
         text += std::format("Usage: {}\n", usage_override ? usage_override->value : usage);
         if constexpr (prologue.has_value()) {
             if (prologue->value != nullptr && *prologue->value != '\0') {
@@ -433,16 +433,16 @@ namespace StarParse::detail::Parser {
         return text;
     }
 
-    template<typename T>
+    template<typename T, Settings S = Settings{}>
     class ParsedArgs {
     public:
         ParsedArgs(T out, DefaultValues defaults, const bool show_help, const bool show_version, const std::string_view argv_name,
-                   std::vector<ParseError> &errors, std::vector<size_t> command_path, const Settings &settings,
+                   std::vector<ParseError> &errors, std::vector<size_t> command_path,
                    std::vector<std::string> response_args = {}) : response_args_(std::move(response_args)), out_(std::move(out)),
                                                                   defaults_(std::move(defaults)), show_help_(show_help), show_version_(show_version),
                                                                   errors_(std::move(errors)),
                                                                   command_path_(std::move(command_path)), argv_name_(argv_name),
-                                                                  settings_(settings) {}
+                                                                  settings_(S) {}
 
         ParsedArgs(const ParsedArgs &) = delete;
 
@@ -486,7 +486,7 @@ namespace StarParse::detail::Parser {
 
         // ReSharper disable once CppMemberFunctionMayBeStatic
         [[nodiscard]] std::string version() const {
-            constexpr auto program = program_of(^^T);
+            constexpr auto program = extraction_of<Program>(^^T);
             if constexpr (program.has_value()) {
                 return Terminal::wrap(std::format("{} version {}", program->name, program->version));
             } else {
@@ -495,7 +495,7 @@ namespace StarParse::detail::Parser {
         }
 
         [[nodiscard]] std::string help() const {
-            constexpr auto program = program_of(^^T);
+            constexpr auto program = extraction_of<Program>(^^T);
             const std::string program_name = program.has_value() ? program->name : std::string{argv_name_};
             const std::string raw_help = format_help<T>(command_path_, defaults_, program_name, program_name, settings_);
             return Terminal::wrap(raw_help);
@@ -607,7 +607,7 @@ namespace StarParse::detail::Parser {
             if (a.is_positional && !separator_seen) {
                 resolve_inferred_subcommand<T>(a, settings);
                 template for (constexpr auto m : members) {
-                    if constexpr (is_subcommand(m)) {
+                    if constexpr (has_annotation<detail::Subcommand_>(m)) {
                         using M = [:std::meta::type_of(m):];
                         static_assert(is_optional(^^M));
                         using Child = [:value_type_of(^^M):];
@@ -637,7 +637,7 @@ namespace StarParse::detail::Parser {
         return attr_array;
     }
 
-    template<typename T>
+    template<typename T, Settings S = Settings{}>
     void check_assertions() {
         static_assert(Assertions::check_annotation_placement<T>(),
                       "misplaced annotation: Program belongs on the argument type; enum values only accept Alias");
@@ -659,10 +659,12 @@ namespace StarParse::detail::Parser {
                       "option names, short names, or aliases collide, or use reserved help/version names (including case and kebab spellings)");
         static_assert(Assertions::check_subcommand_collisions<T>(), "subcommand names or aliases collide (including case and kebab spellings)");
         static_assert(Assertions::check_enum_alias_collisions<T>(), "enum aliases or enumerator names collide (including case and kebab spellings)");
-        // TODO: Env + File annotation assertions and tests
+        static_assert(Assertions::check_subcommand_annotations<T>(), "Env cannot be used on a Subcommand-annotated field");
         static_assert(Assertions::check_requires_subcommand<T>(), "RequiresSubcommand belongs on the argument type, not a field");
         static_assert(Assertions::check_exclusion_groups<T>(), "Needs and Excludes values must either denote valid fields or group names");
         static_assert(Assertions::check_group_name_collisions<T>(), "Group names cannot collide with field names");
+        static_assert(Assertions::check_negated_name_collisions<T>(S),
+                      "When negated names are enabled, fields cannot overlap with negated names");
     }
 
     struct ParseState {
@@ -707,10 +709,10 @@ namespace StarParse::detail::Parser {
         return defaults;
     }
 
-    template<typename T>
-    void parse_into(std::span<const ArgAttributes> attributes, T &out, const Settings &settings, ParseState &state) {
+    template<typename T, Settings settings>
+    void parse_into(std::span<const ArgAttributes> attributes, T &out, ParseState &state) {
         static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
-        check_assertions<T>();
+        check_assertions<T, settings>();
         std::array<size_t, members.size()> fields_set{};
         size_t next_positional{0uz};
         bool subcommand_entered{false};
@@ -718,7 +720,7 @@ namespace StarParse::detail::Parser {
         auto &errors = state.errors;
         std::vector<std::string_view> candidates = viable_candidate_names<T>(settings);
 
-        if constexpr (constexpr auto file = file_of(^^T)) {
+        if constexpr (constexpr auto file = extraction_of<annotations::File>(^^T)) {
             if (const auto parse_result = File::read_env_file(std::string_view{file->filename})) {
                 state.env_vars = std::move(*parse_result);
             } else {
@@ -743,10 +745,9 @@ namespace StarParse::detail::Parser {
                 using M = [:std::meta::type_of(m):];
                 constexpr auto idx = member_index_of<T>(m);
                 constexpr auto pos = positional_index_of<T>(m);
-                if constexpr (is_subcommand(m)) {
+                if constexpr (has_annotation<detail::Subcommand_>(m)) {
                     if (attrs.is_subcommand && !matched && does_match_name<m>(attrs.name, settings, false)) {
                         subcommand_entered = true;
-                        using M = [:std::meta::type_of(m):];
                         using Child = [:value_type_of(^^M):];
                         auto &child = out.[:m:];
                         if (!child)
@@ -755,7 +756,7 @@ namespace StarParse::detail::Parser {
                         ++fields_set[idx];
 
                         state.command_path.push_back(idx);
-                        parse_into<Child>(attributes.subspan(i + 1), *child, settings, state);
+                        parse_into<Child, settings>(attributes.subspan(i + 1), *child, state);
                         entered_child = true;
                     }
                 } else {
@@ -769,7 +770,7 @@ namespace StarParse::detail::Parser {
                             }
                         }
                     } else if (attrs.dashed || attrs.double_dashed) {
-                        constexpr auto opt = opt_of(m);
+                        constexpr auto opt = extraction_of<Opt>(m);
                         constexpr bool named = is_named_option<T>(m);
                         const bool matching_string = named && does_match_name<m>(attrs.name, settings);
                         if (!matched && matching_string) {
@@ -842,7 +843,7 @@ namespace StarParse::detail::Parser {
                             .kind = ErrorKind::AMBIGUOUS_OPTION,
                             .input_value = std::string{attrs.name},
                             .detail = std::move(detail),
-                            .argv_index = attrs.argv_index
+                            .argv_index = attrs.argv_index,
                         });
                         continue;
                     }
@@ -850,18 +851,18 @@ namespace StarParse::detail::Parser {
 
                 // compute edit distance candidates
                 const auto min_candidate =
-                        std::ranges::fold_left(candidates, std::pair{std::numeric_limits<size_t>::max(), ""},
-                                               [&](const std::pair<size_t, std::string_view> &best, const std::string_view candidate) {
-                                                   const auto distance = edit_distance(name_or_value, candidate);
-                                                   return distance < best.first ? std::pair{distance, candidate} : best;
-                                               });
+                    std::ranges::fold_left(candidates, std::pair{std::numeric_limits<size_t>::max(), ""},
+                                           [&](const std::pair<size_t, std::string_view> &best, const std::string_view candidate) {
+                                               const auto distance = edit_distance(name_or_value, candidate, settings);
+                                               return distance < best.first ? std::pair{distance, candidate} : best;
+                                           });
                 const auto max_allowed_distance = std::max<size_t>(1, (name_or_value.size() + 2) / 3);
                 std::string_view suggestion = min_candidate.first <= max_allowed_distance ? min_candidate.second : std::string_view{};
                 errors.push_back({
                     .kind = ErrorKind::UNKNOWN_OPTION,
                     .input_value = std::string{name_or_value},
                     .detail = suggestion.empty() ? "" : std::format(". Did you mean '{}'?", suggestion),
-                    .argv_index = attrs.argv_index
+                    .argv_index = attrs.argv_index,
                 });
             }
         }
@@ -871,7 +872,7 @@ namespace StarParse::detail::Parser {
 
         template for (constexpr auto m : members) {
             const size_t index = member_index_of<T>(m);
-            if constexpr (constexpr auto env = env_of(m)) {
+            if constexpr (constexpr auto env = extraction_of<Env>(m)) {
                 constexpr std::string_view name = env_name_v<m>;
                 if (fields_set[index] != 0)
                     continue;
@@ -909,7 +910,7 @@ namespace StarParse::detail::Parser {
                 }
             }
             if (fields_set[index]) {
-                if constexpr (extraction_of<^^Needs>(m).has_value()) {
+                if constexpr (specialization_of<^^Needs>(m).has_value()) {
                     static constexpr auto needs = get_annotation_list_values<m, ^^Needs>();
                     // can either be a field or a group
                     template for (constexpr auto value : needs) {
@@ -937,7 +938,7 @@ namespace StarParse::detail::Parser {
                         }
                     }
                 }
-                if constexpr (extraction_of<^^Excludes>(m).has_value()) {
+                if constexpr (specialization_of<^^Excludes>(m).has_value()) {
                     static constexpr auto excludes = get_annotation_list_values<m, ^^Excludes>();
                     constexpr auto field_name = name_of(m);
                     template for (constexpr auto value : excludes) {
@@ -971,16 +972,19 @@ namespace StarParse::detail::Parser {
         }
     }
 
-    template<typename T>
-    ParsedArgs<T> parse(const std::span<const std::string_view> args, const std::string_view program_name, T initial = {}, Settings settings = {}) {
+    template<typename T, Settings settings>
+    ParsedArgs<T, settings> parse(const std::span<const std::string_view> args,
+                                  const std::string_view program_name,
+                                  T initial = {}) {
         auto defaults = capture_defaults<T>(initial);
         T out{std::move(initial)};
         ParseState state{};
         std::vector<std::string> response_storage;
         std::vector<ArgAttributes> attr_array = get_arg_attrs<T>(args, settings);
         if (const auto it = std::ranges::find_if(attr_array, [](const ArgAttributes &attrs) {
-            return attrs.is_response_file;
-        }); it != attr_array.end()) {
+                return attrs.is_response_file;
+            });
+            it != attr_array.end()) {
             auto response_args = File::read_response_file(it->name);
             if (response_args) {
                 response_storage = std::move(*response_args);
@@ -993,10 +997,16 @@ namespace StarParse::detail::Parser {
         }
 
         if (state.errors.empty())
-            parse_into<T>(attr_array, out, settings, state);
-        return ParsedArgs<T>{
-            std::move(out), std::move(defaults), state.help_requested, state.version_requested,
-            program_name, state.errors, std::move(state.command_path), settings, std::move(response_storage)
+            parse_into<T, settings>(attr_array, out, state);
+        return ParsedArgs<T, settings>{
+            std::move(out),
+            std::move(defaults),
+            state.help_requested,
+            state.version_requested,
+            program_name,
+            state.errors,
+            std::move(state.command_path),
+            std::move(response_storage),
         };
     }
 } // namespace StarParse::detail::Parser
