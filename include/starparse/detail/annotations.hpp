@@ -69,7 +69,11 @@ namespace StarParse::inline annotations {
     struct Name final {
         const char *name_{};
 
-        explicit consteval Name(std::string_view n) : name_(std::define_static_string(n)) {}
+        explicit consteval Name(std::string_view n) : name_(std::define_static_string(n)) {
+            if (n.empty()) {
+                throw std::invalid_argument("Name cannot be an empty string");
+            }
+        }
     };
 
     struct Positional final {

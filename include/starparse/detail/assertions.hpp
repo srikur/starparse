@@ -181,7 +181,7 @@ namespace StarParse::detail::Assertions {
                 }
             } else if (kind == AnnotationKind::NAME) {
                 const auto name = std::meta::extract<Name>(annotation);
-                if (name.name_ == nullptr || !valid_alias(name.name_))
+                if (!valid_alias(std::string_view{name.name_}))
                     return false;
             }
         }
@@ -212,7 +212,8 @@ namespace StarParse::detail::Assertions {
     };
 
     consteval void append_names(std::vector<Name> &names, const std::meta::info entity, const bool include_short_name = true) {
-        const std::string name{name_of(entity)};
+        const auto resolved_name = name_of(entity);
+        const std::string name{resolved_name.begin(), resolved_name.end()};
         names.push_back({.text = name, .owner = entity});
         std::string kebab = name;
         std::ranges::replace(kebab, '_', '-');

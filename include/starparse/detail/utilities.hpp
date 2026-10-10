@@ -240,14 +240,14 @@ namespace StarParse::detail::Utilities {
 
     template<std::meta::info M>
     inline constexpr std::string_view kebab_name_v = [] {
-        std::string s(name_of(M));
+        std::string s{snake_name_v<M>.begin(), snake_name_v<M>.end()};
         std::ranges::replace(s, '_', '-');
         return std::string_view(std::define_static_string(s), s.size());
     }();
 
     template<std::meta::info M>
     inline constexpr std::string_view snake_negated_name_v = [] {
-        std::string s(name_of(M));
+        std::string s{snake_name_v<M>.begin(), snake_name_v<M>.end()};
         s.reserve(s.size() + 3);
         s.insert(0, "no-");
         return std::string_view(std::define_static_string(s), s.size());
@@ -255,7 +255,7 @@ namespace StarParse::detail::Utilities {
 
     template<std::meta::info M>
     inline constexpr std::string_view kebab_negated_name_v = [] {
-        std::string s(name_of(M));
+        std::string s{snake_name_v<M>.begin(), snake_name_v<M>.end()};
         s.reserve(s.size() + 3);
         s.insert(0, "no_");
         std::ranges::replace(s, '_', '-');
