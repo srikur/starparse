@@ -29,7 +29,7 @@ namespace {
         [[=Validator{
             [](const std::string &arg) -> bool {
                 return arg == "hello";
-            }
+            },
         }]] std::string string4;
         [[=Choices{"a", "b", "c", "d"}]] std::string letter;
         [[=Range{1, 3}]] int range;

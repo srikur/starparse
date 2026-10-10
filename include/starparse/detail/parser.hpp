@@ -843,7 +843,7 @@ namespace StarParse::detail::Parser {
                             .kind = ErrorKind::AMBIGUOUS_OPTION,
                             .input_value = std::string{attrs.name},
                             .detail = std::move(detail),
-                            .argv_index = attrs.argv_index
+                            .argv_index = attrs.argv_index,
                         });
                         continue;
                     }
@@ -851,18 +851,18 @@ namespace StarParse::detail::Parser {
 
                 // compute edit distance candidates
                 const auto min_candidate =
-                        std::ranges::fold_left(candidates, std::pair{std::numeric_limits<size_t>::max(), ""},
-                                               [&](const std::pair<size_t, std::string_view> &best, const std::string_view candidate) {
-                                                   const auto distance = edit_distance(name_or_value, candidate, settings);
-                                                   return distance < best.first ? std::pair{distance, candidate} : best;
-                                               });
+                    std::ranges::fold_left(candidates, std::pair{std::numeric_limits<size_t>::max(), ""},
+                                           [&](const std::pair<size_t, std::string_view> &best, const std::string_view candidate) {
+                                               const auto distance = edit_distance(name_or_value, candidate, settings);
+                                               return distance < best.first ? std::pair{distance, candidate} : best;
+                                           });
                 const auto max_allowed_distance = std::max<size_t>(1, (name_or_value.size() + 2) / 3);
                 std::string_view suggestion = min_candidate.first <= max_allowed_distance ? min_candidate.second : std::string_view{};
                 errors.push_back({
                     .kind = ErrorKind::UNKNOWN_OPTION,
                     .input_value = std::string{name_or_value},
                     .detail = suggestion.empty() ? "" : std::format(". Did you mean '{}'?", suggestion),
-                    .argv_index = attrs.argv_index
+                    .argv_index = attrs.argv_index,
                 });
             }
         }
@@ -982,8 +982,9 @@ namespace StarParse::detail::Parser {
         std::vector<std::string> response_storage;
         std::vector<ArgAttributes> attr_array = get_arg_attrs<T>(args, settings);
         if (const auto it = std::ranges::find_if(attr_array, [](const ArgAttributes &attrs) {
-            return attrs.is_response_file;
-        }); it != attr_array.end()) {
+                return attrs.is_response_file;
+            });
+            it != attr_array.end()) {
             auto response_args = File::read_response_file(it->name);
             if (response_args) {
                 response_storage = std::move(*response_args);
@@ -998,8 +999,14 @@ namespace StarParse::detail::Parser {
         if (state.errors.empty())
             parse_into<T, settings>(attr_array, out, state);
         return ParsedArgs<T, settings>{
-            std::move(out), std::move(defaults), state.help_requested, state.version_requested,
-            program_name, state.errors, std::move(state.command_path), std::move(response_storage)
+            std::move(out),
+            std::move(defaults),
+            state.help_requested,
+            state.version_requested,
+            program_name,
+            state.errors,
+            std::move(state.command_path),
+            std::move(response_storage),
         };
     }
 } // namespace StarParse::detail::Parser

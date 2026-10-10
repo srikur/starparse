@@ -82,9 +82,7 @@ namespace StarParse::detail::Utilities {
 
     template<typename T>
     consteval bool is_named_option(const std::meta::info m) {
-        return !has_annotation<detail::Subcommand_>(m) && (extraction_of<Opt>(m).has_value()
-                                                           || extraction_of<Positional>(m).has_value()
-                                                           || is_bare<T>());
+        return !has_annotation<detail::Subcommand_>(m) && (extraction_of<Opt>(m).has_value() || extraction_of<Positional>(m).has_value() || is_bare<T>());
     }
 
     consteval bool is_hidden(const std::meta::info m) {
@@ -179,10 +177,7 @@ namespace StarParse::detail::Utilities {
                 if constexpr (std::convertible_to<T, std::string_view> && std::convertible_to<decltype(choice), std::string_view>) {
                     if (std::string_view{value} == std::string_view{choice} || (allow_case_insensitivity && iequals(value, choice)))
                         return true;
-                } else if constexpr (requires
-                {
-                    { value == choice } -> std::convertible_to<bool>;
-                }) {
+                } else if constexpr (requires {{ value == choice } -> std::convertible_to<bool>; }) {
                     if (value == choice)
                         return true;
                 }
@@ -230,9 +225,9 @@ namespace StarParse::detail::Utilities {
         r = std::meta::dealias(std::meta::remove_cv(r));
         if (is_optional(r))
             r = std::meta::dealias(value_type_of(r));
-        return std::meta::is_integral_type(r) && r != (^^bool) && !std::meta::extract<bool>(std::meta::substitute(^^is_char_v, {
-                       r
-                   }));
+        return std::meta::is_integral_type(r) && r != (^^bool)&&!std::meta::extract<bool>(std::meta::substitute(^^is_char_v, {
+                                                                                                                                 r,
+                                                                                                                             }));
     }
 
     template<std::meta::info M>
@@ -314,12 +309,12 @@ namespace StarParse::detail::Utilities {
         constexpr std::array true_values{"yes"sv, "1"sv, "on"sv, "true"sv, "t"sv};
         constexpr std::array false_values{"no"sv, "0"sv, "off"sv, "false"sv, "f"sv};
         if (std::ranges::any_of(true_values, [&](auto value) {
-            return iequals(s, value);
-        }))
+                return iequals(s, value);
+            }))
             return true;
         if (std::ranges::any_of(false_values, [&](auto value) {
-            return iequals(s, value);
-        }))
+                return iequals(s, value);
+            }))
             return false;
         return std::unexpected(ParseError{
             .kind = ErrorKind::INVALID_VALUE,
@@ -362,7 +357,10 @@ namespace StarParse::detail::Utilities {
             auto [pointer, error_code] = std::from_chars(s.data(), s.data() + s.size(), v);
             if (error_code != std::errc{} || pointer != s.data() + s.size()) {
                 return std::unexpected(ParseError{
-                    .kind = ErrorKind::INVALID_VALUE, .input_value = std::string{s}, .current_argument = name_of(Mem), .argv_index = index
+                    .kind = ErrorKind::INVALID_VALUE,
+                    .input_value = std::string{s},
+                    .current_argument = name_of(Mem),
+                    .argv_index = index,
                 });
             }
             return v;
@@ -375,7 +373,10 @@ namespace StarParse::detail::Utilities {
             }
             if (!parsed)
                 return std::unexpected(ParseError{
-                    .kind = ErrorKind::INVALID_VALUE, .input_value = std::string{s}, .current_argument = name_of(Mem), .argv_index = index
+                    .kind = ErrorKind::INVALID_VALUE,
+                    .input_value = std::string{s},
+                    .current_argument = name_of(Mem),
+                    .argv_index = index,
                 });
             return *parsed;
         } else {
@@ -553,7 +554,7 @@ namespace StarParse::detail::Utilities {
                     .input_value = std::string{input},
                     .detail = result.error().empty() ? std::string{"validator returned false"} : std::move(result.error()),
                     .current_argument = name_of(Mem),
-                    .argv_index = index
+                    .argv_index = index,
                 });
                 return false;
             }
@@ -565,7 +566,7 @@ namespace StarParse::detail::Utilities {
                     .input_value = std::string{input},
                     .detail = std::format("{}", choices),
                     .current_argument = name_of(Mem),
-                    .argv_index = index
+                    .argv_index = index,
                 });
                 return false;
             }
@@ -579,7 +580,7 @@ namespace StarParse::detail::Utilities {
                     .input_value = std::string{input},
                     .detail = std::format("minimum is {}", mn.value),
                     .current_argument = name_of(Mem),
-                    .argv_index = index
+                    .argv_index = index,
                 });
                 return false;
             }
@@ -593,7 +594,7 @@ namespace StarParse::detail::Utilities {
                     .input_value = std::string{input},
                     .detail = std::format("maximum is {}", mx.value),
                     .current_argument = name_of(Mem),
-                    .argv_index = index
+                    .argv_index = index,
                 });
                 return false;
             }
@@ -607,7 +608,7 @@ namespace StarParse::detail::Utilities {
                     .input_value = std::string{input},
                     .detail = std::format("allowed range is [{}, {}]", range.min, range.max),
                     .current_argument = name_of(Mem),
-                    .argv_index = index
+                    .argv_index = index,
                 });
                 return false;
             }
@@ -629,7 +630,7 @@ namespace StarParse::detail::Utilities {
                     .input_value = std::string{name},
                     .detail = "count would overflow",
                     .current_argument = name_of(Mem),
-                    .argv_index = index
+                    .argv_index = index,
                 });
                 return false;
             }
@@ -655,7 +656,7 @@ namespace StarParse::detail::Utilities {
                 .input_value = std::string{s},
                 .detail = result.error().empty() ? std::string{"parsed returned an error"} : std::move(result.error()),
                 .current_argument = name_of(Mem),
-                .argv_index = index
+                .argv_index = index,
             });
         } else
             return *result;
@@ -697,7 +698,7 @@ namespace StarParse::detail::Utilities {
                         .kind = ErrorKind::DUPLICATE_VALUE,
                         .input_value = std::string{piece},
                         .current_argument = name_of(Mem),
-                        .argv_index = index
+                        .argv_index = index,
                     });
                 } else if constexpr (has_custom_parser) {
                     if (auto result = apply_custom_parser<Mem, E>(piece, index)) {

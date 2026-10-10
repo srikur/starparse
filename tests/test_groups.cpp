@@ -282,9 +282,15 @@ TEST_CASE("groups: mutual dependencies allow neither or both options") {
         [[=Opt{""}, =Needs{"second"}]] bool first{};
         [[=Opt{""}, =Needs{"first"}]] bool second{};
     };
-    SUBCASE("neither") { REQUIRE(parse_from<MutualNeeds>({})); }
-    SUBCASE("both") { REQUIRE(parse_from<MutualNeeds>({"--first", "--second"})); }
-    SUBCASE("one") { check_errors(parse_from<MutualNeeds>({"--first"}), ErrorKind::MISSING_DEPENDENCY, {"second"}); }
+    SUBCASE("neither") {
+        REQUIRE(parse_from<MutualNeeds>({}));
+    }
+    SUBCASE("both") {
+        REQUIRE(parse_from<MutualNeeds>({"--first", "--second"}));
+    }
+    SUBCASE("one") {
+        check_errors(parse_from<MutualNeeds>({"--first"}), ErrorKind::MISSING_DEPENDENCY, {"second"});
+    }
 }
 
 TEST_CASE("groups: mutual exclusions allow either option alone") {
@@ -292,9 +298,15 @@ TEST_CASE("groups: mutual exclusions allow either option alone") {
         [[=Opt{""}, =Excludes{"second"}]] bool first{};
         [[=Opt{""}, =Excludes{"first"}]] bool second{};
     };
-    SUBCASE("neither") { REQUIRE(parse_from<MutualExcludes>({})); }
-    SUBCASE("first") { REQUIRE(parse_from<MutualExcludes>({"--first"})); }
-    SUBCASE("second") { REQUIRE(parse_from<MutualExcludes>({"--second"})); }
+    SUBCASE("neither") {
+        REQUIRE(parse_from<MutualExcludes>({}));
+    }
+    SUBCASE("first") {
+        REQUIRE(parse_from<MutualExcludes>({"--first"}));
+    }
+    SUBCASE("second") {
+        REQUIRE(parse_from<MutualExcludes>({"--second"}));
+    }
     SUBCASE("both") {
         const auto args = parse_from<MutualExcludes>({"--first", "--second"});
         check_errors(args, ErrorKind::INVALID_OVERLAP, {"first", "second"});
