@@ -419,7 +419,8 @@ namespace StarParse::detail::Utilities {
     constexpr bool does_match_name(const std::string_view name, const Settings &settings, const bool allow_short = true) {
         if (matches_non_negated_name<M>(name, settings, allow_short))
             return true;
-        if (settings.autogenerate_negations && name.starts_with("no-") && is_flag_type(std::meta::type_of(M))) {
+        // checking name size >= 3 prevents GCC complaining about removing a prefix of size 3
+        if (settings.autogenerate_negations && name.size() >= 3 && name.starts_with("no-") && is_flag_type(std::meta::type_of(M))) {
             std::string_view negated{name};
             negated.remove_prefix(3);
             return check_snake_case<M>(negated, settings) || check_kebab_case<M>(negated, settings);

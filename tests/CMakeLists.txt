@@ -38,5 +38,5 @@ add_executable(starparse_tests
         test_subcommands.cpp
         test_validations.cpp)
 target_link_libraries(starparse_tests PRIVATE starparse::starparse doctest::doctest)
-target_compile_options(starparse_tests PRIVATE -Wall -Werror)
+target_compile_options(starparse_tests PRIVATE -Wall -Werror -Wextra -Wpedantic)
 doctest_discover_tests(starparse_tests)

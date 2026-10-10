@@ -950,8 +950,6 @@ namespace StarParse::detail::Parser {
                 }
             }
         }
-
-        // check needs, excludes, groups
     }
 
     template<typename T>
