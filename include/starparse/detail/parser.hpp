@@ -38,10 +38,16 @@ namespace StarParse::detail::Parser {
         bool is_separator{};
         bool is_subcommand{};
         bool has_value{};
+        bool is_response_file{};
         std::string_view name{};
         std::string_view value{};
 
         explicit ArgAttributes(std::string_view argument, const size_t index, const bool separator_seen) : argv_index(index) {
+            if (!separator_seen && argument.starts_with('@')) {
+                is_response_file = true;
+                name = argument.substr(1);
+                return;
+            }
             if (separator_seen || !argument.starts_with('-')) {
                 is_positional = true;
                 name = argument;
@@ -431,9 +437,20 @@ namespace StarParse::detail::Parser {
     class ParsedArgs {
     public:
         ParsedArgs(T out, DefaultValues defaults, const bool show_help, const bool show_version, const std::string_view argv_name,
-                   std::vector<ParseError> &errors, std::vector<size_t> command_path, const Settings &settings) : out_(std::move(out)),
-            defaults_(std::move(defaults)), show_help_(show_help), show_version_(show_version), errors_(std::move(errors)),
-            command_path_(std::move(command_path)), argv_name_(argv_name), settings_(settings) {}
+                   std::vector<ParseError> &errors, std::vector<size_t> command_path, const Settings &settings,
+                   std::vector<std::string> response_args = {}) : response_args_(std::move(response_args)), out_(std::move(out)),
+                                                                  defaults_(std::move(defaults)), show_help_(show_help), show_version_(show_version),
+                                                                  errors_(std::move(errors)),
+                                                                  command_path_(std::move(command_path)), argv_name_(argv_name),
+                                                                  settings_(settings) {}
+
+        ParsedArgs(const ParsedArgs &) = delete;
+
+        ParsedArgs &operator=(const ParsedArgs &) = delete;
+
+        ParsedArgs(ParsedArgs &&) = default;
+
+        ParsedArgs &operator=(ParsedArgs &&) = default;
 
         T &&value() && {
             return std::move(out_);
@@ -499,6 +516,8 @@ namespace StarParse::detail::Parser {
         }
 
     private:
+        // Declared first so the text outlives parsed values and errors that reference it.
+        std::vector<std::string> response_args_;
         T out_{};
         DefaultValues defaults_{};
         bool show_help_{};
@@ -666,7 +685,7 @@ namespace StarParse::detail::Parser {
         } else if constexpr (std::same_as<M, bool>) {
             return value ? "true" : "false";
         } else if constexpr (std::constructible_from<M, std::string_view>) {
-            return value;
+            return std::string{value};
         } else if constexpr (is_char_v<M> || std::is_arithmetic_v<M>) {
             // TODO: char might print int value need to check
             return std::to_string(value);
@@ -957,12 +976,27 @@ namespace StarParse::detail::Parser {
         auto defaults = capture_defaults<T>(initial);
         T out{std::move(initial)};
         ParseState state{};
-        const auto attr_array = get_arg_attrs<T>(args, settings);
+        std::vector<std::string> response_storage;
+        std::vector<ArgAttributes> attr_array = get_arg_attrs<T>(args, settings);
+        if (const auto it = std::ranges::find_if(attr_array, [](const ArgAttributes &attrs) {
+            return attrs.is_response_file;
+        }); it != attr_array.end()) {
+            auto response_args = File::read_response_file(it->name);
+            if (response_args) {
+                response_storage = std::move(*response_args);
+                const std::vector<std::string_view> response_views{response_storage.begin(), response_storage.end()};
+                attr_array = get_arg_attrs<T>(response_views, settings);
+            } else {
+                response_args.error().argv_index = it->argv_index;
+                state.errors.push_back(std::move(response_args.error()));
+            }
+        }
 
-        parse_into<T>(attr_array, out, settings, state);
+        if (state.errors.empty())
+            parse_into<T>(attr_array, out, settings, state);
         return ParsedArgs<T>{
             std::move(out), std::move(defaults), state.help_requested, state.version_requested,
-            program_name, state.errors, std::move(state.command_path), settings
+            program_name, state.errors, std::move(state.command_path), settings, std::move(response_storage)
         };
     }
 } // namespace StarParse::detail::Parser
