@@ -890,14 +890,28 @@ namespace StarParse::detail::Parser {
             }
             if constexpr (extraction_of<^^Needs>(m).has_value()) {
                 static constexpr auto needs = get_annotation_list_values<m, ^^Needs>();
+                // can either be a field or a group
                 template for (constexpr auto value : needs) {
-                    if (constexpr auto needs_member = member_named<T>(value)) {
-                        const size_t needs_index = member_index_of<T>(*needs_member);
+                    constexpr auto needs_field = member_named<T>(value);
+                    static constexpr auto needs_group = std::define_static_array(group_named<T>(value));
+                    if constexpr (needs_field.has_value()) {
+                        const size_t needs_index = member_index_of<T>(*needs_field);
                         if (!fields_set[needs_index]) {
                             state.errors.push_back({
                                 .kind = ErrorKind::MISSING_DEPENDENCY,
                                 .detail = value,
                             });
+                        }
+                    } else if constexpr (!needs_group.empty()) {
+                        template for (constexpr auto group_member : needs_group) {
+                            const size_t group_member_index = member_index_of<T>(group_member);
+                            constexpr auto field_name = name_of(group_member);
+                            if (!fields_set[group_member_index]) {
+                                state.errors.push_back({
+                                    .kind = ErrorKind::MISSING_DEPENDENCY,
+                                    .detail = std::string{field_name},
+                                });
+                            }
                         }
                     }
                 }
