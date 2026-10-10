@@ -70,16 +70,13 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
             -Wcast-align=strict
     )
     target_compile_options(starparse_tests PRIVATE
-            -fanalyzer)
-
-    target_compile_options(starparse_tests PRIVATE
-            -fsanitize=address,undefined
-            -fno-omit-frame-pointer
-            -g
+            $<$<CONFIG:Debug>:-fanalyzer>
+            $<$<CONFIG:Debug>:-fsanitize=address,undefined>
+            $<$<CONFIG:Debug>:-fno-omit-frame-pointer>
     )
 
     target_link_options(starparse_tests PRIVATE
-            -fsanitize=address,undefined
+            $<$<CONFIG:Debug>:-fsanitize=address,undefined>
     )
 endif ()
 
