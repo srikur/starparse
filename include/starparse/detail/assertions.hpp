@@ -176,10 +176,8 @@ namespace StarParse::detail::Assertions {
                 if (c != 0 && (c <= ' ' || c == 127 || c == '-' || c == '='))
                     return false;
             } else if (kind == AnnotationKind::ALIAS) {
-                const auto alias = std::meta::extract<Alias>(annotation);
-                for (size_t i = 0; i < alias.count_; ++i) {
-                    if (alias.names_[i] == nullptr || !valid_alias(alias.names_[i]))
-                        return false;
+                for (const auto &alias : alias_name_list(entity)) {
+                    if (!valid_alias(alias)) return false;
                 }
             } else if (kind == AnnotationKind::NAME) {
                 const auto name = std::meta::extract<Name>(annotation);
@@ -223,10 +221,9 @@ namespace StarParse::detail::Assertions {
         if (const auto opt = extraction_of<Opt>(entity); include_short_name && opt && opt->short_name != 0) {
             names.push_back({.text = std::string(1, opt->short_name), .owner = entity, .is_short = true});
         }
-        for (const char *alias : alias_name_list(entity)) {
-            if (alias != nullptr) {
-                names.push_back({.text = std::string{alias}, .owner = entity, .is_short = false, .is_alias = true});
-            }
+        for (const auto &alias : alias_name_list(entity)) {
+            // iterator construction to avoid  UBSan constexpr null-pointer check
+            names.push_back({.text = std::string{alias.begin(), alias.end()}, .owner = entity, .is_short = false, .is_alias = true});
         }
     }
 

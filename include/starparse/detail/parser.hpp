@@ -128,7 +128,7 @@ namespace StarParse::detail::Parser {
         if (settings.allow_kebab_casing && has_prefix(kebab_name_v<M>))
             return kebab_name_v<M>;
         if (settings.allow_aliases) {
-            for (const char *alias : alias_names<M>()) {
+            for (const auto &alias : alias_names<M>()) {
                 if (const std::string_view spelling{alias}; (allow_short_aliases || spelling.size() > 1) && has_prefix(spelling))
                     return spelling;
             }
@@ -293,7 +293,7 @@ namespace StarParse::detail::Parser {
                     }
                     std::string invocation{name};
                     if (settings.allow_aliases) {
-                        for (const char *alias : alias_names<m>()) {
+                        for (const auto &alias : alias_names<m>()) {
                             invocation += std::format(", {}", alias);
                         }
                     }
@@ -316,7 +316,7 @@ namespace StarParse::detail::Parser {
                             }
                         }
                         if (settings.allow_aliases) {
-                            for (const char *alias : alias_names<m>()) {
+                            for (const auto &alias : alias_names<m>()) {
                                 const std::string_view a{alias};
                                 invocation += std::format(", {}{}", a.size() == 1 ? "-" : "--", a);
                             }
@@ -748,7 +748,6 @@ namespace StarParse::detail::Parser {
                 if constexpr (has_annotation<detail::Subcommand_>(m)) {
                     if (attrs.is_subcommand && !matched && does_match_name<m>(attrs.name, settings, false)) {
                         subcommand_entered = true;
-                        using M = [:std::meta::type_of(m):];
                         using Child = [:value_type_of(^^M):];
                         auto &child = out.[:m:];
                         if (!child)

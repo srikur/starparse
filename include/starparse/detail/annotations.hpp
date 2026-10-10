@@ -175,7 +175,11 @@ namespace StarParse::inline annotations {
             requires(sizeof...(Ts) > 0 && std::convertible_to<T, std::string_view>)
         explicit consteval Choices(Ts... ns) : values_(
                                                    std::define_static_array(std::array{std::define_static_string(std::string_view{ns})...}).data()),
-                                               count_(sizeof...(ns)) {}
+                                               count_(sizeof...(ns)) {
+            if ((std::string_view{ns}.empty() || ...)) {
+                throw std::invalid_argument("Choices cannot contain empty strings");
+            }
+        }
 
         template<std::convertible_to<T>... Ts>
             requires(sizeof...(Ts) > 0 && !std::convertible_to<T, std::string_view>)

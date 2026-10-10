@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <charconv>
 #include <chrono>
@@ -118,25 +119,35 @@ namespace StarParse::detail::Utilities {
                           });
     }
 
-    consteval std::vector<const char *> alias_name_list(const std::meta::info m) {
-        std::vector<const char *> names{};
+    consteval std::vector<std::string_view> alias_name_list(const std::meta::info m) {
+        std::vector<std::string_view> names{};
         for (const std::meta::info a : std::meta::annotations_of(m)) {
             if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) != std::meta::dealias(^^Alias)) {
                 continue;
             }
             const auto alias = std::meta::extract<Alias>(a);
-            for (size_t i{0}; i < alias.count_; i++) {
-                names.push_back(alias.names_[i]);
+            for (auto i{0uz}; i < alias.count_; i++) {
+                names.push_back(std::string_view{alias.names_[i]});
             }
         }
         return names;
     }
 
     template<std::meta::info M>
+    constexpr std::span<const std::string_view> alias_names() {
+        // string_view is not structural, so it cannot be used with define_static_array
+        static constexpr auto aliases = [] {
+            std::array<std::string_view, alias_name_list(M).size()> names{};
+            std::ranges::copy(alias_name_list(M), names.begin());
+            return names;
+        }();
+        return aliases;
+    }
+
+    template<std::meta::info M>
     bool matches_alias(const std::string_view name, const bool allow_case_insensitivity = false) {
-        static constexpr auto aliases = std::define_static_array(alias_name_list(M));
-        for (const char *alias : aliases) {
-            if (name == std::string_view{alias} || (allow_case_insensitivity && iequals(name, std::string_view{alias})))
+        for (const auto &alias : alias_names<M>()) {
+            if (name == alias || (allow_case_insensitivity && iequals(name, alias)))
                 return true;
         }
         return false;
@@ -196,12 +207,6 @@ namespace StarParse::detail::Utilities {
             }
         }
         return false;
-    }
-
-    template<std::meta::info M>
-    std::span<const char *const> alias_names() {
-        static constexpr auto aliases = std::define_static_array(alias_name_list(M));
-        return aliases;
     }
 
     consteval bool is_optional(std::meta::info r) {
@@ -505,9 +510,8 @@ namespace StarParse::detail::Utilities {
                     names.push_back(kebab_name_v<m>);
                 }
                 if (settings.allow_aliases) {
-                    constexpr auto aliases = std::define_static_array(alias_name_list(m));
-                    for (const char *name : aliases) {
-                        names.push_back(std::string_view{name});
+                    for (const auto &alias : alias_names<m>()) {
+                        names.push_back(alias);
                     }
                 }
                 if (settings.autogenerate_negations && is_flag_type(std::meta::type_of(m))) {
