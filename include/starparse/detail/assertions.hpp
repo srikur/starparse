@@ -416,7 +416,7 @@ namespace StarParse::detail::Assertions {
     consteval bool check_ranges() {
         static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
         template for (constexpr auto m : members) {
-            constexpr auto range_annotation = range_of(m);
+            constexpr auto range_annotation = extraction_of<^^Range>(m);
 
             if constexpr (range_annotation.has_value()) {
                 using A = [:std::meta::remove_cv(std::meta::type_of(*range_annotation)):];

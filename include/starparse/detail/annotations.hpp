@@ -225,8 +225,7 @@ namespace StarParse::inline annotations {
 
     template<typename T>
     struct Parser final {
-        using value_type = std::conditional_t<std::convertible_to<T, std::string_view>, const char *, T>;
-        using Result = std::expected<T, value_type>;
+        using Result = std::expected<T, std::string>;
         using ValueFn = Result (*)(std::string_view);
         using RefFn = Result(*)(const std::string_view &);
         using RawFn = Result(*)(const char *);

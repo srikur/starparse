@@ -322,19 +322,19 @@ namespace StarParse::detail::Parser {
                             }
                         }
                         if constexpr (!is_flag_type(^^M)) {
-                            if constexpr (constexpr auto range_annotation = range_of(m)) {
+                            if constexpr (constexpr auto range_annotation = extraction_of<^^Range>(m)) {
                                 using A = [:std::meta::remove_cv(std::meta::type_of(*range_annotation)):];
                                 const auto range = std::meta::extract<A>(*range_annotation);
                                 invocation += std::format(" <{}..{}>", range.min, range.max);
-                            } else if constexpr (constexpr auto min_annotation = min_of(m)) {
+                            } else if constexpr (constexpr auto min_annotation = extraction_of<^^Min>(m)) {
                                 using A = [:std::meta::remove_cv(std::meta::type_of(*min_annotation)):];
                                 const auto mn = std::meta::extract<A>(*min_annotation);
                                 invocation += std::format(" <{}..>", mn.value);
-                            } else if constexpr (constexpr auto max_annotation = max_of(m)) {
+                            } else if constexpr (constexpr auto max_annotation = extraction_of<^^Max>(m)) {
                                 using A = [:std::meta::remove_cv(std::meta::type_of(*max_annotation)):];
                                 const auto mx = std::meta::extract<A>(*max_annotation);
                                 invocation += std::format(" <..{}>", mx.value);
-                            } else if constexpr (choices_of(m).has_value()) {
+                            } else if constexpr (extraction_of<^^Choices>(m).has_value()) {
                                 constexpr auto choices = choices_list<m>();
                                 invocation += " <";
                                 invocation.append_range(choices | std::views::transform([](const char *s) {

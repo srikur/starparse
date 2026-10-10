@@ -92,66 +92,6 @@ namespace StarParse::detail::Utilities {
         return std::nullopt;
     }
 
-    consteval std::optional<std::meta::info> validator_of(const std::meta::info m) {
-        for (const std::meta::info a : std::meta::annotations_of(m)) {
-            auto type = std::meta::remove_cv(std::meta::type_of(a));
-            if (is_specialization_of(type, ^^Validator)) {
-                return a;
-            }
-        }
-        return std::nullopt;
-    }
-
-    consteval std::optional<std::meta::info> parser_of(const std::meta::info m) {
-        for (const std::meta::info a : std::meta::annotations_of(m)) {
-            auto type = std::meta::remove_cv(std::meta::type_of(a));
-            if (is_specialization_of(type, ^^Parser)) {
-                return a;
-            }
-        }
-        return std::nullopt;
-    }
-
-    consteval std::optional<std::meta::info> min_of(const std::meta::info m) {
-        for (const std::meta::info a : std::meta::annotations_of(m)) {
-            auto type = std::meta::remove_cv(std::meta::type_of(a));
-            if (is_specialization_of(type, ^^Min)) {
-                return a;
-            }
-        }
-        return std::nullopt;
-    }
-
-    consteval std::optional<std::meta::info> max_of(const std::meta::info m) {
-        for (const std::meta::info a : std::meta::annotations_of(m)) {
-            auto type = std::meta::remove_cv(std::meta::type_of(a));
-            if (is_specialization_of(type, ^^Max)) {
-                return a;
-            }
-        }
-        return std::nullopt;
-    }
-
-    consteval std::optional<std::meta::info> range_of(const std::meta::info m) {
-        for (const std::meta::info a : std::meta::annotations_of(m)) {
-            auto type = std::meta::remove_cv(std::meta::type_of(a));
-            if (is_specialization_of(type, ^^Range)) {
-                return a;
-            }
-        }
-        return std::nullopt;
-    }
-
-    consteval std::optional<std::meta::info> choices_of(const std::meta::info m) {
-        for (const std::meta::info a : std::meta::annotations_of(m)) {
-            auto type = std::meta::remove_cv(std::meta::type_of(a));
-            if (is_specialization_of(type, ^^Choices)) {
-                return a;
-            }
-        }
-        return std::nullopt;
-    }
-
     template<std::meta::info T>
     consteval std::optional<std::meta::info> extraction_of(const std::meta::info m) {
         for (const std::meta::info a : std::meta::annotations_of(m)) {
@@ -281,7 +221,7 @@ namespace StarParse::detail::Utilities {
 
     template<std::meta::info M>
     consteval auto choices_list() {
-        constexpr auto annotation = choices_of(M);
+        constexpr auto annotation = extraction_of<^^Choices>(M);
         using C = [:std::meta::remove_cv(std::meta::type_of(*annotation)):];
         constexpr auto choices = std::meta::extract<C>(*annotation);
         return std::span{choices.values_, choices.count_};
@@ -297,7 +237,7 @@ namespace StarParse::detail::Utilities {
 
     template<std::meta::info M, typename T>
     bool matches_choice(const T &value, const bool allow_case_insensitivity = false) {
-        if constexpr (!choices_of(M).has_value()) {
+        if constexpr (!extraction_of<^^Choices>(M).has_value()) {
             return false;
         } else {
             static constexpr auto choices = choices_list<M>();
@@ -677,11 +617,11 @@ namespace StarParse::detail::Utilities {
 
     template<std::meta::info Mem, typename M>
     bool validate(const M &value, const std::string_view input, const size_t index, std::vector<ParseError> &errors, const Settings &settings) {
-        constexpr auto validator_annotation = validator_of(Mem);
-        constexpr auto choice_annotation = choices_of(Mem);
-        constexpr auto min_annotation = min_of(Mem);
-        constexpr auto max_annotation = max_of(Mem);
-        constexpr auto range_annotation = range_of(Mem);
+        constexpr auto validator_annotation = extraction_of<^^Validator>(Mem);
+        constexpr auto choice_annotation = extraction_of<^^Choices>(Mem);
+        constexpr auto min_annotation = extraction_of<^^Min>(Mem);
+        constexpr auto max_annotation = extraction_of<^^Max>(Mem);
+        constexpr auto range_annotation = extraction_of<^^Range>(Mem);
 
         if constexpr (validator_annotation.has_value()) {
             using V = [:std::meta::remove_cv(std::meta::type_of(*validator_annotation)):];
@@ -786,7 +726,7 @@ namespace StarParse::detail::Utilities {
 
     template<std::meta::info Mem, typename E>
     std::expected<E, ParseError> apply_custom_parser(const std::string_view s, const size_t index) {
-        constexpr auto parser = *parser_of(Mem);
+        constexpr auto parser = *extraction_of<^^Parser>(Mem);
         using V = [:std::meta::remove_cv(std::meta::type_of(parser)):];
         constexpr auto parsing_function = std::meta::extract<V>(parser);
 
@@ -808,7 +748,7 @@ namespace StarParse::detail::Utilities {
     void assign_from_string(M &field, const std::string_view s, const size_t index, size_t &count, std::vector<ParseError> &errors,
                             const Settings &settings) {
         constexpr auto annotated = separator_of(Mem);
-        constexpr bool has_custom_parser = parser_of(Mem).has_value();
+        constexpr bool has_custom_parser = extraction_of<^^Parser>(Mem).has_value();
         const std::string_view separator = annotated.has_value() ? std::string_view{annotated->value} : settings.value_separator;
         if constexpr (is_vector(std::meta::remove_cv(^^M))) {
             using E = [:value_type_of(^^M):];
