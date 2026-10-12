@@ -52,8 +52,7 @@ namespace StarParse::inline annotations {
         const char *help_{};
         const char *metavar_{}; // TODO: support multiple
 
-        explicit consteval Opt(const char s, std::string_view h, std::string_view m) : short_name(s), help_(std::define_static_string(h)),
-                                                                                       metavar_(std::define_static_string(m)) {}
+        explicit consteval Opt(const char s, std::string_view h, std::string_view m) : short_name(s), help_(std::define_static_string(h)), metavar_(std::define_static_string(m)) {}
 
         explicit consteval Opt(const char s, std::string_view h) : short_name(s), help_(std::define_static_string(h)) {}
 
@@ -105,14 +104,11 @@ namespace StarParse::inline annotations {
 
         template<std::convertible_to<std::string_view>... Ts>
             requires(sizeof...(Ts) > 0)
-        explicit consteval Alias(Ts... ns) : names_(std::define_static_array(std::array{std::define_static_string(std::string_view{ns})...}).data()),
-                                             count_(sizeof...(ns)) {}
+        explicit consteval Alias(Ts... ns) : names_(std::define_static_array(std::array{std::define_static_string(std::string_view{ns})...}).data()), count_(sizeof...(ns)) {}
     };
 
     struct Program final {
-        explicit consteval Program(std::string_view n, std::string_view d, std::string_view v) : name(std::define_static_string(n)),
-                                                                                                 description(std::define_static_string(d)),
-                                                                                                 version(std::define_static_string(v)) {}
+        explicit consteval Program(std::string_view n, std::string_view d, std::string_view v) : name(std::define_static_string(n)), description(std::define_static_string(d)), version(std::define_static_string(v)) {}
 
         const char *name{};
         const char *description{};
@@ -181,9 +177,7 @@ namespace StarParse::inline annotations {
 
         template<std::convertible_to<std::string_view>... Ts>
             requires(sizeof...(Ts) > 0 && std::convertible_to<T, std::string_view>)
-        explicit consteval Choices(Ts... ns) : values_(
-                                                   std::define_static_array(std::array{std::define_static_string(std::string_view{ns})...}).data()),
-                                               count_(sizeof...(ns)) {
+        explicit consteval Choices(Ts... ns) : values_(std::define_static_array(std::array{std::define_static_string(std::string_view{ns})...}).data()), count_(sizeof...(ns)) {
             if ((std::string_view{ns}.empty() || ...)) {
                 throw std::invalid_argument("Choices cannot contain empty strings");
             }
@@ -191,8 +185,7 @@ namespace StarParse::inline annotations {
 
         template<std::convertible_to<T>... Ts>
             requires(sizeof...(Ts) > 0 && !std::convertible_to<T, std::string_view>)
-        explicit consteval Choices(Ts... ns) : values_(std::define_static_array(std::array<T, sizeof...(Ts)>{T{ns}...}).data()),
-                                               count_(sizeof...(ns)) {}
+        explicit consteval Choices(Ts... ns) : values_(std::define_static_array(std::array<T, sizeof...(Ts)>{T{ns}...}).data()), count_(sizeof...(ns)) {}
     };
 
     template<typename... Ts>
@@ -291,13 +284,11 @@ namespace StarParse::inline annotations {
 
         template<std::convertible_to<std::string_view>... Ts>
             requires(sizeof...(Ts) > 0 && std::convertible_to<T, std::string_view>)
-        explicit consteval Needs(Ts... ns) : values_(std::define_static_array(std::array{std::define_static_string(std::string_view{ns})...}).data()),
-                                             count_(sizeof...(ns)) {}
+        explicit consteval Needs(Ts... ns) : values_(std::define_static_array(std::array{std::define_static_string(std::string_view{ns})...}).data()), count_(sizeof...(ns)) {}
 
         template<std::convertible_to<T>... Ts>
             requires(sizeof...(Ts) > 0 && !std::convertible_to<T, std::string_view>)
-        explicit consteval Needs(Ts... ns) : values_(std::define_static_array(std::array<T, sizeof...(Ts)>{T{ns}...}).data()),
-                                             count_(sizeof...(ns)) {}
+        explicit consteval Needs(Ts... ns) : values_(std::define_static_array(std::array<T, sizeof...(Ts)>{T{ns}...}).data()), count_(sizeof...(ns)) {}
     };
 
     template<typename... Ts>
@@ -311,14 +302,11 @@ namespace StarParse::inline annotations {
 
         template<std::convertible_to<std::string_view>... Ts>
             requires(sizeof...(Ts) > 0 && std::convertible_to<T, std::string_view>)
-        explicit consteval Excludes(Ts... ns) : values_(
-                                                    std::define_static_array(std::array{std::define_static_string(std::string_view{ns})...}).data()),
-                                                count_(sizeof...(ns)) {}
+        explicit consteval Excludes(Ts... ns) : values_(std::define_static_array(std::array{std::define_static_string(std::string_view{ns})...}).data()), count_(sizeof...(ns)) {}
 
         template<std::convertible_to<T>... Ts>
             requires(sizeof...(Ts) > 0 && !std::convertible_to<T, std::string_view>)
-        explicit consteval Excludes(Ts... ns) : values_(std::define_static_array(std::array<T, sizeof...(Ts)>{T{ns}...}).data()),
-                                                count_(sizeof...(ns)) {}
+        explicit consteval Excludes(Ts... ns) : values_(std::define_static_array(std::array<T, sizeof...(Ts)>{T{ns}...}).data()), count_(sizeof...(ns)) {}
     };
 
     template<typename... Ts>
@@ -332,16 +320,35 @@ namespace StarParse::inline annotations {
 
         template<std::convertible_to<std::string_view>... Ts>
             requires(sizeof...(Ts) > 0 && std::convertible_to<T, std::string_view>)
-        explicit consteval
-        Groups(Ts... ns) : values_(std::define_static_array(std::array{std::define_static_string(std::string_view{ns})...}).data()),
-                           count_(sizeof...(ns)) {}
+        explicit consteval Groups(Ts... ns) : values_(std::define_static_array(std::array{std::define_static_string(std::string_view{ns})...}).data()), count_(sizeof...(ns)) {}
 
         template<std::convertible_to<T>... Ts>
             requires(sizeof...(Ts) > 0 && !std::convertible_to<T, std::string_view>)
-        explicit consteval Groups(Ts... ns) : values_(std::define_static_array(std::array<T, sizeof...(Ts)>{T{ns}...}).data()),
-                                              count_(sizeof...(ns)) {}
+        explicit consteval Groups(Ts... ns) : values_(std::define_static_array(std::array<T, sizeof...(Ts)>{T{ns}...}).data()), count_(sizeof...(ns)) {}
     };
 
     template<typename... Ts>
     Groups(Ts...) -> Groups<std::common_type_t<Ts...> >;
+
+    template<std::integral T>
+    struct MinLength final {
+        T length_{};
+
+        explicit consteval MinLength(const T length) : length_(length) {}
+    };
+
+    template<std::integral T>
+    struct MaxLength final {
+        T length_{};
+
+        explicit consteval MaxLength(const T length) : length_(length) {}
+    };
+
+    template<std::integral T>
+    struct Length final {
+        T min_{};
+        T max_{};
+
+        explicit consteval Length(const T min, const T max) : min_(min), max_(max) {}
+    };
 } // namespace StarParse::inline annotations

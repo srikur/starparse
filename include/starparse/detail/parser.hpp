@@ -665,6 +665,8 @@ namespace StarParse::detail::Parser {
         static_assert(Assertions::check_group_name_collisions<T>(), "Group names cannot collide with field names");
         static_assert(Assertions::check_negated_name_collisions<T>(S),
                       "When negated names are enabled, fields cannot overlap with negated names");
+        // TODO: Add assertion for length annotations only on strings
+        // TODO: Add assertion for valid values within string annotations
     }
 
     struct ParseState {
