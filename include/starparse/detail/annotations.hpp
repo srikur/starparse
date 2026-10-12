@@ -61,10 +61,14 @@ namespace StarParse::inline annotations {
 
         explicit consteval Opt(const char s) : short_name(s) {}
 
+        explicit consteval Opt() = default;
+
         [[nodiscard]] constexpr std::string_view help() const {
             return help_;
         }
     };
+
+    constexpr Opt Option{};
 
     struct Name final {
         const char *name_{};
