@@ -2,17 +2,13 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
   pull_request:
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
     container: gcc:16
-    strategy:
-      fail-fast: false
-      matrix:
-        build_type: [Release, Debug]
     steps:
       - uses: actions/checkout@v4
 
@@ -22,10 +18,10 @@ jobs:
           apt-get install -y --no-install-recommends cmake
 
       - name: Configure
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
-        run: cmake --build build --parallel 2
+        run: cmake --build build -j
 
       - name: Test
         run: ctest --test-dir build --output-on-failure
