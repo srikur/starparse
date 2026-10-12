@@ -68,12 +68,12 @@ TEST_CASE("name: explicit aliases and short options remain available") {
 
 TEST_CASE("name: settings apply to the override") {
     constexpr Settings strict{.allow_kebab_casing = false, .allow_aliases = false, .allow_case_insensitivity = false};
-    const auto exact = parse_from<Args>({"--thread_count=4"}, strict);
+    const auto exact = parse_from<Args, strict>({"--thread_count=4"});
     REQUIRE(exact);
     CHECK(exact->jobs == 4);
     for (const auto option : {"--thread-count=4", "--THREAD_COUNT=4", "--workers=4", "--jobs=4"}) {
         CAPTURE(option);
-        const auto args = parse_from<Args>({option}, strict);
+        const auto args = parse_from<Args, strict>({option});
         REQUIRE_FALSE(args);
         REQUIRE(args.errors().size() == 1);
         CHECK(args.errors()[0].kind == ErrorKind::UNKNOWN_OPTION);
@@ -87,7 +87,7 @@ TEST_CASE("name: negations use the override") {
         REQUIRE(args);
         CHECK_FALSE(args->verbose);
     }
-    const auto disabled = parse_from<Args>({"--no-chatty-mode"}, Settings{.autogenerate_negations = false});
+    const auto disabled = parse_from<Args, Settings{.autogenerate_negations = false}>({"--no-chatty-mode"});
     REQUIRE_FALSE(disabled);
     CHECK(disabled.errors()[0].kind == ErrorKind::UNKNOWN_OPTION);
 }
@@ -186,7 +186,7 @@ TEST_CASE("name: required and missing-value diagnostics use the override") {
     CHECK(required.errors()[0].kind == ErrorKind::MISSING_REQUIRED);
     CHECK(required.errors()[0].current_argument == "source-file");
 
-    const auto missing = parse_from<Args>({"--thread_count"}, Settings{.allow_repeated_counts = false});
+    const auto missing = parse_from<Args, Settings{.allow_repeated_counts = false}>({"--thread_count"});
     REQUIRE_FALSE(missing);
     CHECK(missing.errors()[0].kind == ErrorKind::MISSING_VALUE);
     CHECK(missing.errors()[0].current_argument == "thread_count");

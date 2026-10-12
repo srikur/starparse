@@ -25,14 +25,14 @@ namespace {
 } // namespace
 
 TEST_CASE("help and version: check short form works") {
-    const auto args = parse_from<Args>({"-H"}, settings);
+    const auto args = parse_from<Args, settings>({"-H"});
     REQUIRE(args);
     CHECK(args.help_requested() == true);
     CHECK(args.version_requested() == false);
 }
 
 TEST_CASE("help and version: check short form disabled when used by an argument") {
-    const auto args = parse_from<Args2>({"-h"}, settings);
+    const auto args = parse_from<Args2, settings>({"-h"});
     REQUIRE_FALSE(args);
     CHECK(args.errors().size() == 1uz);
     CHECK(args.errors()[0].kind == ErrorKind::UNKNOWN_OPTION);

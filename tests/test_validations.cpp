@@ -1,6 +1,5 @@
 #include "test_support.hpp"
 
-#include <cstdint>
 #include <expected>
 #include <string>
 
@@ -27,9 +26,11 @@ namespace {
         [[=Validator{is_hello}]] std::string string1;
         [[=Validator{is_hello_expected}]] std::string string2;
         [[=Validator{is_hello_cstr}]] std::string string3;
-        [[=Validator{[](const std::string &arg) -> bool {
-            return arg == "hello";
-        }}]] std::string string4;
+        [[=Validator{
+            [](const std::string &arg) -> bool {
+                return arg == "hello";
+            },
+        }]] std::string string4;
         [[=Choices{"a", "b", "c", "d"}]] std::string letter;
         [[=Range{1, 3}]] int range;
         [[=Range{0, 255}]] uint8_t range2;

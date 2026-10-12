@@ -38,14 +38,14 @@ namespace {
     };
 
     template<typename T>
-    auto parse_presence(const unsigned mask) {
+    auto parse_presence(const int mask) {
         std::array<const char *, 4> argv{"groups-test"};
         constexpr std::array options{"--action", "--first", "--second"};
-        int argc{1};
+        size_t argc{1};
         for (const auto &[index, value] : std::views::enumerate(options)) {
-            if (mask & (1u << index)) argv[argc++] = value;
+            if (mask & (1 << static_cast<int>(index))) argv[argc++] = value;
         }
-        return parse<T>(argc, argv.data());
+        return parse<T>(static_cast<int>(argc), argv.data());
     }
 
     // Compare error contents without depending on the order of group members.
@@ -68,31 +68,31 @@ namespace {
 } // namespace
 
 TEST_CASE_TEMPLATE("groups: Needs checks every presence combination", T, NeedsFields, NeedsGroup) {
-    for (auto mask : std::views::iota(0, 8)) {
+    for (int mask : std::views::iota(0, 8)) {
         CAPTURE(mask);
         const auto args = parse_presence<T>(mask);
         std::vector<std::string_view> missing;
-        if (mask & 1u) {
-            if (!(mask & 2u)) missing.emplace_back("first");
-            if (!(mask & 4u)) missing.emplace_back("second");
+        if (mask & 1) {
+            if (!(mask & 2)) missing.emplace_back("first");
+            if (!(mask & 4)) missing.emplace_back("second");
         }
         check_errors(args, ErrorKind::MISSING_DEPENDENCY, missing);
         if (args) {
-            CHECK(args->action == static_cast<bool>(mask & 1u));
-            CHECK(args->first == static_cast<bool>(mask & 2u));
-            CHECK(args->second == static_cast<bool>(mask & 4u));
+            CHECK(args->action == static_cast<bool>(mask & 1));
+            CHECK(args->first == static_cast<bool>(mask & 2));
+            CHECK(args->second == static_cast<bool>(mask & 4));
         }
     }
 }
 
 TEST_CASE_TEMPLATE("groups: Excludes checks every presence combination", T, ExcludesFields, ExcludesGroup) {
-    for (auto mask : std::views::iota(0, 8)) {
+    for (int mask : std::views::iota(0, 8)) {
         CAPTURE(mask);
         const auto args = parse_presence<T>(mask);
         std::vector<std::string_view> conflicts;
-        if (mask & 1u) {
-            if (mask & 2u) conflicts.emplace_back("first");
-            if (mask & 4u) conflicts.emplace_back("second");
+        if (mask & 1) {
+            if (mask & 2) conflicts.emplace_back("first");
+            if (mask & 4) conflicts.emplace_back("second");
         }
         check_errors(args, ErrorKind::INVALID_OVERLAP, conflicts, "action");
     }
@@ -282,9 +282,15 @@ TEST_CASE("groups: mutual dependencies allow neither or both options") {
         [[=Opt{""}, =Needs{"second"}]] bool first{};
         [[=Opt{""}, =Needs{"first"}]] bool second{};
     };
-    SUBCASE("neither") { REQUIRE(parse_from<MutualNeeds>({})); }
-    SUBCASE("both") { REQUIRE(parse_from<MutualNeeds>({"--first", "--second"})); }
-    SUBCASE("one") { check_errors(parse_from<MutualNeeds>({"--first"}), ErrorKind::MISSING_DEPENDENCY, {"second"}); }
+    SUBCASE("neither") {
+        REQUIRE(parse_from<MutualNeeds>({}));
+    }
+    SUBCASE("both") {
+        REQUIRE(parse_from<MutualNeeds>({"--first", "--second"}));
+    }
+    SUBCASE("one") {
+        check_errors(parse_from<MutualNeeds>({"--first"}), ErrorKind::MISSING_DEPENDENCY, {"second"});
+    }
 }
 
 TEST_CASE("groups: mutual exclusions allow either option alone") {
@@ -292,9 +298,15 @@ TEST_CASE("groups: mutual exclusions allow either option alone") {
         [[=Opt{""}, =Excludes{"second"}]] bool first{};
         [[=Opt{""}, =Excludes{"first"}]] bool second{};
     };
-    SUBCASE("neither") { REQUIRE(parse_from<MutualExcludes>({})); }
-    SUBCASE("first") { REQUIRE(parse_from<MutualExcludes>({"--first"})); }
-    SUBCASE("second") { REQUIRE(parse_from<MutualExcludes>({"--second"})); }
+    SUBCASE("neither") {
+        REQUIRE(parse_from<MutualExcludes>({}));
+    }
+    SUBCASE("first") {
+        REQUIRE(parse_from<MutualExcludes>({"--first"}));
+    }
+    SUBCASE("second") {
+        REQUIRE(parse_from<MutualExcludes>({"--second"}));
+    }
     SUBCASE("both") {
         const auto args = parse_from<MutualExcludes>({"--first", "--second"});
         check_errors(args, ErrorKind::INVALID_OVERLAP, {"first", "second"});
