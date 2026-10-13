@@ -622,7 +622,7 @@ namespace StarParse::detail::Utilities {
 
             if (numeric_less(value_length, mn.length_)) {
                 errors.push_back({
-                    .kind = ErrorKind::OUT_OF_RANGE,
+                    .kind = ErrorKind::INVALID_STRING_LENGTH,
                     .input_value = std::string{input},
                     .detail = std::format("minimum string length is {}", mn.length_),
                     .current_argument = name_of(Mem),
@@ -637,7 +637,7 @@ namespace StarParse::detail::Utilities {
 
             if (numeric_less(mx.length_, value_length)) {
                 errors.push_back({
-                    .kind = ErrorKind::OUT_OF_RANGE,
+                    .kind = ErrorKind::INVALID_STRING_LENGTH,
                     .input_value = std::string{input},
                     .detail = std::format("maximum string length is {}", mx.length_),
                     .current_argument = name_of(Mem),
@@ -652,7 +652,7 @@ namespace StarParse::detail::Utilities {
 
             if (numeric_less(value_length, range.min_) || numeric_less(range.max_, value_length)) {
                 errors.push_back(ParseError{
-                    .kind = ErrorKind::OUT_OF_RANGE,
+                    .kind = ErrorKind::INVALID_STRING_LENGTH,
                     .input_value = std::string{input},
                     .detail = std::format("string length must be within [{}, {}]", range.min_, range.max_),
                     .current_argument = name_of(Mem),

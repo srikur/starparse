@@ -26,6 +26,7 @@ namespace StarParse {
         INVALID_OVERLAP, // Excludes{}
         READING_RESPONSE_FAILED,
         INVALID_RESPONSE_FILE,
+        INVALID_STRING_LENGTH,
     };
 
     struct ParseError {
@@ -76,6 +77,8 @@ namespace StarParse {
                     return std::format("Failed to read response file '{}': {}", input_value, detail);
                 case ErrorKind::INVALID_RESPONSE_FILE:
                     return std::format("Invalid response file '{}': {}", input_value, detail);
+                case ErrorKind::INVALID_STRING_LENGTH:
+                    return std::format("Invalid string length for option '{}'; {}", option, detail);
                 default:
                     return std::format("Unknown error: '{}'", input_value);
             }

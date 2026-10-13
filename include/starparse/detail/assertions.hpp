@@ -393,8 +393,23 @@ namespace StarParse::detail::Assertions {
             });
             if (choices_count > 1)
                 return false;
+            const auto min_len_count = std::ranges::count_if(annotations, [](const std::meta::info a) {
+                return is_specialization_of(std::meta::remove_cv(std::meta::type_of(a)), ^^MinLength);
+            });
+            if (min_len_count > 1)
+                return false;
+            const auto max_len_count = std::ranges::count_if(annotations, [](const std::meta::info a) {
+                return is_specialization_of(std::meta::remove_cv(std::meta::type_of(a)), ^^MaxLength);
+            });
+            if (max_len_count > 1)
+                return false;
+            const auto length_count = std::ranges::count_if(annotations, [](const std::meta::info a) {
+                return is_specialization_of(std::meta::remove_cv(std::meta::type_of(a)), ^^Length);
+            });
+            if (length_count > 1)
+                return false;
             // also if more than 1 on a field
-            if (validator_count + min_count + max_count + range_count + choices_count > 1)
+            if (validator_count + min_count + max_count + range_count + choices_count + min_len_count + max_len_count + length_count > 1)
                 return false;
         }
         return true;
