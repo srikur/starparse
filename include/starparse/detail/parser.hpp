@@ -438,10 +438,14 @@ namespace StarParse::detail::Parser {
     public:
         ParsedArgs(T out, DefaultValues defaults, const bool show_help, const bool show_version, const std::string_view argv_name,
                    std::vector<ParseError> &errors, std::vector<size_t> command_path,
-                   std::vector<std::string> response_args = {}) : response_args_(std::move(response_args)), out_(std::move(out)),
-                                                                  defaults_(std::move(defaults)), show_help_(show_help), show_version_(show_version),
+                   std::vector<std::string> response_args = {}) : response_args_(std::move(response_args)),
+                                                                  out_(std::move(out)),
+                                                                  defaults_(std::move(defaults)),
+                                                                  show_help_(show_help),
+                                                                  show_version_(show_version),
                                                                   errors_(std::move(errors)),
-                                                                  command_path_(std::move(command_path)), argv_name_(argv_name),
+                                                                  command_path_(std::move(command_path)),
+                                                                  argv_name_(argv_name),
                                                                   settings_(S) {}
 
         ParsedArgs(const ParsedArgs &) = delete;

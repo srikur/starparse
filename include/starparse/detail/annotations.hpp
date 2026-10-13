@@ -232,9 +232,9 @@ namespace StarParse::inline annotations {
     struct Parser final {
         using Result = std::expected<T, std::string>;
         using ValueFn = Result (*)(std::string_view);
-        using RefFn = Result(*)(const std::string_view &);
-        using RawFn = Result(*)(const char *);
-        using StringFn = Result(*)(std::string);
+        using RefFn = Result (*)(const std::string_view &);
+        using RawFn = Result (*)(const char *);
+        using StringFn = Result (*)(std::string);
 
         ValueFn value_fn{};
         RefFn ref_fn{};

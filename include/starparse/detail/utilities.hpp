@@ -225,9 +225,9 @@ namespace StarParse::detail::Utilities {
         r = std::meta::dealias(std::meta::remove_cv(r));
         if (is_optional(r))
             r = std::meta::dealias(value_type_of(r));
-        return std::meta::is_integral_type(r) && r != (^^bool) && !std::meta::extract<bool>(std::meta::substitute(^^is_char_v, {
-                                                                                                                      r,
-                                                                                                                  }));
+        // clang-format off
+        return std::meta::is_integral_type(r) && r != (^^bool) && !std::meta::extract<bool>(std::meta::substitute(^^is_char_v, {r,}));
+        // clang-format on
     }
 
     template<std::meta::info M>
@@ -309,12 +309,12 @@ namespace StarParse::detail::Utilities {
         constexpr std::array true_values{"yes"sv, "1"sv, "on"sv, "true"sv, "t"sv};
         constexpr std::array false_values{"no"sv, "0"sv, "off"sv, "false"sv, "f"sv};
         if (std::ranges::any_of(true_values, [&](auto value) {
-            return iequals(s, value);
-        }))
+                return iequals(s, value);
+            }))
             return true;
         if (std::ranges::any_of(false_values, [&](auto value) {
-            return iequals(s, value);
-        }))
+                return iequals(s, value);
+            }))
             return false;
         return std::unexpected(ParseError{
             .kind = ErrorKind::INVALID_VALUE,
