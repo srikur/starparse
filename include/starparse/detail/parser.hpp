@@ -637,6 +637,7 @@ namespace StarParse::detail::Parser {
         return attr_array;
     }
 
+    // TODO: Include args in error strings + consolidate?
     template<typename T, Settings S = Settings{}>
     void check_assertions() {
         static_assert(Assertions::check_annotation_placement<T>(),
@@ -655,6 +656,7 @@ namespace StarParse::detail::Parser {
                       "only one annotation among Min, Max, Range, Choices, or Validator can be applied to a single field");
         static_assert(Assertions::no_scalar_separators<T>(), "the Separator annotation cannot be applied to scalar fields");
         static_assert(Assertions::check_ranges<T>(), "invalid Range annotation for specified type");
+        // TODO: Min and Max bounds checking
         static_assert(Assertions::check_alias_collisions<T>(),
                       "option names, short names, or aliases collide, or use reserved help/version names (including case and kebab spellings)");
         static_assert(Assertions::check_subcommand_collisions<T>(), "subcommand names or aliases collide (including case and kebab spellings)");
@@ -665,7 +667,8 @@ namespace StarParse::detail::Parser {
         static_assert(Assertions::check_group_name_collisions<T>(), "Group names cannot collide with field names");
         static_assert(Assertions::check_negated_name_collisions<T>(S),
                       "When negated names are enabled, fields cannot overlap with negated names");
-        // TODO: Add assertion for length annotations only on strings
+        static_assert(Assertions::check_string_length_annotations<T>(), "Length, MinLength, and MaxLength can only be placed on string fields convertible to std::string_view");
+        static_assert(Assertions::check_string_annotation_values<T>(), "string length constraints using Length, MinLength, and MaxLength must be positive and within their type bounds");
         // TODO: Add assertion for valid values within string annotations
     }
 
