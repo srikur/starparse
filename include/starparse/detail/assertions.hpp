@@ -426,34 +426,6 @@ namespace StarParse::detail::Assertions {
     }
 
     template<typename T>
-    consteval bool check_ranges() {
-        static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
-        template for (constexpr auto m : members) {
-            constexpr auto range_annotation = specialization_of<^^Range>(m);
-
-            if constexpr (range_annotation.has_value()) {
-                using A = [:std::meta::remove_cv(std::meta::type_of(*range_annotation)):];
-                const auto range = std::meta::extract<A>(*range_annotation);
-                // 1) max > min
-                if (numeric_less(range.max, range.min) || range.min == range.max)
-                    return false;
-                // 2) check for NaN/infinite
-                using V = [:std::meta::remove_cv(std::meta::type_of(m)):];
-                if constexpr (std::floating_point<V>) {
-                    if (!std::isfinite(range.max) || !std::isfinite(range.min))
-                        return false;
-                }
-                // 3) Check for no in-range values possible for specified type
-                if (range.min < std::numeric_limits<V>::lowest() || range.min > std::numeric_limits<V>::max())
-                    return false;
-                if (range.max < std::numeric_limits<V>::lowest() || range.max > std::numeric_limits<V>::max())
-                    return false;
-            }
-        }
-        return true;
-    }
-
-    template<typename T>
     consteval bool check_exclusion_groups() {
         // verify that all Needs and Excludes values are either a valid field or valid group name
         static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));

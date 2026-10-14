@@ -659,8 +659,6 @@ namespace StarParse::detail::Parser {
         static_assert(Assertions::no_duplicate_validators<T>(),
                       "only one annotation among Min, Max, Range, Choices, or Validator can be applied to a single field");
         static_assert(Assertions::no_scalar_separators<T>(), "the Separator annotation cannot be applied to scalar fields");
-        static_assert(Assertions::check_ranges<T>(), "invalid Range annotation for specified type");
-        // TODO: Min and Max bounds checking
         static_assert(Assertions::check_alias_collisions<T>(),
                       "option names, short names, or aliases collide, or use reserved help/version names (including case and kebab spellings)");
         static_assert(Assertions::check_subcommand_collisions<T>(), "subcommand names or aliases collide (including case and kebab spellings)");

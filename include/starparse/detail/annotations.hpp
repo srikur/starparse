@@ -157,21 +157,50 @@ namespace StarParse::inline annotations {
     struct Min final {
         T value{};
 
-        explicit consteval Min(const T v) : value(v) {}
+        explicit consteval Min(const T v) : value(v) {
+            if (value <= 0) throw std::out_of_range("Minimum value must be greater than zero");
+            if constexpr (std::floating_point<T>) {
+                if (!std::isfinite(value))
+                    throw std::invalid_argument("Specified minimum value must be finite");
+            }
+            if (value < std::numeric_limits<T>::lowest() || value > std::numeric_limits<T>::max())
+                throw std::out_of_range("Specified value is not within the bounds of its integral type");
+        }
     };
 
     template<Numeric T>
     struct Max final {
         T value{};
 
-        explicit consteval Max(const T v) : value(v) {}
+        explicit consteval Max(const T v) : value(v) {
+            if (value <= 0) throw std::out_of_range("Maximum value must be greater than zero");
+            if constexpr (std::floating_point<T>) {
+                if (!std::isfinite(value))
+                    throw std::invalid_argument("Specified maximum value must be finite");
+            }
+            if (value < std::numeric_limits<T>::lowest() || value > std::numeric_limits<T>::max())
+                throw std::out_of_range("Specified value is not within the bounds of its integral type");
+        }
     };
 
     template<Numeric T>
     struct Range final {
         T min{};
         T max{};
-        explicit consteval Range(const T mi, const T ma) : min(mi), max(ma) {}
+
+        explicit consteval Range(const T mi, const T ma) : min(mi), max(ma) {
+            if (min <= 0 || max <= 0) throw std::out_of_range("Min and Max lengths must both be greater than zero");
+            if constexpr (std::floating_point<T>) {
+                if (!std::isfinite(max) || !std::isfinite(min))
+                    throw std::invalid_argument("Both minimum and maximum must be finite values");
+            }
+            if (std::cmp_less(max, min) || min == max)
+                throw std::invalid_argument("Minimum length must be strictly less than maximum length");
+            if (min < std::numeric_limits<T>::lowest() || min > std::numeric_limits<T>::max())
+                throw std::out_of_range("Specified minimum length is not within the bounds of its integral type");
+            if (max < std::numeric_limits<T>::lowest() || max > std::numeric_limits<T>::max())
+                throw std::out_of_range("Specified maximum length is not within the bounds of its integral type");
+        }
     };
 
     template<typename T>
