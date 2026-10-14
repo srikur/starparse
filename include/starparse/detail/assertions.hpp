@@ -532,32 +532,4 @@ namespace StarParse::detail::Assertions {
         return true;
     }
 
-    template<typename T>
-    consteval bool check_string_annotation_values() {
-        static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
-        template for (constexpr auto m : members) {
-            if constexpr (constexpr auto min_ann = specialization_of<^^MinLength>(m)) {
-                using A = [:std::meta::remove_cv(std::meta::type_of(*min_ann)):];
-                constexpr MinLength min_annotation = std::meta::extract<A>(*min_ann);
-                using V = [:value_type_of(^^A):];
-                if (min_annotation.length_ <= 0 || min_annotation.length_ < std::numeric_limits<V>::lowest() || min_annotation.length_ > std::numeric_limits<V>::max())
-                    return false;
-            } else if constexpr (constexpr auto max_ann = specialization_of<^^MaxLength>(m)) {
-                using A = [:std::meta::remove_cv(std::meta::type_of(*max_ann)):];
-                constexpr MaxLength max_annotation = std::meta::extract<A>(*max_ann);
-                using V = [:value_type_of(^^A):];
-                if (max_annotation.length_ <= 0 || max_annotation.length_ < std::numeric_limits<V>::lowest() || max_annotation.length_ > std::numeric_limits<V>::max())
-                    return false;
-            } else if constexpr (constexpr auto ann = specialization_of<^^Length>(m)) {
-                using A = [:std::meta::remove_cv(std::meta::type_of(*ann)):];
-                constexpr Length annotation = std::meta::extract<A>(*ann);
-                using V = [:value_type_of(^^A):];
-                if (annotation <= 0 || annotation.min_ < std::numeric_limits<V>::lowest() || annotation.min_ > std::numeric_limits<V>::max())
-                    return false;
-                if (annotation.max_ < std::numeric_limits<V>::lowest() || annotation.max_ > std::numeric_limits<V>::max())
-                    return false;
-            }
-        }
-        return true;
-    }
 } // namespace StarParse::detail::Assertions

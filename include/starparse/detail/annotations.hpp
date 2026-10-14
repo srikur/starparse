@@ -104,7 +104,11 @@ namespace StarParse::inline annotations {
 
         template<std::convertible_to<std::string_view>... Ts>
             requires(sizeof...(Ts) > 0)
-        explicit consteval Alias(Ts... ns) : names_(std::define_static_array(std::array{std::define_static_string(std::string_view{ns})...}).data()), count_(sizeof...(ns)) {}
+        explicit consteval Alias(Ts... ns) : names_(std::define_static_array(std::array{std::define_static_string(std::string_view{ns})...}).data()), count_(sizeof...(ns)) {
+            if ((std::string_view{ns}.empty() || ...)) {
+                throw std::invalid_argument("Alias cannot contain empty strings");
+            }
+        }
     };
 
     struct Program final {
@@ -334,14 +338,22 @@ namespace StarParse::inline annotations {
     struct MinLength final {
         T length_{};
 
-        explicit consteval MinLength(const T length) : length_(length) {}
+        explicit consteval MinLength(const T length) : length_(length) {
+            if (length <= 0) throw std::out_of_range("Minimum length must be greater than zero");
+            if (length < std::numeric_limits<T>::lowest() || length > std::numeric_limits<T>::max())
+                throw std::out_of_range("Specified length must be within the bounds of its integral type");
+        }
     };
 
     template<std::integral T>
     struct MaxLength final {
         T length_{};
 
-        explicit consteval MaxLength(const T length) : length_(length) {}
+        explicit consteval MaxLength(const T length) : length_(length) {
+            if (length <= 0) throw std::out_of_range("Maximum length must be greater than zero");
+            if (length < std::numeric_limits<T>::lowest() || length > std::numeric_limits<T>::max())
+                throw std::out_of_range("Specified length is not within the bounds of its integral type");
+        }
     };
 
     template<std::integral T>
@@ -349,6 +361,12 @@ namespace StarParse::inline annotations {
         T min_{};
         T max_{};
 
-        explicit consteval Length(const T min, const T max) : min_(min), max_(max) {}
+        explicit consteval Length(const T min, const T max) : min_(min), max_(max) {
+            if (min <= 0 || max <= 0) throw std::out_of_range("Min and Max lengths must both be greater than zero");
+            if (min < std::numeric_limits<T>::lowest() || min > std::numeric_limits<T>::max())
+                throw std::out_of_range("Specified minimum length is not within the bounds of its integral type");
+            if (max < std::numeric_limits<T>::lowest() || max > std::numeric_limits<T>::max())
+                throw std::out_of_range("Specified maximum length is not within the bounds of its integral type");
+        }
     };
 } // namespace StarParse::inline annotations

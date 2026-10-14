@@ -672,7 +672,6 @@ namespace StarParse::detail::Parser {
         static_assert(Assertions::check_negated_name_collisions<T>(S),
                       "When negated names are enabled, fields cannot overlap with negated names");
         static_assert(Assertions::check_string_length_annotations<T>(), "Length, MinLength, and MaxLength can only be placed on string fields convertible to std::string_view");
-        static_assert(Assertions::check_string_annotation_values<T>(), "string length constraints using Length, MinLength, and MaxLength must be positive and within their type bounds");
         // TODO: Add assertion for valid values within string annotations
     }
 
