@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <cmath>
 #include <concepts>
 #include <expected>
 #include <meta>
@@ -158,7 +159,6 @@ namespace StarParse::inline annotations {
         T value{};
 
         explicit consteval Min(const T v) : value(v) {
-            if (value <= 0) throw std::out_of_range("Minimum value must be greater than zero");
             if constexpr (std::floating_point<T>) {
                 if (!std::isfinite(value))
                     throw std::invalid_argument("Specified minimum value must be finite");
@@ -173,7 +173,6 @@ namespace StarParse::inline annotations {
         T value{};
 
         explicit consteval Max(const T v) : value(v) {
-            if (value <= 0) throw std::out_of_range("Maximum value must be greater than zero");
             if constexpr (std::floating_point<T>) {
                 if (!std::isfinite(value))
                     throw std::invalid_argument("Specified maximum value must be finite");
@@ -189,7 +188,6 @@ namespace StarParse::inline annotations {
         T max{};
 
         explicit consteval Range(const T mi, const T ma) : min(mi), max(ma) {
-            if (min <= 0 || max <= 0) throw std::out_of_range("Min and Max lengths must both be greater than zero");
             if constexpr (std::floating_point<T>) {
                 if (!std::isfinite(max) || !std::isfinite(min))
                     throw std::invalid_argument("Both minimum and maximum must be finite values");

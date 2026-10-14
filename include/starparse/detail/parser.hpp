@@ -335,7 +335,7 @@ namespace StarParse::detail::Parser {
                                 const auto mx = std::meta::extract<A>(*max_annotation);
                                 invocation += std::format(" <..{}>", mx.value);
                             } else if constexpr (specialization_of<^^Choices>(m).has_value()) {
-                                constexpr auto choices = choices_list<m>();
+                                constexpr auto choices = get_annotation_list_values<m, ^^Choices>();
                                 invocation += " <";
                                 invocation.append_range(choices | std::views::transform([](const char *s) {
                                                             return std::string_view{s};
@@ -670,7 +670,6 @@ namespace StarParse::detail::Parser {
         static_assert(Assertions::check_negated_name_collisions<T>(S),
                       "When negated names are enabled, fields cannot overlap with negated names");
         static_assert(Assertions::check_string_length_annotations<T>(), "Length, MinLength, and MaxLength can only be placed on string fields convertible to std::string_view");
-        // TODO: Add assertion for valid values within string annotations
     }
 
     struct ParseState {

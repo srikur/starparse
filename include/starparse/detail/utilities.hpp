@@ -151,14 +151,6 @@ namespace StarParse::detail::Utilities {
         return false;
     }
 
-    template<std::meta::info M>
-    consteval auto choices_list() {
-        constexpr auto annotation = specialization_of<^^Choices>(M);
-        using C = [:std::meta::remove_cv(std::meta::type_of(*annotation)):];
-        constexpr auto choices = std::meta::extract<C>(*annotation);
-        return std::span{choices.values_, choices.count_};
-    }
-
     template<std::meta::info M, std::meta::info T>
     consteval auto get_annotation_list_values() {
         constexpr auto annotation = specialization_of<T>(M);
@@ -172,7 +164,7 @@ namespace StarParse::detail::Utilities {
         if constexpr (!specialization_of<^^Choices>(M).has_value()) {
             return false;
         } else {
-            static constexpr auto choices = choices_list<M>();
+            static constexpr auto choices = get_annotation_list_values<M, ^^Choices>();
             for (const auto &choice : choices) {
                 if constexpr (std::convertible_to<T, std::string_view> && std::convertible_to<decltype(choice), std::string_view>) {
                     if (std::string_view{value} == std::string_view{choice} || (allow_case_insensitivity && iequals(value, choice)))
@@ -562,7 +554,7 @@ namespace StarParse::detail::Utilities {
                 return false;
             }
         } else if constexpr (choice_annotation.has_value()) {
-            static constexpr auto choices = choices_list<Mem>();
+            static constexpr auto choices = get_annotation_list_values<Mem, ^^Choices>();
             if (!matches_choice<Mem>(value, settings.allow_case_insensitivity)) {
                 errors.push_back({
                     .kind = ErrorKind::INVALID_CHOICE,
