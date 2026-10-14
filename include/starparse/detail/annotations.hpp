@@ -7,6 +7,7 @@
 #include <string>
 #include <string_view>
 #include <type_traits>
+#include <utility>
 
 namespace StarParse::inline annotations {
     namespace detail {
@@ -363,6 +364,8 @@ namespace StarParse::inline annotations {
 
         explicit consteval Length(const T min, const T max) : min_(min), max_(max) {
             if (min <= 0 || max <= 0) throw std::out_of_range("Min and Max lengths must both be greater than zero");
+            if (std::cmp_less(max, min) || min == max)
+                throw std::invalid_argument("Minimum length must be strictly less than maximum length");
             if (min < std::numeric_limits<T>::lowest() || min > std::numeric_limits<T>::max())
                 throw std::out_of_range("Specified minimum length is not within the bounds of its integral type");
             if (max < std::numeric_limits<T>::lowest() || max > std::numeric_limits<T>::max())
