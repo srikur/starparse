@@ -38,28 +38,35 @@ add_executable(starparse_tests
         test_subcommands.cpp
         test_validations.cpp)
 target_link_libraries(starparse_tests PRIVATE starparse::starparse doctest::doctest)
-target_compile_options(starparse_tests PRIVATE
-        -Wall
-        -Wextra
-        -Werror
-        -Wpedantic
-        -Wconversion
-        -Wsign-conversion
-        -Wdouble-promotion
-        -Wcast-align
-        -Wcast-qual
-        -Wold-style-cast
-        -Wzero-as-null-pointer-constant
-        -Wnon-virtual-dtor
-        -Woverloaded-virtual
-        -Wnull-dereference
-        -Wimplicit-fallthrough
-        -Wswitch-enum
-        -Wshadow
-        -Wformat=2
-        -Wextra-semi
-        -Wmissing-declarations
-        -Wundef)
+
+# Warning flags depend on the command-line dialect the compiler speaks (GCC/Clang vs
+# MSVC/clang-cl), not on the vendor, so key off the frontend variant.
+if (CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+    target_compile_options(starparse_tests PRIVATE /W4 /WX /permissive-)
+else ()
+    target_compile_options(starparse_tests PRIVATE
+            -Wall
+            -Wextra
+            -Werror
+            -Wpedantic
+            -Wconversion
+            -Wsign-conversion
+            -Wdouble-promotion
+            -Wcast-align
+            -Wcast-qual
+            -Wold-style-cast
+            -Wzero-as-null-pointer-constant
+            -Wnon-virtual-dtor
+            -Woverloaded-virtual
+            -Wnull-dereference
+            -Wimplicit-fallthrough
+            -Wswitch-enum
+            -Wshadow
+            -Wformat=2
+            -Wextra-semi
+            -Wmissing-declarations
+            -Wundef)
+endif ()
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     target_compile_options(starparse_tests PRIVATE
@@ -71,13 +78,19 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     )
     target_compile_options(starparse_tests PRIVATE
             $<$<CONFIG:Debug>:-fanalyzer>
-            $<$<CONFIG:Debug>:-fsanitize=address,undefined>
-            $<$<CONFIG:Debug>:-fno-omit-frame-pointer>
     )
 
-    target_link_options(starparse_tests PRIVATE
-            $<$<CONFIG:Debug>:-fsanitize=address,undefined>
-    )
+    # MinGW-w64 GCC ships without libasan/libubsan, so the sanitizers are POSIX-only.
+    if (NOT WIN32)
+        target_compile_options(starparse_tests PRIVATE
+                $<$<CONFIG:Debug>:-fsanitize=address,undefined>
+                $<$<CONFIG:Debug>:-fno-omit-frame-pointer>
+        )
+
+        target_link_options(starparse_tests PRIVATE
+                $<$<CONFIG:Debug>:-fsanitize=address,undefined>
+        )
+    endif ()
 endif ()
 
 doctest_discover_tests(starparse_tests)

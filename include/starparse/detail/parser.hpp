@@ -783,7 +783,7 @@ namespace StarParse::detail::Parser {
                                     if (fields_set[idx])
                                         continue; // skip this arg
                                     break;
-                                case DuplicateOptionPolicy::ERROR:
+                                case DuplicateOptionPolicy::REPORT_ERROR:
                                     if (fields_set[idx]) {
                                         errors.push_back({
                                             .kind = ErrorKind::DUPLICATE_OPTION,

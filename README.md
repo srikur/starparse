@@ -28,7 +28,8 @@ auto main(int argc, char** argv) -> int {
 
 ## Requirements
 
-- **GCC 16 or newer** (`-std=c++26 -freflection`).
+- A **C++26** compiler with reflection support. Development of this project is primarily done on macOS and Windows with
+  GCC 16 (`-std=c++26 -freflection`).
 - CMake >= 3.25 to build the tests/examples or install the package. No dependencies other than the standard library.
 
 ## Features
@@ -306,11 +307,18 @@ subcommand or enum-alias collisions.
 
 ## Building and testing
 
-The `release` and `debug` presets expect `g++-16` on your `PATH` (e.g. Homebrew's `gcc` package on macOS). Configure,
-build, and test in one command:
+The `release` and `debug` presets use whichever C++ compiler CMake finds. Configure, build, and test in one command:
 
 ```sh
 cmake --workflow --preset release
+```
+
+Specifying a compiler:
+
+```sh
+cmake --preset release -DCMAKE_CXX_COMPILER=g++-16
+cmake --build --preset release
+ctest --preset release
 ```
 
 ## Using starparse in your application
@@ -354,11 +362,9 @@ Copy the `include/starparse/` directory (or download a `starparse-<version>` arc
 the [releases page](https://github.com/srikur/starparse/releases)) and compile with:
 
 ```sh
-g++ -std=c++26 -freflection -I<path-to>/include your_app.cpp
+g++ -std=c++26 -freflection -I<path-to>/include your_app.cpp              # GCC 16+
+g++ -std=c++26 -freflection -I<path-to>/include your_app.cpp -lstdc++exp  # MinGW-w64 GCC: std::println lives in libstdc++exp
 ```
-
-In every case, linking against `starparse::starparse` propagates the include path, `-std=c++26`, and `-freflection`
-automatically.
 
 ## License
 

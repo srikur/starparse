@@ -4,7 +4,7 @@ namespace StarParse {
     enum class DuplicateOptionPolicy {
         LAST_WINS,
         FIRST_WINS,
-        ERROR
+        REPORT_ERROR
     };
 
     struct Settings {

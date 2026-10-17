@@ -7,20 +7,26 @@
   },
   "configurePresets": [
     {
-      "name": "release",
-      "displayName": "GCC 16 Release",
-      "description": "Homebrew GCC with -freflection",
+      "name": "base",
+      "hidden": true,
+      "description": "Uses system C++ compiler; override with CMAKE_CXX_COMPILER or CXX",
       "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": {
-        "CMAKE_CXX_COMPILER": "g++-16",
-        "CMAKE_BUILD_TYPE": "Release",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
       }
     },
     {
+      "name": "release",
+      "displayName": "Release",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
       "name": "debug",
-      "displayName": "GCC 16 Debug",
-      "inherits": "release",
+      "displayName": "Debug",
+      "inherits": "base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug"
       }

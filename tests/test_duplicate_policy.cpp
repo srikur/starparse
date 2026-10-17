@@ -15,7 +15,7 @@ namespace {
 
     constexpr Settings first_wins{.duplicate_option_policy = DuplicateOptionPolicy::FIRST_WINS};
     constexpr Settings last_wins{.duplicate_option_policy = DuplicateOptionPolicy::LAST_WINS};
-    constexpr Settings errors{.duplicate_option_policy = DuplicateOptionPolicy::ERROR};
+    constexpr Settings errors{.duplicate_option_policy = DuplicateOptionPolicy::REPORT_ERROR};
 } // namespace
 
 TEST_CASE("duplicate policy: with no override, last wins") {
