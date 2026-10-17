@@ -1,8 +1,6 @@
 #pragma once
 #include <string>
 #ifdef _WIN32
-// Trim <windows.h>: NOGDI drops <wingdi.h>, whose ERROR macro would otherwise collide with
-// DuplicateOptionPolicy::ERROR, and NOMINMAX keeps min/max available as std:: functions.
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
