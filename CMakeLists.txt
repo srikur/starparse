@@ -10,11 +10,98 @@ option(STARPARSE_BUILD_TESTS "Build the starparse tests" ${PROJECT_IS_TOP_LEVEL}
 option(STARPARSE_BUILD_EXAMPLES "Build the starparse examples" ${PROJECT_IS_TOP_LEVEL})
 option(STARPARSE_INSTALL "Generate install rules for starparse" ${PROJECT_IS_TOP_LEVEL})
 
+include(CheckCXXCompilerFlag)
+include(CheckCXXSourceCompiles)
+
 add_library(starparse INTERFACE)
 add_library(starparse::starparse ALIAS starparse)
 
 target_compile_features(starparse INTERFACE cxx_std_26)
-target_compile_options(starparse INTERFACE $<$<CXX_COMPILER_ID:GNU>:-freflection>)
+
+if(NOT "cxx_std_26" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
+    message(FATAL_ERROR
+        "starparse requires a C++26 compiler. "
+        "${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION} (${CMAKE_CXX_COMPILER}) does not report C++26 support. "
+        "Point CMake at another compiler with -DCMAKE_CXX_COMPILER=<path> or the CXX environment variable.")
+endif()
+
+function(starparse_detect_reflection flag_out found_out)
+    set(CMAKE_CXX_STANDARD 26)
+    set(CMAKE_CXX_STANDARD_REQUIRED ON)
+    set(CMAKE_CXX_EXTENSIONS OFF)
+
+    set(flag "")
+    check_cxx_compiler_flag(-freflection STARPARSE_HAS_FREFLECTION)
+    if(STARPARSE_HAS_FREFLECTION)
+        set(flag -freflection)
+    else()
+        check_cxx_compiler_flag(-freflection-latest STARPARSE_HAS_FREFLECTION_LATEST)
+        if(STARPARSE_HAS_FREFLECTION_LATEST)
+            set(flag -freflection-latest)
+        endif()
+    endif()
+
+    set(CMAKE_REQUIRED_FLAGS "${flag}")
+    check_cxx_source_compiles([[
+#include <meta>
+#include <string_view>
+struct Probe {};
+static_assert(std::meta::identifier_of(^^Probe) == std::string_view{"Probe"});
+int main() {}
+]] STARPARSE_HAS_REFLECTION)
+
+    set(${flag_out} "${flag}" PARENT_SCOPE)
+    set(${found_out} "${STARPARSE_HAS_REFLECTION}" PARENT_SCOPE)
+endfunction()
+
+# needed for std::println support in MinGW (libstdc++ on MinGW: libstdc++exp)
+function(starparse_detect_print_libs libs_out)
+    set(CMAKE_CXX_STANDARD 26)
+    set(CMAKE_CXX_STANDARD_REQUIRED ON)
+    set(CMAKE_CXX_EXTENSIONS OFF)
+
+    set(probe [[
+#include <print>
+int main() { std::println("{}", 42); }
+]])
+
+    set(libs "")
+    check_cxx_source_compiles("${probe}" STARPARSE_PRINT_LINKS)
+    if(NOT STARPARSE_PRINT_LINKS)
+        set(CMAKE_REQUIRED_LIBRARIES stdc++exp)
+        check_cxx_source_compiles("${probe}" STARPARSE_PRINT_LINKS_WITH_STDCXXEXP)
+        if(STARPARSE_PRINT_LINKS_WITH_STDCXXEXP)
+            set(libs stdc++exp)
+        endif()
+    endif()
+
+    set(${libs_out} "${libs}" PARENT_SCOPE)
+endfunction()
+
+starparse_detect_reflection(STARPARSE_REFLECTION_FLAG STARPARSE_HAS_REFLECTION)
+starparse_detect_print_libs(STARPARSE_PRINT_LIBS)
+
+if(STARPARSE_REFLECTION_FLAG)
+    target_compile_options(starparse INTERFACE ${STARPARSE_REFLECTION_FLAG})
+endif()
+
+if(STARPARSE_PRINT_LIBS)
+    target_link_libraries(starparse INTERFACE ${STARPARSE_PRINT_LIBS})
+    message(STATUS "starparse: linking ${STARPARSE_PRINT_LIBS} for std::println support")
+endif()
+
+if(STARPARSE_HAS_REFLECTION)
+    set(_starparse_flag_note "")
+    if(STARPARSE_REFLECTION_FLAG)
+        set(_starparse_flag_note " with ${STARPARSE_REFLECTION_FLAG}")
+    endif()
+    unset(_starparse_flag_note)
+else()
+    message(WARNING
+        "starparse is built using reflection (C++26 <meta>). "
+        "${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION} (${CMAKE_CXX_COMPILER}) does not provide it, "
+        "so targets that include starparse will fail to compile.")
+endif()
 
 target_sources(starparse INTERFACE
     FILE_SET HEADERS
@@ -27,14 +114,8 @@ target_sources(starparse INTERFACE
         include/starparse/detail/file.hpp
         include/starparse/detail/parser.hpp
         include/starparse/detail/settings.hpp
+        include/starparse/detail/terminal.hpp
         include/starparse/detail/utilities.hpp)
-
-if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_VERSION VERSION_LESS 16)
-    message(WARNING
-        "starparse requires P2996 reflection, which currently means GCC 16+ with -freflection. "
-        "The current compiler is ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}; "
-        "targets that include starparse will likely fail to compile.")
-endif()
 
 if(STARPARSE_BUILD_TESTS AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/CMakeLists.txt")
     enable_testing()
