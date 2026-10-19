@@ -1,12 +1,14 @@
 #pragma once
 
 #include <array>
+#include <cmath>
 #include <concepts>
 #include <expected>
 #include <meta>
 #include <string>
 #include <string_view>
 #include <type_traits>
+#include <utility>
 
 namespace StarParse::inline annotations {
     namespace detail {
@@ -52,8 +54,7 @@ namespace StarParse::inline annotations {
         const char *help_{};
         const char *metavar_{}; // TODO: support multiple
 
-        explicit consteval Opt(const char s, std::string_view h, std::string_view m) : short_name(s), help_(std::define_static_string(h)),
-                                                                                       metavar_(std::define_static_string(m)) {}
+        explicit consteval Opt(const char s, std::string_view h, std::string_view m) : short_name(s), help_(std::define_static_string(h)), metavar_(std::define_static_string(m)) {}
 
         explicit consteval Opt(const char s, std::string_view h) : short_name(s), help_(std::define_static_string(h)) {}
 
@@ -105,14 +106,15 @@ namespace StarParse::inline annotations {
 
         template<std::convertible_to<std::string_view>... Ts>
             requires(sizeof...(Ts) > 0)
-        explicit consteval Alias(Ts... ns) : names_(std::define_static_array(std::array{std::define_static_string(std::string_view{ns})...}).data()),
-                                             count_(sizeof...(ns)) {}
+        explicit consteval Alias(Ts... ns) : names_(std::define_static_array(std::array{std::define_static_string(std::string_view{ns})...}).data()), count_(sizeof...(ns)) {
+            if ((std::string_view{ns}.empty() || ...)) {
+                throw std::invalid_argument("Alias cannot contain empty strings");
+            }
+        }
     };
 
     struct Program final {
-        explicit consteval Program(std::string_view n, std::string_view d, std::string_view v) : name(std::define_static_string(n)),
-                                                                                                 description(std::define_static_string(d)),
-                                                                                                 version(std::define_static_string(v)) {}
+        explicit consteval Program(std::string_view n, std::string_view d, std::string_view v) : name(std::define_static_string(n)), description(std::define_static_string(d)), version(std::define_static_string(v)) {}
 
         const char *name{};
         const char *description{};
@@ -156,21 +158,47 @@ namespace StarParse::inline annotations {
     struct Min final {
         T value{};
 
-        explicit consteval Min(const T v) : value(v) {}
+        explicit consteval Min(const T v) : value(v) {
+            if constexpr (std::floating_point<T>) {
+                if (!std::isfinite(value))
+                    throw std::invalid_argument("Specified minimum value must be finite");
+            }
+            if (value < std::numeric_limits<T>::lowest() || value > std::numeric_limits<T>::max())
+                throw std::out_of_range("Specified value is not within the bounds of its integral type");
+        }
     };
 
     template<Numeric T>
     struct Max final {
         T value{};
 
-        explicit consteval Max(const T v) : value(v) {}
+        explicit consteval Max(const T v) : value(v) {
+            if constexpr (std::floating_point<T>) {
+                if (!std::isfinite(value))
+                    throw std::invalid_argument("Specified maximum value must be finite");
+            }
+            if (value < std::numeric_limits<T>::lowest() || value > std::numeric_limits<T>::max())
+                throw std::out_of_range("Specified value is not within the bounds of its integral type");
+        }
     };
 
     template<Numeric T>
     struct Range final {
         T min{};
         T max{};
-        explicit consteval Range(const T mi, const T ma) : min(mi), max(ma) {}
+
+        explicit consteval Range(const T mi, const T ma) : min(mi), max(ma) {
+            if constexpr (std::floating_point<T>) {
+                if (!std::isfinite(max) || !std::isfinite(min))
+                    throw std::invalid_argument("Both minimum and maximum must be finite values");
+            }
+            if (std::cmp_less(max, min) || min == max)
+                throw std::invalid_argument("Minimum length must be strictly less than maximum length");
+            if (min < std::numeric_limits<T>::lowest() || min > std::numeric_limits<T>::max())
+                throw std::out_of_range("Specified minimum length is not within the bounds of its integral type");
+            if (max < std::numeric_limits<T>::lowest() || max > std::numeric_limits<T>::max())
+                throw std::out_of_range("Specified maximum length is not within the bounds of its integral type");
+        }
     };
 
     template<typename T>
@@ -181,9 +209,7 @@ namespace StarParse::inline annotations {
 
         template<std::convertible_to<std::string_view>... Ts>
             requires(sizeof...(Ts) > 0 && std::convertible_to<T, std::string_view>)
-        explicit consteval Choices(Ts... ns) : values_(
-                                                   std::define_static_array(std::array{std::define_static_string(std::string_view{ns})...}).data()),
-                                               count_(sizeof...(ns)) {
+        explicit consteval Choices(Ts... ns) : values_(std::define_static_array(std::array{std::define_static_string(std::string_view{ns})...}).data()), count_(sizeof...(ns)) {
             if ((std::string_view{ns}.empty() || ...)) {
                 throw std::invalid_argument("Choices cannot contain empty strings");
             }
@@ -191,8 +217,7 @@ namespace StarParse::inline annotations {
 
         template<std::convertible_to<T>... Ts>
             requires(sizeof...(Ts) > 0 && !std::convertible_to<T, std::string_view>)
-        explicit consteval Choices(Ts... ns) : values_(std::define_static_array(std::array<T, sizeof...(Ts)>{T{ns}...}).data()),
-                                               count_(sizeof...(ns)) {}
+        explicit consteval Choices(Ts... ns) : values_(std::define_static_array(std::array<T, sizeof...(Ts)>{T{ns}...}).data()), count_(sizeof...(ns)) {}
     };
 
     template<typename... Ts>
@@ -239,9 +264,9 @@ namespace StarParse::inline annotations {
     struct Parser final {
         using Result = std::expected<T, std::string>;
         using ValueFn = Result (*)(std::string_view);
-        using RefFn = Result(*)(const std::string_view &);
-        using RawFn = Result(*)(const char *);
-        using StringFn = Result(*)(std::string);
+        using RefFn = Result (*)(const std::string_view &);
+        using RawFn = Result (*)(const char *);
+        using StringFn = Result (*)(std::string);
 
         ValueFn value_fn{};
         RefFn ref_fn{};
@@ -291,13 +316,11 @@ namespace StarParse::inline annotations {
 
         template<std::convertible_to<std::string_view>... Ts>
             requires(sizeof...(Ts) > 0 && std::convertible_to<T, std::string_view>)
-        explicit consteval Needs(Ts... ns) : values_(std::define_static_array(std::array{std::define_static_string(std::string_view{ns})...}).data()),
-                                             count_(sizeof...(ns)) {}
+        explicit consteval Needs(Ts... ns) : values_(std::define_static_array(std::array{std::define_static_string(std::string_view{ns})...}).data()), count_(sizeof...(ns)) {}
 
         template<std::convertible_to<T>... Ts>
             requires(sizeof...(Ts) > 0 && !std::convertible_to<T, std::string_view>)
-        explicit consteval Needs(Ts... ns) : values_(std::define_static_array(std::array<T, sizeof...(Ts)>{T{ns}...}).data()),
-                                             count_(sizeof...(ns)) {}
+        explicit consteval Needs(Ts... ns) : values_(std::define_static_array(std::array<T, sizeof...(Ts)>{T{ns}...}).data()), count_(sizeof...(ns)) {}
     };
 
     template<typename... Ts>
@@ -311,14 +334,11 @@ namespace StarParse::inline annotations {
 
         template<std::convertible_to<std::string_view>... Ts>
             requires(sizeof...(Ts) > 0 && std::convertible_to<T, std::string_view>)
-        explicit consteval Excludes(Ts... ns) : values_(
-                                                    std::define_static_array(std::array{std::define_static_string(std::string_view{ns})...}).data()),
-                                                count_(sizeof...(ns)) {}
+        explicit consteval Excludes(Ts... ns) : values_(std::define_static_array(std::array{std::define_static_string(std::string_view{ns})...}).data()), count_(sizeof...(ns)) {}
 
         template<std::convertible_to<T>... Ts>
             requires(sizeof...(Ts) > 0 && !std::convertible_to<T, std::string_view>)
-        explicit consteval Excludes(Ts... ns) : values_(std::define_static_array(std::array<T, sizeof...(Ts)>{T{ns}...}).data()),
-                                                count_(sizeof...(ns)) {}
+        explicit consteval Excludes(Ts... ns) : values_(std::define_static_array(std::array<T, sizeof...(Ts)>{T{ns}...}).data()), count_(sizeof...(ns)) {}
     };
 
     template<typename... Ts>
@@ -332,16 +352,51 @@ namespace StarParse::inline annotations {
 
         template<std::convertible_to<std::string_view>... Ts>
             requires(sizeof...(Ts) > 0 && std::convertible_to<T, std::string_view>)
-        explicit consteval
-        Groups(Ts... ns) : values_(std::define_static_array(std::array{std::define_static_string(std::string_view{ns})...}).data()),
-                           count_(sizeof...(ns)) {}
+        explicit consteval Groups(Ts... ns) : values_(std::define_static_array(std::array{std::define_static_string(std::string_view{ns})...}).data()), count_(sizeof...(ns)) {}
 
         template<std::convertible_to<T>... Ts>
             requires(sizeof...(Ts) > 0 && !std::convertible_to<T, std::string_view>)
-        explicit consteval Groups(Ts... ns) : values_(std::define_static_array(std::array<T, sizeof...(Ts)>{T{ns}...}).data()),
-                                              count_(sizeof...(ns)) {}
+        explicit consteval Groups(Ts... ns) : values_(std::define_static_array(std::array<T, sizeof...(Ts)>{T{ns}...}).data()), count_(sizeof...(ns)) {}
     };
 
     template<typename... Ts>
     Groups(Ts...) -> Groups<std::common_type_t<Ts...> >;
+
+    template<std::integral T>
+    struct MinLength final {
+        T length_{};
+
+        explicit consteval MinLength(const T length) : length_(length) {
+            if (length <= 0) throw std::out_of_range("Minimum length must be greater than zero");
+            if (length < std::numeric_limits<T>::lowest() || length > std::numeric_limits<T>::max())
+                throw std::out_of_range("Specified length must be within the bounds of its integral type");
+        }
+    };
+
+    template<std::integral T>
+    struct MaxLength final {
+        T length_{};
+
+        explicit consteval MaxLength(const T length) : length_(length) {
+            if (length <= 0) throw std::out_of_range("Maximum length must be greater than zero");
+            if (length < std::numeric_limits<T>::lowest() || length > std::numeric_limits<T>::max())
+                throw std::out_of_range("Specified length is not within the bounds of its integral type");
+        }
+    };
+
+    template<std::integral T>
+    struct Length final {
+        T min_{};
+        T max_{};
+
+        explicit consteval Length(const T min, const T max) : min_(min), max_(max) {
+            if (min <= 0 || max <= 0) throw std::out_of_range("Min and Max lengths must both be greater than zero");
+            if (std::cmp_less(max, min) || min == max)
+                throw std::invalid_argument("Minimum length must be strictly less than maximum length");
+            if (min < std::numeric_limits<T>::lowest() || min > std::numeric_limits<T>::max())
+                throw std::out_of_range("Specified minimum length is not within the bounds of its integral type");
+            if (max < std::numeric_limits<T>::lowest() || max > std::numeric_limits<T>::max())
+                throw std::out_of_range("Specified maximum length is not within the bounds of its integral type");
+        }
+    };
 } // namespace StarParse::inline annotations

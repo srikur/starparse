@@ -335,7 +335,7 @@ namespace StarParse::detail::Parser {
                                 const auto mx = std::meta::extract<A>(*max_annotation);
                                 invocation += std::format(" <..{}>", mx.value);
                             } else if constexpr (specialization_of<^^Choices>(m).has_value()) {
-                                constexpr auto choices = choices_list<m>();
+                                constexpr auto choices = get_annotation_list_values<m, ^^Choices>();
                                 invocation += " <";
                                 invocation.append_range(choices | std::views::transform([](const char *s) {
                                                             return std::string_view{s};
@@ -438,10 +438,14 @@ namespace StarParse::detail::Parser {
     public:
         ParsedArgs(T out, DefaultValues defaults, const bool show_help, const bool show_version, const std::string_view argv_name,
                    std::vector<ParseError> &errors, std::vector<size_t> command_path,
-                   std::vector<std::string> response_args = {}) : response_args_(std::move(response_args)), out_(std::move(out)),
-                                                                  defaults_(std::move(defaults)), show_help_(show_help), show_version_(show_version),
+                   std::vector<std::string> response_args = {}) : response_args_(std::move(response_args)),
+                                                                  out_(std::move(out)),
+                                                                  defaults_(std::move(defaults)),
+                                                                  show_help_(show_help),
+                                                                  show_version_(show_version),
                                                                   errors_(std::move(errors)),
-                                                                  command_path_(std::move(command_path)), argv_name_(argv_name),
+                                                                  command_path_(std::move(command_path)),
+                                                                  argv_name_(argv_name),
                                                                   settings_(S) {}
 
         ParsedArgs(const ParsedArgs &) = delete;
@@ -637,6 +641,7 @@ namespace StarParse::detail::Parser {
         return attr_array;
     }
 
+    // TODO: Include args in error strings + consolidate?
     template<typename T, Settings S = Settings{}>
     void check_assertions() {
         static_assert(Assertions::check_annotation_placement<T>(),
@@ -654,7 +659,6 @@ namespace StarParse::detail::Parser {
         static_assert(Assertions::no_duplicate_validators<T>(),
                       "only one annotation among Min, Max, Range, Choices, or Validator can be applied to a single field");
         static_assert(Assertions::no_scalar_separators<T>(), "the Separator annotation cannot be applied to scalar fields");
-        static_assert(Assertions::check_ranges<T>(), "invalid Range annotation for specified type");
         static_assert(Assertions::check_alias_collisions<T>(),
                       "option names, short names, or aliases collide, or use reserved help/version names (including case and kebab spellings)");
         static_assert(Assertions::check_subcommand_collisions<T>(), "subcommand names or aliases collide (including case and kebab spellings)");
@@ -665,6 +669,7 @@ namespace StarParse::detail::Parser {
         static_assert(Assertions::check_group_name_collisions<T>(), "Group names cannot collide with field names");
         static_assert(Assertions::check_negated_name_collisions<T>(S),
                       "When negated names are enabled, fields cannot overlap with negated names");
+        static_assert(Assertions::check_string_length_annotations<T>(), "Length, MinLength, and MaxLength can only be placed on string fields convertible to std::string_view");
     }
 
     struct ParseState {

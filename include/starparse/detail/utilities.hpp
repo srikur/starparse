@@ -151,14 +151,6 @@ namespace StarParse::detail::Utilities {
         return false;
     }
 
-    template<std::meta::info M>
-    consteval auto choices_list() {
-        constexpr auto annotation = specialization_of<^^Choices>(M);
-        using C = [:std::meta::remove_cv(std::meta::type_of(*annotation)):];
-        constexpr auto choices = std::meta::extract<C>(*annotation);
-        return std::span{choices.values_, choices.count_};
-    }
-
     template<std::meta::info M, std::meta::info T>
     consteval auto get_annotation_list_values() {
         constexpr auto annotation = specialization_of<T>(M);
@@ -172,12 +164,12 @@ namespace StarParse::detail::Utilities {
         if constexpr (!specialization_of<^^Choices>(M).has_value()) {
             return false;
         } else {
-            static constexpr auto choices = choices_list<M>();
+            static constexpr auto choices = get_annotation_list_values<M, ^^Choices>();
             for (const auto &choice : choices) {
                 if constexpr (std::convertible_to<T, std::string_view> && std::convertible_to<decltype(choice), std::string_view>) {
                     if (std::string_view{value} == std::string_view{choice} || (allow_case_insensitivity && iequals(value, choice)))
                         return true;
-                } else if constexpr (requires {{ value == choice } -> std::convertible_to<bool>; }) {
+                } else if constexpr (requires { { value == choice } -> std::convertible_to<bool>; }) {
                     if (value == choice)
                         return true;
                 }
@@ -225,9 +217,9 @@ namespace StarParse::detail::Utilities {
         r = std::meta::dealias(std::meta::remove_cv(r));
         if (is_optional(r))
             r = std::meta::dealias(value_type_of(r));
-        return std::meta::is_integral_type(r) && r != (^^bool)&&!std::meta::extract<bool>(std::meta::substitute(^^is_char_v, {
-                                                                                                                                 r,
-                                                                                                                             }));
+        // clang-format off
+        return std::meta::is_integral_type(r) && r != (^^bool) && !std::meta::extract<bool>(std::meta::substitute(^^is_char_v, {r,}));
+        // clang-format on
     }
 
     template<std::meta::info M>
@@ -540,6 +532,9 @@ namespace StarParse::detail::Utilities {
         constexpr auto min_annotation = specialization_of<^^Min>(Mem);
         constexpr auto max_annotation = specialization_of<^^Max>(Mem);
         constexpr auto range_annotation = specialization_of<^^Range>(Mem);
+        constexpr auto min_length_annotation = specialization_of<^^MinLength>(Mem);
+        constexpr auto max_length_annotation = specialization_of<^^MaxLength>(Mem);
+        constexpr auto range_length_annotation = specialization_of<^^Length>(Mem);
 
         if constexpr (validator_annotation.has_value()) {
             using V = [:std::meta::remove_cv(std::meta::type_of(*validator_annotation)):];
@@ -559,7 +554,7 @@ namespace StarParse::detail::Utilities {
                 return false;
             }
         } else if constexpr (choice_annotation.has_value()) {
-            static constexpr auto choices = choices_list<Mem>();
+            static constexpr auto choices = get_annotation_list_values<Mem, ^^Choices>();
             if (!matches_choice<Mem>(value, settings.allow_case_insensitivity)) {
                 errors.push_back({
                     .kind = ErrorKind::INVALID_CHOICE,
@@ -607,6 +602,51 @@ namespace StarParse::detail::Utilities {
                     .kind = ErrorKind::OUT_OF_RANGE,
                     .input_value = std::string{input},
                     .detail = std::format("allowed range is [{}, {}]", range.min, range.max),
+                    .current_argument = name_of(Mem),
+                    .argv_index = index,
+                });
+                return false;
+            }
+        } else if constexpr (min_length_annotation.has_value()) {
+            using A = [:std::meta::remove_cv(std::meta::type_of(*min_length_annotation)):];
+            constexpr MinLength mn = std::meta::extract<A>(*min_length_annotation);
+            const size_t value_length = std::string_view(value).size();
+
+            if (numeric_less(value_length, mn.length_)) {
+                errors.push_back({
+                    .kind = ErrorKind::INVALID_STRING_LENGTH,
+                    .input_value = std::string{input},
+                    .detail = std::format("minimum string length is {}", mn.length_),
+                    .current_argument = name_of(Mem),
+                    .argv_index = index,
+                });
+                return false;
+            }
+        } else if constexpr (max_length_annotation.has_value()) {
+            using A = [:std::meta::remove_cv(std::meta::type_of(*min_length_annotation)):];
+            constexpr MaxLength mx = std::meta::extract<A>(*min_length_annotation);
+            const size_t value_length = std::string_view(value).size();
+
+            if (numeric_less(mx.length_, value_length)) {
+                errors.push_back({
+                    .kind = ErrorKind::INVALID_STRING_LENGTH,
+                    .input_value = std::string{input},
+                    .detail = std::format("maximum string length is {}", mx.length_),
+                    .current_argument = name_of(Mem),
+                    .argv_index = index,
+                });
+                return false;
+            }
+        } else if constexpr (range_length_annotation.has_value()) {
+            using A = [:std::meta::remove_cv(std::meta::type_of(*range_annotation)):];
+            constexpr Length range = std::meta::extract<A>(*range_annotation);
+            const size_t value_length = std::string_view(value).size();
+
+            if (numeric_less(value_length, range.min_) || numeric_less(range.max_, value_length)) {
+                errors.push_back(ParseError{
+                    .kind = ErrorKind::INVALID_STRING_LENGTH,
+                    .input_value = std::string{input},
+                    .detail = std::format("string length must be within [{}, {}]", range.min_, range.max_),
                     .current_argument = name_of(Mem),
                     .argv_index = index,
                 });

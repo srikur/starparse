@@ -393,8 +393,23 @@ namespace StarParse::detail::Assertions {
             });
             if (choices_count > 1)
                 return false;
+            const auto min_len_count = std::ranges::count_if(annotations, [](const std::meta::info a) {
+                return is_specialization_of(std::meta::remove_cv(std::meta::type_of(a)), ^^MinLength);
+            });
+            if (min_len_count > 1)
+                return false;
+            const auto max_len_count = std::ranges::count_if(annotations, [](const std::meta::info a) {
+                return is_specialization_of(std::meta::remove_cv(std::meta::type_of(a)), ^^MaxLength);
+            });
+            if (max_len_count > 1)
+                return false;
+            const auto length_count = std::ranges::count_if(annotations, [](const std::meta::info a) {
+                return is_specialization_of(std::meta::remove_cv(std::meta::type_of(a)), ^^Length);
+            });
+            if (length_count > 1)
+                return false;
             // also if more than 1 on a field
-            if (validator_count + min_count + max_count + range_count + choices_count > 1)
+            if (validator_count + min_count + max_count + range_count + choices_count + min_len_count + max_len_count + length_count > 1)
                 return false;
         }
         return true;
@@ -406,34 +421,6 @@ namespace StarParse::detail::Assertions {
         for (const auto m : members) {
             if (!is_container(std::meta::remove_cv(std::meta::type_of(m))) && extraction_of<Separator>(m).has_value())
                 return false;
-        }
-        return true;
-    }
-
-    template<typename T>
-    consteval bool check_ranges() {
-        static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
-        template for (constexpr auto m : members) {
-            constexpr auto range_annotation = specialization_of<^^Range>(m);
-
-            if constexpr (range_annotation.has_value()) {
-                using A = [:std::meta::remove_cv(std::meta::type_of(*range_annotation)):];
-                const auto range = std::meta::extract<A>(*range_annotation);
-                // 1) max > min
-                if (numeric_less(range.max, range.min) || range.min == range.max)
-                    return false;
-                // 2) check for NaN/infinite
-                using V = [:std::meta::remove_cv(std::meta::type_of(m)):];
-                if constexpr (std::floating_point<V>) {
-                    if (!std::isfinite(range.max) || !std::isfinite(range.min))
-                        return false;
-                }
-                // 3) Check for no in-range values possible for specified type
-                if (range.min < std::numeric_limits<V>::lowest() || range.min > std::numeric_limits<V>::max())
-                    return false;
-                if (range.max < std::numeric_limits<V>::lowest() || range.max > std::numeric_limits<V>::max())
-                    return false;
-            }
         }
         return true;
     }
@@ -502,4 +489,19 @@ namespace StarParse::detail::Assertions {
         }
         return true;
     }
+
+    template<typename T>
+    consteval bool check_string_length_annotations() {
+        static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
+        template for (constexpr auto m : members) {
+            if constexpr (specialization_of<^^MinLength>(m)) {
+                using V = [:std::meta::dealias(std::meta::remove_cvref(std::meta::type_of(m))):];
+                if constexpr (!std::convertible_to<V, std::string_view>) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
 } // namespace StarParse::detail::Assertions
