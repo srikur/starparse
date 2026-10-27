@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <algorithm>
 #include <array>
@@ -72,7 +72,8 @@ namespace StarParse::detail::Utilities {
 
     template<typename T>
     consteval bool is_bare() {
-        for (const std::meta::info m : std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current())) {
+        for (const std::meta::info m :
+             std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current())) {
             if (extraction_of<Opt>(m).has_value() || extraction_of<Positional>(m).has_value()) {
                 return false;
             }
@@ -82,12 +83,14 @@ namespace StarParse::detail::Utilities {
 
     template<typename T>
     consteval bool is_named_option(const std::meta::info m) {
-        return !has_annotation<detail::Subcommand_>(m) && (extraction_of<Opt>(m).has_value() || extraction_of<Positional>(m).has_value() || is_bare<T>());
+        return !has_annotation<detail::Subcommand_>(m) &&
+               (extraction_of<Opt>(m).has_value() || extraction_of<Positional>(m).has_value() || is_bare<T>());
     }
 
     consteval bool is_hidden(const std::meta::info m) {
         for (const auto a : std::meta::annotations_of(m)) {
-            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^detail::Hidden_)) {
+            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) ==
+                std::meta::dealias(^^detail::Hidden_)) {
                 return true;
             }
         }
@@ -102,7 +105,8 @@ namespace StarParse::detail::Utilities {
     bool matches_short_name(const std::string_view value, const bool allow_case_insensitivity = false) {
         constexpr std::optional<Opt> opt = extraction_of<Opt>(M);
         if (opt.has_value() && value.size() == 1) {
-            return allow_case_insensitivity ? ascii_lower(value[0]) == ascii_lower(opt->short_name) : value[0] == opt->short_name;
+            return allow_case_insensitivity ? ascii_lower(value[0]) == ascii_lower(opt->short_name)
+                                            : value[0] == opt->short_name;
         }
         return false;
     }
@@ -111,10 +115,9 @@ namespace StarParse::detail::Utilities {
         if (a.length() != b.length()) {
             return false;
         }
-        return std::equal(a.begin(), a.end(), b.begin(),
-                          [](const unsigned char ac, const unsigned char bc) {
-                              return std::tolower(ac) == std::tolower(bc);
-                          });
+        return std::equal(a.begin(), a.end(), b.begin(), [](const unsigned char ac, const unsigned char bc) {
+            return std::tolower(ac) == std::tolower(bc);
+        });
     }
 
     consteval std::vector<std::string_view> alias_name_list(const std::meta::info m) {
@@ -144,7 +147,7 @@ namespace StarParse::detail::Utilities {
 
     template<std::meta::info M>
     bool matches_alias(const std::string_view name, const bool allow_case_insensitivity = false) {
-        for (const auto &alias : alias_names<M>()) {
+        for (const auto& alias : alias_names<M>()) {
             if (name == alias || (allow_case_insensitivity && iequals(name, alias)))
                 return true;
         }
@@ -160,16 +163,20 @@ namespace StarParse::detail::Utilities {
     }
 
     template<std::meta::info M, typename T>
-    bool matches_choice(const T &value, const bool allow_case_insensitivity = false) {
+    bool matches_choice(const T& value, const bool allow_case_insensitivity = false) {
         if constexpr (!specialization_of<^^Choices>(M).has_value()) {
             return false;
         } else {
             static constexpr auto choices = get_annotation_list_values<M, ^^Choices>();
-            for (const auto &choice : choices) {
-                if constexpr (std::convertible_to<T, std::string_view> && std::convertible_to<decltype(choice), std::string_view>) {
-                    if (std::string_view{value} == std::string_view{choice} || (allow_case_insensitivity && iequals(value, choice)))
+            for (const auto& choice : choices) {
+                if constexpr (std::convertible_to<T, std::string_view> &&
+                              std::convertible_to<decltype(choice), std::string_view>) {
+                    if (std::string_view{value} == std::string_view{choice} ||
+                        (allow_case_insensitivity && iequals(value, choice)))
                         return true;
-                } else if constexpr (requires { { value == choice } -> std::convertible_to<bool>; }) {
+                } else if constexpr (requires {
+                                         { value == choice } -> std::convertible_to<bool>;
+                                     }) {
                     if (value == choice)
                         return true;
                 }
@@ -181,14 +188,17 @@ namespace StarParse::detail::Utilities {
     template<typename T>
     bool short_name_exists(const std::string_view name, const bool allow_case_insensitivity = false) {
         // check aliases, opt, and choices
-        static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
+        static constexpr auto members =
+            std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
         template for (constexpr auto member : members) {
             if constexpr (is_named_option<T>(member)) {
                 constexpr auto canonical = name_of(member);
-                if (canonical.size() == 1 && (name == canonical || (allow_case_insensitivity && iequals(name, canonical))))
+                if (canonical.size() == 1 &&
+                    (name == canonical || (allow_case_insensitivity && iequals(name, canonical))))
                     return true;
             }
-            if (matches_alias<member>(name, allow_case_insensitivity) || matches_choice<member>(name, allow_case_insensitivity) ||
+            if (matches_alias<member>(name, allow_case_insensitivity) ||
+                matches_choice<member>(name, allow_case_insensitivity) ||
                 matches_short_name<member>(name, allow_case_insensitivity)) {
                 return true;
             }
@@ -250,17 +260,19 @@ namespace StarParse::detail::Utilities {
     }();
 
     template<std::meta::info M>
-    constexpr bool check_snake_case(const std::string_view name, const Settings &settings) {
+    constexpr bool check_snake_case(const std::string_view name, const Settings& settings) {
         return name == snake_name_v<M> || (settings.allow_case_insensitivity && iequals(name, snake_name_v<M>));
     }
 
     template<std::meta::info M>
-    constexpr bool check_kebab_case(const std::string_view name, const Settings &settings) {
-        return settings.allow_kebab_casing && (name == kebab_name_v<M> || (settings.allow_case_insensitivity && iequals(name, kebab_name_v<M>)));
+    constexpr bool check_kebab_case(const std::string_view name, const Settings& settings) {
+        return settings.allow_kebab_casing &&
+               (name == kebab_name_v<M> || (settings.allow_case_insensitivity && iequals(name, kebab_name_v<M>)));
     }
 
     template<std::meta::info M>
-    constexpr bool matches_non_negated_name(const std::string_view name, const Settings &settings, const bool allow_short = true) {
+    constexpr bool matches_non_negated_name(const std::string_view name, const Settings& settings,
+                                            const bool allow_short = true) {
         if (allow_short && matches_short_name<M>(name, settings.allow_case_insensitivity))
             return true;
         if (check_snake_case<M>(name, settings) || check_kebab_case<M>(name, settings))
@@ -271,11 +283,13 @@ namespace StarParse::detail::Utilities {
     }
 
     template<std::meta::info M>
-    constexpr bool does_match_name(const std::string_view name, const Settings &settings, const bool allow_short = true) {
+    constexpr bool does_match_name(const std::string_view name, const Settings& settings,
+                                   const bool allow_short = true) {
         if (matches_non_negated_name<M>(name, settings, allow_short))
             return true;
         // checking name size >= 3 prevents GCC complaining about removing a prefix of size 3
-        if (settings.autogenerate_negations && name.size() >= 3 && name.starts_with("no-") && is_flag_type(std::meta::type_of(M))) {
+        if (settings.autogenerate_negations && name.size() >= 3 && name.starts_with("no-") &&
+            is_flag_type(std::meta::type_of(M))) {
             std::string_view negated{name};
             negated.remove_prefix(3);
             return check_snake_case<M>(negated, settings) || check_kebab_case<M>(negated, settings);
@@ -300,13 +314,9 @@ namespace StarParse::detail::Utilities {
         using namespace std::literals;
         constexpr std::array true_values{"yes"sv, "1"sv, "on"sv, "true"sv, "t"sv};
         constexpr std::array false_values{"no"sv, "0"sv, "off"sv, "false"sv, "f"sv};
-        if (std::ranges::any_of(true_values, [&](auto value) {
-                return iequals(s, value);
-            }))
+        if (std::ranges::any_of(true_values, [&](auto value) { return iequals(s, value); }))
             return true;
-        if (std::ranges::any_of(false_values, [&](auto value) {
-                return iequals(s, value);
-            }))
+        if (std::ranges::any_of(false_values, [&](auto value) { return iequals(s, value); }))
             return false;
         return std::unexpected(ParseError{
             .kind = ErrorKind::INVALID_VALUE,
@@ -318,7 +328,8 @@ namespace StarParse::detail::Utilities {
     template<typename T>
     consteval size_t member_index_of(const std::meta::info m) {
         size_t index{0};
-        for (const std::meta::info member : std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current())) {
+        for (const std::meta::info member :
+             std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current())) {
             if (member == m) {
                 return index;
             }
@@ -328,7 +339,7 @@ namespace StarParse::detail::Utilities {
     }
 
     template<std::meta::info Mem, typename M>
-    std::expected<M, ParseError> from_string(std::string_view s, const size_t index, const Settings &settings) {
+    std::expected<M, ParseError> from_string(std::string_view s, const size_t index, const Settings& settings) {
         if constexpr (is_optional(^^M)) {
             using T = [:value_type_of(^^M):];
             if (auto result = from_string<Mem, T>(s, index, settings))
@@ -382,7 +393,7 @@ namespace StarParse::detail::Utilities {
         constexpr auto env = extraction_of<Env>(M);
         static_assert(env.has_value(), "member requires an Env annotation");
         std::string s{env->name};
-        for (auto &c : s) {
+        for (auto& c : s) {
             // note: apparently std::toupper is not constexpr
             if (c >= 'a' && c <= 'z')
                 c = static_cast<char>(c - 'a' + 'A');
@@ -402,7 +413,8 @@ namespace StarParse::detail::Utilities {
             return std::nullopt;
         }
         size_t index{0};
-        for (const std::meta::info member : std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current())) {
+        for (const std::meta::info member :
+             std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current())) {
             if (is_flag_type(std::meta::type_of(member))) {
                 continue;
             }
@@ -415,8 +427,9 @@ namespace StarParse::detail::Utilities {
     }
 
     template<typename T>
-    bool option_takes_value(std::string_view name, bool is_short, const Settings &settings) {
-        static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
+    bool option_takes_value(std::string_view name, bool is_short, const Settings& settings) {
+        static constexpr auto members =
+            std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
         bool takes{false};
         template for (constexpr auto m : members) {
             using M = [:std::meta::type_of(m):];
@@ -428,10 +441,11 @@ namespace StarParse::detail::Utilities {
     }
 
     template<typename T>
-    bool option_is_count(std::string_view name, bool is_short, const Settings &settings) {
+    bool option_is_count(std::string_view name, bool is_short, const Settings& settings) {
         if (!settings.allow_repeated_counts)
             return false;
-        static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
+        static constexpr auto members =
+            std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
         template for (constexpr auto m : members) {
             if constexpr (is_named_option<T>(m) && is_count_type(std::meta::type_of(m))) {
                 if (does_match_name<m>(name, settings, is_short))
@@ -443,7 +457,8 @@ namespace StarParse::detail::Utilities {
 
     consteval bool is_required(const std::meta::info m) {
         for (const auto a : std::meta::annotations_of(m)) {
-            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) == std::meta::dealias(^^detail::Required_)) {
+            if (std::meta::dealias(std::meta::remove_cv(std::meta::type_of(a))) ==
+                std::meta::dealias(^^detail::Required_)) {
                 return true;
             }
         }
@@ -460,7 +475,7 @@ namespace StarParse::detail::Utilities {
     }
 
     template<typename F>
-    void for_each_value(std::string_view s, const std::string_view separator, F &&f) {
+    void for_each_value(std::string_view s, const std::string_view separator, F&& f) {
         if (separator.empty()) {
             f(s);
             return;
@@ -475,9 +490,7 @@ namespace StarParse::detail::Utilities {
 
     [[nodiscard]] inline std::string to_uppercase(const std::string_view sv) {
         std::string result{sv};
-        std::ranges::transform(result, result.begin(), [](unsigned char c) {
-            return std::toupper(c);
-        });
+        std::ranges::transform(result, result.begin(), [](unsigned char c) { return std::toupper(c); });
         return result;
     }
 
@@ -492,9 +505,10 @@ namespace StarParse::detail::Utilities {
     }
 
     template<typename T>
-    std::vector<std::string_view> viable_candidate_names(const Settings &settings) {
+    std::vector<std::string_view> viable_candidate_names(const Settings& settings) {
         std::vector<std::string_view> names;
-        static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
+        static constexpr auto members =
+            std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
         template for (constexpr auto m : members) {
             if (is_named_option<T>(m)) {
                 // TODO: support case insensitivity here?
@@ -503,7 +517,7 @@ namespace StarParse::detail::Utilities {
                     names.push_back(kebab_name_v<m>);
                 }
                 if (settings.allow_aliases) {
-                    for (const auto &alias : alias_names<m>()) {
+                    for (const auto& alias : alias_names<m>()) {
                         names.push_back(alias);
                     }
                 }
@@ -526,7 +540,8 @@ namespace StarParse::detail::Utilities {
     }
 
     template<std::meta::info Mem, typename M>
-    bool validate(const M &value, const std::string_view input, const size_t index, std::vector<ParseError> &errors, const Settings &settings) {
+    bool validate(const M& value, const std::string_view input, const size_t index, std::vector<ParseError>& errors,
+                  const Settings& settings) {
         constexpr auto validator_annotation = specialization_of<^^Validator>(Mem);
         constexpr auto choice_annotation = specialization_of<^^Choices>(Mem);
         constexpr auto min_annotation = specialization_of<^^Min>(Mem);
@@ -540,14 +555,15 @@ namespace StarParse::detail::Utilities {
             using V = [:std::meta::remove_cv(std::meta::type_of(*validator_annotation)):];
             constexpr auto validator = std::meta::extract<V>(*validator_annotation);
 
-            static_assert(std::is_invocable_r_v<std::expected<void, std::string>, const V &, const M &>,
+            static_assert(std::is_invocable_r_v<std::expected<void, std::string>, const V&, const M&>,
                           "Validator must accept the parsed value type");
 
             if (auto result = validator(value); !result) {
                 errors.push_back({
                     .kind = ErrorKind::VALIDATION_FAILED,
                     .input_value = std::string{input},
-                    .detail = result.error().empty() ? std::string{"validator returned false"} : std::move(result.error()),
+                    .detail =
+                        result.error().empty() ? std::string{"validator returned false"} : std::move(result.error()),
                     .current_argument = name_of(Mem),
                     .argv_index = index,
                 });
@@ -657,7 +673,8 @@ namespace StarParse::detail::Utilities {
     }
 
     template<std::meta::info Mem, typename M>
-    bool increment_count(M &field, const std::string_view name, const size_t index, std::vector<ParseError> &errors, const Settings &settings) {
+    bool increment_count(M& field, const std::string_view name, const size_t index, std::vector<ParseError>& errors,
+                         const Settings& settings) {
         if constexpr (is_optional(^^M)) {
             auto value = field.value_or(0);
             if (!increment_count<Mem>(value, name, index, errors, settings))
@@ -688,8 +705,9 @@ namespace StarParse::detail::Utilities {
         using V = [:std::meta::remove_cv(std::meta::type_of(parser)):];
         constexpr auto parsing_function = std::meta::extract<V>(parser);
 
-        static_assert(std::is_invocable_r_v<std::expected<E, std::string>, const V &, const std::string_view>,
-                      "Parser must accept a string_view and return std::expected of the parsed value type and std::string");
+        static_assert(
+            std::is_invocable_r_v<std::expected<E, std::string>, const V&, const std::string_view>,
+            "Parser must accept a string_view and return std::expected of the parsed value type and std::string");
         if (auto result = parsing_function(s); !result) {
             return std::unexpected(ParseError{
                 .kind = ErrorKind::CUSTOM_PARSING_FAILED,
@@ -703,13 +721,13 @@ namespace StarParse::detail::Utilities {
     }
 
     template<std::meta::info Mem, typename M>
-    void assign_from_string(M &field, const std::string_view s, const size_t index, size_t &count, std::vector<ParseError> &errors,
-                            const Settings &settings) {
+    void assign_from_string(M& field, const std::string_view s, const size_t index, size_t& count,
+                            std::vector<ParseError>& errors, const Settings& settings) {
         constexpr auto annotated = extraction_of<Separator>(Mem);
         constexpr bool has_custom_parser = specialization_of<^^Parser>(Mem).has_value();
         // lifetime of the char should be okay I think
         const unsigned char raw_sep = annotated.has_value() ? annotated->value : settings.value_separator;
-        const std::string_view separator = std::string_view{reinterpret_cast<const char *>(&raw_sep), 1};
+        const std::string_view separator = std::string_view{reinterpret_cast<const char*>(&raw_sep), 1};
         if constexpr (is_vector(std::meta::remove_cv(^^M))) {
             using E = [:value_type_of(^^M):];
             if (count == 0)
@@ -774,7 +792,8 @@ namespace StarParse::detail::Utilities {
         }
     }
 
-    [[nodiscard]] constexpr size_t edit_distance(const std::string_view a, const std::string_view b, const Settings &settings) {
+    [[nodiscard]] constexpr size_t edit_distance(const std::string_view a, const std::string_view b,
+                                                 const Settings& settings) {
         const auto m = a.size();
         const auto n = b.size();
         if (m == 0)
@@ -795,7 +814,7 @@ namespace StarParse::detail::Utilities {
             return 0;
         matrix.resize(rows * cols);
 
-        const auto at = [&matrix, cols](const size_t i, const size_t j) -> size_t & {
+        const auto at = [&matrix, cols](const size_t i, const size_t j) -> size_t& {
             return matrix[i * cols + j];
         };
 
@@ -825,13 +844,14 @@ namespace StarParse::detail::Utilities {
                     last_match_col = j;
 
                 auto best = std::min({
-                    at(i - 1, j) + 1, // deletion
-                    at(i, j - 1) + 1, // insertion
-                    at(i - 1, j - 1) + cost // substitution
+                    at(i - 1, j) + 1,        // deletion
+                    at(i, j - 1) + 1,        // insertion
+                    at(i - 1, j - 1) + cost  // substitution
                 });
 
                 if (previous_row != 0 && previous_col != 0) {
-                    const auto transposition = at(previous_row - 1, previous_col - 1) + (i - previous_row - 1) + 1 + (j - previous_col - 1);
+                    const auto transposition =
+                        at(previous_row - 1, previous_col - 1) + (i - previous_row - 1) + 1 + (j - previous_col - 1);
                     best = std::min(best, transposition);
                 }
                 at(i, j) = best;
@@ -842,8 +862,9 @@ namespace StarParse::detail::Utilities {
     }
 
     template<typename T>
-    size_t option_max_values(std::string_view name, bool is_short, const Settings &settings) {
-        static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
+    size_t option_max_values(std::string_view name, bool is_short, const Settings& settings) {
+        static constexpr auto members =
+            std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
         auto n{1uz};
         template for (constexpr auto m : members) {
             using M = [:std::meta::remove_cv(std::meta::type_of(m)):];
@@ -860,7 +881,7 @@ namespace StarParse::detail::Utilities {
     }
 
     template<typename T>
-    consteval std::optional<std::meta::info> member_named(const char *name) {
+    consteval std::optional<std::meta::info> member_named(const char* name) {
         for (const auto m : std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current())) {
             if (name_of(m) == std::string_view{name}) {
                 return m;
@@ -870,8 +891,9 @@ namespace StarParse::detail::Utilities {
     }
 
     template<typename T>
-    consteval std::vector<std::meta::info> group_named(const char *name) {
-        static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
+    consteval std::vector<std::meta::info> group_named(const char* name) {
+        static constexpr auto members =
+            std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
         std::vector<std::meta::info> result;
         template for (constexpr auto m : members) {
             constexpr auto groups = specialization_of<^^Groups>(m);
@@ -886,4 +908,4 @@ namespace StarParse::detail::Utilities {
         }
         return result;
     }
-} // namespace StarParse::detail::Utilities
+}  // namespace StarParse::detail::Utilities

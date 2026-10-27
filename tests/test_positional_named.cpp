@@ -1,4 +1,4 @@
-#include "test_support.hpp"
+﻿#include "test_support.hpp"
 
 #include <string>
 
@@ -10,7 +10,7 @@ namespace {
         [[=Opt{'v', "Verbose mode"}]] bool verbose;
         [[=Positional{1}]] int arg2;
     };
-} // namespace
+}  // namespace
 
 TEST_CASE("positional: filled in order around options") {
     const auto args = parse_from<Args>({"hello", "-v", "42"});

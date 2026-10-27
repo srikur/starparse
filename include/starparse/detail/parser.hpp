@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <algorithm>
 #include <array>
@@ -26,7 +26,7 @@
 namespace StarParse::detail::Parser {
     using namespace StarParse::detail::Utilities;
     using namespace StarParse::detail::Assertions;
-    using DefaultValues = std::vector<std::optional<std::string> >;
+    using DefaultValues = std::vector<std::optional<std::string>>;
 
     struct ArgAttributes {
         size_t argv_index{};
@@ -42,7 +42,8 @@ namespace StarParse::detail::Parser {
         std::string_view name{};
         std::string_view value{};
 
-        explicit ArgAttributes(std::string_view argument, const size_t index, const bool separator_seen) : argv_index(index) {
+        explicit ArgAttributes(std::string_view argument, const size_t index, const bool separator_seen)
+            : argv_index(index) {
             if (!separator_seen && argument.starts_with('@')) {
                 is_response_file = true;
                 name = argument.substr(1);
@@ -88,8 +89,9 @@ namespace StarParse::detail::Parser {
     };
 
     template<typename T>
-    bool matches_full_name(std::string_view name, const Settings &settings) {
-        static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
+    bool matches_full_name(std::string_view name, const Settings& settings) {
+        static constexpr auto members =
+            std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
         bool found{false};
         template for (constexpr auto m : members) {
             constexpr bool named = is_named_option<T>(m);
@@ -101,8 +103,9 @@ namespace StarParse::detail::Parser {
     }
 
     template<typename T>
-    bool matches_subcommand_name(const std::string_view name, const Settings &settings) {
-        static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
+    bool matches_subcommand_name(const std::string_view name, const Settings& settings) {
+        static constexpr auto members =
+            std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
         bool found{false};
         template for (constexpr auto m : members) {
             if constexpr (has_annotation<detail::Subcommand_>(m)) {
@@ -119,17 +122,20 @@ namespace StarParse::detail::Parser {
 
     // the first long spelling of M (name, kebab name, alias, or negation) that begins with prefix
     template<std::meta::info M>
-    std::optional<std::string_view> spelling_with_prefix(const std::string_view prefix, const Settings &settings, const bool allow_short_aliases) {
+    std::optional<std::string_view> spelling_with_prefix(const std::string_view prefix, const Settings& settings,
+                                                         const bool allow_short_aliases) {
         const auto has_prefix = [&](const std::string_view spelling) {
-            return spelling.starts_with(prefix) || (settings.allow_case_insensitivity && istarts_with(spelling, prefix));
+            return spelling.starts_with(prefix) ||
+                   (settings.allow_case_insensitivity && istarts_with(spelling, prefix));
         };
         if (has_prefix(snake_name_v<M>))
             return snake_name_v<M>;
         if (settings.allow_kebab_casing && has_prefix(kebab_name_v<M>))
             return kebab_name_v<M>;
         if (settings.allow_aliases) {
-            for (const auto &alias : alias_names<M>()) {
-                if (const std::string_view spelling{alias}; (allow_short_aliases || spelling.size() > 1) && has_prefix(spelling))
+            for (const auto& alias : alias_names<M>()) {
+                if (const std::string_view spelling{alias};
+                    (allow_short_aliases || spelling.size() > 1) && has_prefix(spelling))
                     return spelling;
             }
         }
@@ -145,8 +151,9 @@ namespace StarParse::detail::Parser {
     }
 
     template<typename T>
-    std::vector<std::string_view> inferred_option_matches(const std::string_view prefix, const Settings &settings) {
-        static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
+    std::vector<std::string_view> inferred_option_matches(const std::string_view prefix, const Settings& settings) {
+        static constexpr auto members =
+            std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
         std::vector<std::string_view> matches;
         template for (constexpr auto m : members) {
             if constexpr (is_named_option<T>(m)) {
@@ -162,8 +169,9 @@ namespace StarParse::detail::Parser {
     }
 
     template<typename T>
-    std::optional<std::string_view> inferred_subcommand_name(const std::string_view prefix, const Settings &settings) {
-        static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
+    std::optional<std::string_view> inferred_subcommand_name(const std::string_view prefix, const Settings& settings) {
+        static constexpr auto members =
+            std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
         std::optional<std::string_view> found;
         auto count{0uz};
         template for (constexpr auto m : members) {
@@ -179,8 +187,9 @@ namespace StarParse::detail::Parser {
 
     // rewrites a.name to the full option spelling when a is an unambiguous abbreviation of exactly one long option
     template<typename T>
-    void resolve_inferred_option(ArgAttributes &a, const Settings &settings) {
-        if (!settings.infer_arguments || !a.double_dashed || a.is_help || a.is_version || matches_full_name<T>(a.name, settings))
+    void resolve_inferred_option(ArgAttributes& a, const Settings& settings) {
+        if (!settings.infer_arguments || !a.double_dashed || a.is_help || a.is_version ||
+            matches_full_name<T>(a.name, settings))
             return;
         if (const auto matches = inferred_option_matches<T>(a.name, settings); matches.size() == 1) {
             a.name = matches.front();
@@ -191,7 +200,7 @@ namespace StarParse::detail::Parser {
 
     // rewrites a.name to the full subcommand spelling when a is an unambiguous abbreviation of exactly one subcommand
     template<typename T>
-    void resolve_inferred_subcommand(ArgAttributes &a, const Settings &settings) {
+    void resolve_inferred_subcommand(ArgAttributes& a, const Settings& settings) {
         if (!settings.infer_subcommands || !a.is_positional || a.dashed || matches_subcommand_name<T>(a.name, settings))
             return;
         if (const auto inferred = inferred_subcommand_name<T>(a.name, settings))
@@ -199,8 +208,9 @@ namespace StarParse::detail::Parser {
     }
 
     template<typename T>
-    bool is_flag(const char c, const Settings &settings) {
-        static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
+    bool is_flag(const char c, const Settings& settings) {
+        static constexpr auto members =
+            std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
         template for (constexpr auto m : members) {
             using M = [:std::meta::type_of(m):];
             if constexpr (is_flag_type(^^M) && is_named_option<T>(m)) {
@@ -213,7 +223,7 @@ namespace StarParse::detail::Parser {
     }
 
     template<typename T>
-    bool is_flag_bundle(const std::string_view name, const Settings &settings) {
+    bool is_flag_bundle(const std::string_view name, const Settings& settings) {
         if (name.size() < 2) {
             return false;
         }
@@ -233,9 +243,10 @@ namespace StarParse::detail::Parser {
     };
 
     template<typename T>
-    std::string format_help(std::span<const size_t> command_path, const DefaultValues &defaults, const std::string &command_name, std::string usage,
-                            const Settings &settings) {
-        static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
+    std::string format_help(std::span<const size_t> command_path, const DefaultValues& defaults,
+                            const std::string& command_name, std::string usage, const Settings& settings) {
+        static constexpr auto members =
+            std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
         constexpr auto program = extraction_of<Program>(^^T);
         constexpr auto prologue = extraction_of<Prologue>(^^T);
         constexpr auto epilogue = extraction_of<Epilogue>(^^T);
@@ -246,10 +257,12 @@ namespace StarParse::detail::Parser {
             std::string description;
             bool required{};
         };
+
         struct HelpRow {
             std::string invocation;
             std::string description;
         };
+
         std::vector<ArgumentRow> arguments;
         std::vector<HelpRow> options;
         std::vector<HelpRow> commands;
@@ -275,10 +288,13 @@ namespace StarParse::detail::Parser {
                 }
                 if constexpr (env.has_value()) {
                     if (env->name != nullptr)
-                        description += description.empty() ? std::format("[env: {}]", env->name) : std::format(" [env: {}]", env->name);
+                        description += description.empty() ? std::format("[env: {}]", env->name)
+                                                           : std::format(" [env: {}]", env->name);
                 }
-                if (const auto &default_value = defaults[member_index_of<T>(m)]; default_value && settings.print_help_default_values) {
-                    description += description.empty() ? std::format("[default: {}]", *default_value) : std::format(" [default: {}]", *default_value);
+                if (const auto& default_value = defaults[member_index_of<T>(m)];
+                    default_value && settings.print_help_default_values) {
+                    description += description.empty() ? std::format("[default: {}]", *default_value)
+                                                       : std::format(" [default: {}]", *default_value);
                 }
                 if constexpr (required) {
                     description += description.empty() ? "(required)" : " (required)";
@@ -293,7 +309,7 @@ namespace StarParse::detail::Parser {
                     }
                     std::string invocation{name};
                     if (settings.allow_aliases) {
-                        for (const auto &alias : alias_names<m>()) {
+                        for (const auto& alias : alias_names<m>()) {
                             invocation += std::format(", {}", alias);
                         }
                     }
@@ -316,7 +332,7 @@ namespace StarParse::detail::Parser {
                             }
                         }
                         if (settings.allow_aliases) {
-                            for (const auto &alias : alias_names<m>()) {
+                            for (const auto& alias : alias_names<m>()) {
                                 const std::string_view a{alias};
                                 invocation += std::format(", {}{}", a.size() == 1 ? "-" : "--", a);
                             }
@@ -337,10 +353,9 @@ namespace StarParse::detail::Parser {
                             } else if constexpr (specialization_of<^^Choices>(m).has_value()) {
                                 constexpr auto choices = get_annotation_list_values<m, ^^Choices>();
                                 invocation += " <";
-                                invocation.append_range(choices | std::views::transform([](const char *s) {
-                                                            return std::string_view{s};
-                                                        }) |
-                                                        std::views::join_with('|'));
+                                invocation.append_range(
+                                    choices | std::views::transform([](const char* s) { return std::string_view{s}; }) |
+                                    std::views::join_with('|'));
                                 invocation += ">";
                             } else {
                                 invocation += " <value>";
@@ -359,7 +374,7 @@ namespace StarParse::detail::Parser {
         options.push_back({std::format("{}, --version", short_version), "Show version information"});
 
         usage += " [options]";
-        for (const auto &argument : arguments) {
+        for (const auto& argument : arguments) {
             usage += argument.required ? std::format(" <{}>", argument.name) : std::format(" [{}]", argument.name);
         }
 
@@ -369,7 +384,8 @@ namespace StarParse::detail::Parser {
                     if (command_path.front() == member_index_of<T>(m)) {
                         using Child = [:value_type_of(std::meta::type_of(m)):];
                         constexpr auto name = name_of(m);
-                        return format_help<Child>(command_path.subspan(1), defaults, std::format("{} {}", command_name, name),
+                        return format_help<Child>(command_path.subspan(1), defaults,
+                                                  std::format("{} {}", command_name, name),
                                                   std::format("{} {}", usage, name), settings);
                     }
                 }
@@ -379,11 +395,11 @@ namespace StarParse::detail::Parser {
             usage += " [command]";
 
         size_t column{0};
-        for (const auto &argument : arguments)
+        for (const auto& argument : arguments)
             column = std::max(column, argument.name.size());
-        for (const auto &option : options)
+        for (const auto& option : options)
             column = std::max(column, option.invocation.size());
-        for (const auto &command : commands)
+        for (const auto& command : commands)
             column = std::max(column, command.invocation.size());
         column += 2;
 
@@ -411,17 +427,17 @@ namespace StarParse::detail::Parser {
         }
         if (!arguments.empty()) {
             text += "\nArguments:\n";
-            for (const auto &argument : arguments) {
+            for (const auto& argument : arguments) {
                 text += row(argument.name, argument.description);
             }
         }
         text += "\nOptions:\n";
-        for (const auto &option : options) {
+        for (const auto& option : options) {
             text += row(option.invocation, option.description);
         }
         if (!commands.empty()) {
             text += "\nCommands:\n";
-            for (const auto &command : commands) {
+            for (const auto& command : commands) {
                 text += row(command.invocation, command.description);
             }
         }
@@ -435,28 +451,29 @@ namespace StarParse::detail::Parser {
 
     template<typename T, Settings S = Settings{}>
     class ParsedArgs {
-    public:
-        ParsedArgs(T out, DefaultValues defaults, const bool show_help, const bool show_version, const std::string_view argv_name,
-                   std::vector<ParseError> &errors, std::vector<size_t> command_path,
-                   std::vector<std::string> response_args = {}) : response_args_(std::move(response_args)),
-                                                                  out_(std::move(out)),
-                                                                  defaults_(std::move(defaults)),
-                                                                  show_help_(show_help),
-                                                                  show_version_(show_version),
-                                                                  errors_(std::move(errors)),
-                                                                  command_path_(std::move(command_path)),
-                                                                  argv_name_(argv_name),
-                                                                  settings_(S) {}
+       public:
+        ParsedArgs(T out, DefaultValues defaults, const bool show_help, const bool show_version,
+                   const std::string_view argv_name, std::vector<ParseError>& errors, std::vector<size_t> command_path,
+                   std::vector<std::string> response_args = {})
+            : response_args_(std::move(response_args)),
+              out_(std::move(out)),
+              defaults_(std::move(defaults)),
+              show_help_(show_help),
+              show_version_(show_version),
+              errors_(std::move(errors)),
+              command_path_(std::move(command_path)),
+              argv_name_(argv_name),
+              settings_(S) {}
 
-        ParsedArgs(const ParsedArgs &) = delete;
+        ParsedArgs(const ParsedArgs&) = delete;
 
-        ParsedArgs &operator=(const ParsedArgs &) = delete;
+        ParsedArgs& operator=(const ParsedArgs&) = delete;
 
-        ParsedArgs(ParsedArgs &&) = default;
+        ParsedArgs(ParsedArgs&&) = default;
 
-        ParsedArgs &operator=(ParsedArgs &&) = default;
+        ParsedArgs& operator=(ParsedArgs&&) = default;
 
-        T &&value() && {
+        T&& value() && {
             return std::move(out_);
         }
 
@@ -464,15 +481,15 @@ namespace StarParse::detail::Parser {
             return errors_.empty();
         }
 
-        T &operator*() {
+        T& operator*() {
             return out_;
         }
 
-        const T &operator*() const {
+        const T& operator*() const {
             return out_;
         }
 
-        [[nodiscard]] auto operator->(this auto &self) noexcept {
+        [[nodiscard]] auto operator->(this auto& self) noexcept {
             return std::addressof(self.out_);
         }
 
@@ -501,7 +518,8 @@ namespace StarParse::detail::Parser {
         [[nodiscard]] std::string help() const {
             constexpr auto program = extraction_of<Program>(^^T);
             const std::string program_name = program.has_value() ? program->name : std::string{argv_name_};
-            const std::string raw_help = format_help<T>(command_path_, defaults_, program_name, program_name, settings_);
+            const std::string raw_help =
+                format_help<T>(command_path_, defaults_, program_name, program_name, settings_);
             return Terminal::wrap(raw_help);
         }
 
@@ -509,17 +527,14 @@ namespace StarParse::detail::Parser {
             if (errors_.empty()) {
                 return "";
             }
-            const auto error_strings = errors_ | std::views::transform([](const ParseError &error) {
-                                           return error.to_string();
-                                       }) |
-                                       std::ranges::to<std::vector<std::string> >();
+            const auto error_strings =
+                errors_ | std::views::transform([](const ParseError& error) { return error.to_string(); }) |
+                std::ranges::to<std::vector<std::string>>();
             return std::accumulate(error_strings.begin() + 1, error_strings.end(), error_strings[0],
-                                   [](std::string a, const std::string &b) {
-                                       return std::move(a) + '\n' + b;
-                                   });
+                                   [](std::string a, const std::string& b) { return std::move(a) + '\n' + b; });
         }
 
-    private:
+       private:
         // Declared first so the text outlives parsed values and errors that reference it.
         std::vector<std::string> response_args_;
         T out_{};
@@ -533,11 +548,12 @@ namespace StarParse::detail::Parser {
     };
 
     template<typename T>
-    bool is_bare_value(const std::string_view next, const Settings &settings) {
+    bool is_bare_value(const std::string_view next, const Settings& settings) {
         if (next.size() > 1 && next.starts_with('-')) {
             // "--", "--foo", "-x" are options; "-5" and "-.5" are values unless a digit is itself a short name
-            const bool numeric = std::isdigit(static_cast<unsigned char>(next[1])) ||
-                                 (next[1] == '.' && next.size() > 2 && std::isdigit(static_cast<unsigned char>(next[2])));
+            const bool numeric =
+                std::isdigit(static_cast<unsigned char>(next[1])) ||
+                (next[1] == '.' && next.size() > 2 && std::isdigit(static_cast<unsigned char>(next[2])));
             if (!numeric || short_name_exists<T>(next.substr(1, 1), settings.allow_case_insensitivity))
                 return false;
         }
@@ -549,16 +565,17 @@ namespace StarParse::detail::Parser {
     }
 
     template<typename T>
-    bool takes_next_value(const ArgAttributes &option, const std::string_view next, const Settings &settings) {
+    bool takes_next_value(const ArgAttributes& option, const std::string_view next, const Settings& settings) {
         if (!Utilities::option_is_count<T>(option.name, option.dashed, settings))
             return true;
         return is_bare_value<T>(next, settings);
     }
 
     template<typename T>
-    void get_arg_attrs_into(std::span<const std::string_view> args, const Settings &settings, size_t &i, bool &separator_seen,
-                            std::vector<ArgAttributes> &attrs) {
-        static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
+    void get_arg_attrs_into(std::span<const std::string_view> args, const Settings& settings, size_t& i,
+                            bool& separator_seen, std::vector<ArgAttributes>& attrs) {
+        static constexpr auto members =
+            std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
         for (; i < args.size(); ++i) {
             ArgAttributes a{args[i], i + 1, separator_seen};
             if (a.is_separator) {
@@ -576,7 +593,8 @@ namespace StarParse::detail::Parser {
                         if (Utilities::option_takes_value<T>(flag.name, true, settings)) {
                             flag.value = a.name.substr(f + 1);
                             flag.has_value = !flag.value.empty();
-                            if (!flag.has_value && i + 1 < args.size() && takes_next_value<T>(flag, args[i + 1], settings)) {
+                            if (!flag.has_value && i + 1 < args.size() &&
+                                takes_next_value<T>(flag, args[i + 1], settings)) {
                                 flag.value = args[++i];
                                 flag.has_value = true;
                             }
@@ -589,12 +607,14 @@ namespace StarParse::detail::Parser {
                 }
             }
             resolve_inferred_option<T>(a, settings);
-            if ((a.dashed || a.double_dashed) && !a.has_value && Utilities::option_takes_value<T>(a.name, a.dashed, settings) &&
-                i + 1 < args.size() && takes_next_value<T>(a, args[i + 1], settings)) {
+            if ((a.dashed || a.double_dashed) && !a.has_value &&
+                Utilities::option_takes_value<T>(a.name, a.dashed, settings) && i + 1 < args.size() &&
+                takes_next_value<T>(a, args[i + 1], settings)) {
                 a.value = args[++i];
                 a.has_value = true;
                 const auto max = option_max_values<T>(a.name, a.dashed, settings);
-                for (auto taken{1uz}; taken < max && i + 1 < args.size() && is_bare_value<T>(args[i + 1], settings); ++taken) {
+                for (auto taken{1uz}; taken < max && i + 1 < args.size() && is_bare_value<T>(args[i + 1], settings);
+                     ++taken) {
                     attrs.push_back(a);
                     a.value = args[++i];
                     a.argv_index = i + 1;
@@ -632,7 +652,7 @@ namespace StarParse::detail::Parser {
     }
 
     template<typename T>
-    std::vector<ArgAttributes> get_arg_attrs(const std::span<const std::string_view> args, const Settings &settings) {
+    std::vector<ArgAttributes> get_arg_attrs(const std::span<const std::string_view> args, const Settings& settings) {
         std::vector<ArgAttributes> attr_array;
         attr_array.reserve(args.size());
         bool separator_seen{false};
@@ -648,28 +668,43 @@ namespace StarParse::detail::Parser {
                       "misplaced annotation: Program belongs on the argument type; enum values only accept Alias");
         static_assert(Assertions::no_annotations_on_ignored_fields<T>(),
                       "annotated fields need Opt, Positional, or Subcommand when another field uses Opt or Positional");
-        static_assert(Assertions::no_duplicate_annotations<T>(), "annotations other than Alias may only appear once on an entity");
+        static_assert(Assertions::no_duplicate_annotations<T>(),
+                      "annotations other than Alias may only appear once on an entity");
         static_assert(Assertions::check_name_values<T>(),
-                      "invalid option spelling: names and aliases must be nonempty, contain no whitespace or '=', and not start with '-'; "
+                      "invalid option spelling: names and aliases must be nonempty, contain no whitespace or '=', and "
+                      "not start with '-'; "
                       "short names cannot be whitespace, '-' or '='");
-        static_assert(Assertions::check_positional_indices<T>(), "Positional indices must be unique, begin at 0, and increment contiguously");
-        static_assert(Assertions::no_positional_containers<T>(), "a Positional container must be the final Positional index specified");
-        static_assert(Assertions::no_required_optionals<T>(), "a Required field cannot have a std::optional type; drop one of the two");
+        static_assert(Assertions::check_positional_indices<T>(),
+                      "Positional indices must be unique, begin at 0, and increment contiguously");
+        static_assert(Assertions::no_positional_containers<T>(),
+                      "a Positional container must be the final Positional index specified");
+        static_assert(Assertions::no_required_optionals<T>(),
+                      "a Required field cannot have a std::optional type; drop one of the two");
         static_assert(Assertions::no_duplicate_short_names<T>(), "two fields cannot have duplicate Opt short names");
-        static_assert(Assertions::no_duplicate_validators<T>(),
-                      "only one annotation among Min, Max, Range, Choices, or Validator can be applied to a single field");
-        static_assert(Assertions::no_scalar_separators<T>(), "the Separator annotation cannot be applied to scalar fields");
+        static_assert(
+            Assertions::no_duplicate_validators<T>(),
+            "only one annotation among Min, Max, Range, Choices, or Validator can be applied to a single field");
+        static_assert(Assertions::no_scalar_separators<T>(),
+                      "the Separator annotation cannot be applied to scalar fields");
         static_assert(Assertions::check_alias_collisions<T>(),
-                      "option names, short names, or aliases collide, or use reserved help/version names (including case and kebab spellings)");
-        static_assert(Assertions::check_subcommand_collisions<T>(), "subcommand names or aliases collide (including case and kebab spellings)");
-        static_assert(Assertions::check_enum_alias_collisions<T>(), "enum aliases or enumerator names collide (including case and kebab spellings)");
-        static_assert(Assertions::check_subcommand_annotations<T>(), "Env cannot be used on a Subcommand-annotated field");
-        static_assert(Assertions::check_requires_subcommand<T>(), "RequiresSubcommand belongs on the argument type, not a field");
-        static_assert(Assertions::check_exclusion_groups<T>(), "Needs and Excludes values must either denote valid fields or group names");
+                      "option names, short names, or aliases collide, or use reserved help/version names (including "
+                      "case and kebab spellings)");
+        static_assert(Assertions::check_subcommand_collisions<T>(),
+                      "subcommand names or aliases collide (including case and kebab spellings)");
+        static_assert(Assertions::check_enum_alias_collisions<T>(),
+                      "enum aliases or enumerator names collide (including case and kebab spellings)");
+        static_assert(Assertions::check_subcommand_annotations<T>(),
+                      "Env cannot be used on a Subcommand-annotated field");
+        static_assert(Assertions::check_requires_subcommand<T>(),
+                      "RequiresSubcommand belongs on the argument type, not a field");
+        static_assert(Assertions::check_exclusion_groups<T>(),
+                      "Needs and Excludes values must either denote valid fields or group names");
         static_assert(Assertions::check_group_name_collisions<T>(), "Group names cannot collide with field names");
         static_assert(Assertions::check_negated_name_collisions<T>(S),
                       "When negated names are enabled, fields cannot overlap with negated names");
-        static_assert(Assertions::check_string_length_annotations<T>(), "Length, MinLength, and MaxLength can only be placed on string fields convertible to std::string_view");
+        static_assert(
+            Assertions::check_string_length_annotations<T>(),
+            "Length, MinLength, and MaxLength can only be placed on string fields convertible to std::string_view");
     }
 
     struct ParseState {
@@ -705,7 +740,8 @@ namespace StarParse::detail::Parser {
 
     template<typename T>
     DefaultValues capture_defaults(T initial) {
-        static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
+        static constexpr auto members =
+            std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
         constexpr auto sz = members.size();
         DefaultValues defaults(sz);
         template for (constexpr auto m : members) {
@@ -715,14 +751,15 @@ namespace StarParse::detail::Parser {
     }
 
     template<typename T, Settings settings>
-    void parse_into(std::span<const ArgAttributes> attributes, T &out, ParseState &state) {
-        static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
+    void parse_into(std::span<const ArgAttributes> attributes, T& out, ParseState& state) {
+        static constexpr auto members =
+            std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
         check_assertions<T, settings>();
         std::array<size_t, members.size()> fields_set{};
         size_t next_positional{0uz};
         bool subcommand_entered{false};
         size_t final_positional{static_cast<size_t>(get_positional_range<T>().second - 1)};
-        auto &errors = state.errors;
+        auto& errors = state.errors;
         std::vector<std::string_view> candidates = viable_candidate_names<T>(settings);
 
         if constexpr (constexpr auto file = extraction_of<annotations::File>(^^T)) {
@@ -734,7 +771,7 @@ namespace StarParse::detail::Parser {
         }
 
         for (auto i{0uz}; i < attributes.size(); ++i) {
-            const auto &attrs = attributes[i];
+            const auto& attrs = attributes[i];
             bool matched{false}, entered_child{false};
 
             if (attrs.is_help) {
@@ -754,7 +791,7 @@ namespace StarParse::detail::Parser {
                     if (attrs.is_subcommand && !matched && does_match_name<m>(attrs.name, settings, false)) {
                         subcommand_entered = true;
                         using Child = [:value_type_of(^^M):];
-                        auto &child = out.[:m:];
+                        auto& child = out.[:m:];
                         if (!child)
                             child.emplace();
                         matched = true;
@@ -768,10 +805,12 @@ namespace StarParse::detail::Parser {
                     if (attrs.is_positional) {
                         if constexpr (pos.has_value()) {
                             using V = [:std::meta::remove_cv(std::meta::type_of(m)):];
-                            if (!matched && (next_positional == *pos || (is_container(^^V) && *pos == final_positional))) {
+                            if (!matched &&
+                                (next_positional == *pos || (is_container(^^V) && *pos == final_positional))) {
                                 matched = true;
                                 next_positional++;
-                                assign_from_string<m>(out.[:m:], attrs.name, attrs.argv_index, fields_set[idx], errors, settings);
+                                assign_from_string<m>(out.[:m:], attrs.name, attrs.argv_index, fields_set[idx], errors,
+                                                               settings);
                             }
                         }
                     } else if (attrs.dashed || attrs.double_dashed) {
@@ -783,10 +822,10 @@ namespace StarParse::detail::Parser {
                             // check duplicate option setting
                             switch (settings.duplicate_option_policy) {
                                 case DuplicateOptionPolicy::LAST_WINS:
-                                    break; // continue processing as normal
+                                    break;  // continue processing as normal
                                 case DuplicateOptionPolicy::FIRST_WINS:
                                     if (fields_set[idx])
-                                        continue; // skip this arg
+                                        continue;  // skip this arg
                                     break;
                                 case DuplicateOptionPolicy::REPORT_ERROR:
                                     if (fields_set[idx]) {
@@ -801,7 +840,8 @@ namespace StarParse::detail::Parser {
                             }
                             if constexpr (is_flag_type(^^M)) {
                                 if (attrs.has_value) {
-                                    assign_from_string<m>(out.[:m:], attrs.value, attrs.argv_index, fields_set[idx], errors, settings);
+                                    assign_from_string<m>(out.[:m:], attrs.value, attrs.argv_index, fields_set[idx],
+                                                                   errors, settings);
                                 } else {
                                     out.[:m:] = matches_non_negated_name<m>(attrs.name, settings);
                                 }
@@ -812,7 +852,8 @@ namespace StarParse::detail::Parser {
                                 if (!attrs.has_value) {
                                     if constexpr (is_count_type(^^M)) {
                                         if (settings.allow_repeated_counts) {
-                                            increment_count<m>(out.[:m:], attrs.name, attrs.argv_index, errors, settings);
+                                            increment_count<m>(out.[:m:], attrs.name, attrs.argv_index, errors,
+                                                                        settings);
                                             ++fields_set[idx];
                                             if (pos)
                                                 next_positional++;
@@ -825,7 +866,8 @@ namespace StarParse::detail::Parser {
                                     });
                                     continue;
                                 }
-                                assign_from_string<m>(out.[:m:], attrs.value, attrs.argv_index, fields_set[idx], errors, settings);
+                                assign_from_string<m>(out.[:m:], attrs.value, attrs.argv_index, fields_set[idx], errors,
+                                                               settings);
                                 if (pos)
                                     next_positional++;
                             }
@@ -855,14 +897,15 @@ namespace StarParse::detail::Parser {
                 }
 
                 // compute edit distance candidates
-                const auto min_candidate =
-                    std::ranges::fold_left(candidates, std::pair{std::numeric_limits<size_t>::max(), ""},
-                                           [&](const std::pair<size_t, std::string_view> &best, const std::string_view candidate) {
-                                               const auto distance = edit_distance(name_or_value, candidate, settings);
-                                               return distance < best.first ? std::pair{distance, candidate} : best;
-                                           });
+                const auto min_candidate = std::ranges::fold_left(
+                    candidates, std::pair{std::numeric_limits<size_t>::max(), ""},
+                    [&](const std::pair<size_t, std::string_view>& best, const std::string_view candidate) {
+                        const auto distance = edit_distance(name_or_value, candidate, settings);
+                        return distance < best.first ? std::pair{distance, candidate} : best;
+                    });
                 const auto max_allowed_distance = std::max<size_t>(1, (name_or_value.size() + 2) / 3);
-                std::string_view suggestion = min_candidate.first <= max_allowed_distance ? min_candidate.second : std::string_view{};
+                std::string_view suggestion =
+                    min_candidate.first <= max_allowed_distance ? min_candidate.second : std::string_view{};
                 errors.push_back({
                     .kind = ErrorKind::UNKNOWN_OPTION,
                     .input_value = std::string{name_or_value},
@@ -884,7 +927,8 @@ namespace StarParse::detail::Parser {
                 if (const auto process_env_value = File::read_env(name)) {
                     assign_from_string<m>(out.[:m:], *process_env_value, 0, fields_set[index], errors, settings);
                 } else if (state.env_vars.contains(name.data())) {
-                    assign_from_string<m>(out.[:m:], state.env_vars[name.data()], 0, fields_set[index], errors, settings);
+                    assign_from_string<m>(out.[:m:], state.env_vars[name.data()], 0, fields_set[index], errors,
+                                                   settings);
                 }
             }
         }
@@ -978,17 +1022,15 @@ namespace StarParse::detail::Parser {
     }
 
     template<typename T, Settings settings>
-    ParsedArgs<T, settings> parse(const std::span<const std::string_view> args,
-                                  const std::string_view program_name,
+    ParsedArgs<T, settings> parse(const std::span<const std::string_view> args, const std::string_view program_name,
                                   T initial = {}) {
         auto defaults = capture_defaults<T>(initial);
         T out{std::move(initial)};
         ParseState state{};
         std::vector<std::string> response_storage;
         std::vector<ArgAttributes> attr_array = get_arg_attrs<T>(args, settings);
-        if (const auto it = std::ranges::find_if(attr_array, [](const ArgAttributes &attrs) {
-                return attrs.is_response_file;
-            });
+        if (const auto it =
+                std::ranges::find_if(attr_array, [](const ArgAttributes& attrs) { return attrs.is_response_file; });
             it != attr_array.end()) {
             auto response_args = File::read_response_file(it->name);
             if (response_args) {
@@ -1004,14 +1046,8 @@ namespace StarParse::detail::Parser {
         if (state.errors.empty())
             parse_into<T, settings>(attr_array, out, state);
         return ParsedArgs<T, settings>{
-            std::move(out),
-            std::move(defaults),
-            state.help_requested,
-            state.version_requested,
-            program_name,
-            state.errors,
-            std::move(state.command_path),
-            std::move(response_storage),
+            std::move(out), std::move(defaults), state.help_requested,          state.version_requested,
+            program_name,   state.errors,        std::move(state.command_path), std::move(response_storage),
         };
     }
-} // namespace StarParse::detail::Parser
+}  // namespace StarParse::detail::Parser

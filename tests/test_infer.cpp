@@ -1,4 +1,4 @@
-#include "test_support.hpp"
+﻿#include "test_support.hpp"
 
 #include <optional>
 #include <string>
@@ -39,7 +39,7 @@ namespace {
     };
 
     constexpr Settings infer_subcommands{.infer_subcommands = true};
-} // namespace
+}  // namespace
 
 TEST_CASE("infer: unique prefix resolves to a flag") {
     for (const auto option : {"--verb", "--verbo", "--v", "--VERB"}) {

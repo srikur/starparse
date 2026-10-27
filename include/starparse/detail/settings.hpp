@@ -1,11 +1,7 @@
-#pragma once
+﻿#pragma once
 
 namespace StarParse {
-    enum class DuplicateOptionPolicy {
-        LAST_WINS,
-        FIRST_WINS,
-        REPORT_ERROR
-    };
+    enum class DuplicateOptionPolicy { LAST_WINS, FIRST_WINS, REPORT_ERROR };
 
     struct Settings {
         bool allow_kebab_casing{true};
@@ -19,4 +15,4 @@ namespace StarParse {
         DuplicateOptionPolicy duplicate_option_policy{DuplicateOptionPolicy::LAST_WINS};
         unsigned char value_separator{','};
     };
-} // namespace StarParse
+}  // namespace StarParse

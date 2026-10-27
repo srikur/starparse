@@ -1,4 +1,4 @@
-#include "test_support.hpp"
+﻿#include "test_support.hpp"
 
 #include <optional>
 
@@ -23,10 +23,10 @@ namespace {
         [[=Required, =Positional{0}]] int initial;
         [[=Subcommand, =Alias{"op"}]] std::optional<Operation> operation;
     };
-} // namespace
+}  // namespace
 
 TEST_CASE("subcommands: nested subcommand with its own positional") {
-    const auto check_add = [](const ParsedArgs<Args> &args) {
+    const auto check_add = [](const ParsedArgs<Args>& args) {
         REQUIRE(args);
         CHECK(args->initial == 10);
         REQUIRE(args->operation.has_value());
@@ -49,7 +49,7 @@ TEST_CASE("subcommands: nested subcommand with its own positional") {
 }
 
 TEST_CASE("subcommands: sibling subcommands are exclusive") {
-    const auto check_subtract = [](const ParsedArgs<Args> &args) {
+    const auto check_subtract = [](const ParsedArgs<Args>& args) {
         REQUIRE(args);
         REQUIRE(args->operation.has_value());
         CHECK_FALSE(args->operation->add.has_value());

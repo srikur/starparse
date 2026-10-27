@@ -1,4 +1,4 @@
-#include "test_support.hpp"
+﻿#include "test_support.hpp"
 
 #include <string>
 
@@ -15,7 +15,7 @@ namespace {
     Flags defaults() {
         return {.arg1 = "default1", .keep = true, .verbose = false, .arg2 = 99};
     }
-} // namespace
+}  // namespace
 
 TEST_CASE("prefill: defaults survive when nothing is passed") {
     const auto args = parse_from<Flags>({}, defaults());

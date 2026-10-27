@@ -1,4 +1,4 @@
-#include "test_support.hpp"
+﻿#include "test_support.hpp"
 
 #include <string>
 
@@ -15,7 +15,7 @@ namespace {
         [[=Opt{'m', "Archive mode"}]] Mode mode;
         [[=Positional{0}]] std::string input;
     };
-} // namespace
+}  // namespace
 
 TEST_CASE("enum: value by enumerator name") {
     const auto args = parse_from<Args>({"--mode=safe", "hello"});
@@ -46,7 +46,7 @@ TEST_CASE("enum: unknown value is an invalid-value error") {
     const auto args = parse_from<Args>({"--mode=slow", "hello"});
     REQUIRE_FALSE(args);
     REQUIRE(args.errors().size() == 1uz);
-    const auto &error = args.errors()[0];
+    const auto& error = args.errors()[0];
     CHECK(error.kind == ErrorKind::INVALID_VALUE);
     CHECK(error.input_value == "slow");
     CHECK(error.current_argument.value_or("").ends_with("mode"));

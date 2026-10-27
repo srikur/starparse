@@ -1,4 +1,4 @@
-#include "test_support.hpp"
+﻿#include "test_support.hpp"
 
 #include <string>
 
@@ -16,7 +16,7 @@ namespace {
     constexpr Settings first_wins{.duplicate_option_policy = DuplicateOptionPolicy::FIRST_WINS};
     constexpr Settings last_wins{.duplicate_option_policy = DuplicateOptionPolicy::LAST_WINS};
     constexpr Settings errors{.duplicate_option_policy = DuplicateOptionPolicy::REPORT_ERROR};
-} // namespace
+}  // namespace
 
 TEST_CASE("duplicate policy: with no override, last wins") {
     const auto args = parse_from<Args>({"--jobs", "6", "--jobs=4"});

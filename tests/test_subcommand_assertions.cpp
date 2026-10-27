@@ -1,4 +1,4 @@
-#include "test_support.hpp"
+﻿#include "test_support.hpp"
 
 #include <optional>
 
@@ -38,9 +38,7 @@ namespace {
 
     static_assert(!check_annotation_placement<MisplacedStaticMember>());
 
-    enum class MisplacedEnumerator {
-        run[[=Subcommand]]
-    };
+    enum class MisplacedEnumerator { run[[=Subcommand]] };
 
     struct EnumArgs {
         MisplacedEnumerator mode{};
@@ -89,7 +87,7 @@ namespace {
     };
 
     static_assert(check_subcommand_collisions<NestedArgs>());
-} // namespace
+}  // namespace
 
 TEST_CASE("subcommand assertions: valid layouts pass every check") {
     StarParse::detail::Parser::check_assertions<MixedArgs>();

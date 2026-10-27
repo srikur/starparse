@@ -1,4 +1,4 @@
-#include "test_support.hpp"
+﻿#include "test_support.hpp"
 
 using namespace StarParse;
 
@@ -33,7 +33,7 @@ namespace {
     struct KebabArgs {
         int dry_run;
     };
-} // namespace
+}  // namespace
 
 TEST_CASE("settings: allow_case_insensitivity") {
     SUBCASE("enabled: enum values match in any case") {

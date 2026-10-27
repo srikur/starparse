@@ -1,4 +1,4 @@
-#include "test_support.hpp"
+﻿#include "test_support.hpp"
 
 #include <algorithm>
 #include <array>
@@ -39,23 +39,24 @@ namespace {
 
     template<typename T>
     auto parse_presence(const int mask) {
-        std::array<const char *, 4> argv{"groups-test"};
+        std::array<const char*, 4> argv{"groups-test"};
         constexpr std::array options{"--action", "--first", "--second"};
         size_t argc{1};
-        for (const auto &[index, value] : std::views::enumerate(options)) {
-            if (mask & (1 << static_cast<int>(index))) argv[argc++] = value;
+        for (const auto& [index, value] : std::views::enumerate(options)) {
+            if (mask & (1 << static_cast<int>(index)))
+                argv[argc++] = value;
         }
         return parse<T>(static_cast<int>(argc), argv.data());
     }
 
     // Compare error contents without depending on the order of group members.
     template<typename T>
-    void check_errors(const ParsedArgs<T> &args, const ErrorKind kind, const std::vector<std::string_view> &names,
+    void check_errors(const ParsedArgs<T>& args, const ErrorKind kind, const std::vector<std::string_view>& names,
                       const std::optional<std::string_view> source = std::nullopt) {
         CAPTURE(args.error_message());
         CHECK(static_cast<bool>(args) == names.empty());
         CHECK(args.errors().size() == names.size());
-        for (const auto &error : args.errors()) {
+        for (const auto& error : args.errors()) {
             CHECK(error.kind == kind);
             if (source)
                 CHECK(error.current_argument == source);
@@ -65,7 +66,7 @@ namespace {
             CHECK(std::ranges::count(args.errors(), name, &ParseError::detail) == 1);
         }
     }
-} // namespace
+}  // namespace
 
 TEST_CASE_TEMPLATE("groups: Needs checks every presence combination", T, NeedsFields, NeedsGroup) {
     for (int mask : std::views::iota(0, 8)) {
@@ -73,8 +74,10 @@ TEST_CASE_TEMPLATE("groups: Needs checks every presence combination", T, NeedsFi
         const auto args = parse_presence<T>(mask);
         std::vector<std::string_view> missing;
         if (mask & 1) {
-            if (!(mask & 2)) missing.emplace_back("first");
-            if (!(mask & 4)) missing.emplace_back("second");
+            if (!(mask & 2))
+                missing.emplace_back("first");
+            if (!(mask & 4))
+                missing.emplace_back("second");
         }
         check_errors(args, ErrorKind::MISSING_DEPENDENCY, missing);
         if (args) {
@@ -91,8 +94,10 @@ TEST_CASE_TEMPLATE("groups: Excludes checks every presence combination", T, Excl
         const auto args = parse_presence<T>(mask);
         std::vector<std::string_view> conflicts;
         if (mask & 1) {
-            if (mask & 2) conflicts.emplace_back("first");
-            if (mask & 4) conflicts.emplace_back("second");
+            if (mask & 2)
+                conflicts.emplace_back("first");
+            if (mask & 4)
+                conflicts.emplace_back("second");
         }
         check_errors(args, ErrorKind::INVALID_OVERLAP, conflicts, "action");
     }
@@ -109,8 +114,8 @@ TEST_CASE_TEMPLATE("groups: explicitly false options still satisfy Needs", T, Ne
 }
 
 TEST_CASE_TEMPLATE("groups: explicitly false options still trigger Excludes", T, ExcludesFields, ExcludesGroup) {
-    check_errors(parse_from<T>({"--action=false", "--no-first", "--second=false"}),
-                 ErrorKind::INVALID_OVERLAP, {"first", "second"}, "action");
+    check_errors(parse_from<T>({"--action=false", "--no-first", "--second=false"}), ErrorKind::INVALID_OVERLAP,
+                 {"first", "second"}, "action");
 }
 
 TEST_CASE_TEMPLATE("groups: prefilled values do not satisfy Needs", T, NeedsFields, NeedsGroup) {
@@ -130,20 +135,22 @@ TEST_CASE_TEMPLATE("groups: prefilled values do not trigger Excludes", T, Exclud
     CHECK(args->second);
 }
 
-TEST_CASE_TEMPLATE("groups: a prefilled owner does not activate its rules", T, NeedsFields, NeedsGroup, ExcludesFields, ExcludesGroup) {
+TEST_CASE_TEMPLATE("groups: a prefilled owner does not activate its rules", T, NeedsFields, NeedsGroup, ExcludesFields,
+                   ExcludesGroup) {
     const auto args = parse_from<T>({}, T{.action = true});
     REQUIRE(args);
     CHECK(args->action);
 }
 
-TEST_CASE_TEMPLATE("groups: Needs is independent of argument order and supports short options", T, NeedsFields, NeedsGroup) {
+TEST_CASE_TEMPLATE("groups: Needs is independent of argument order and supports short options", T, NeedsFields,
+                   NeedsGroup) {
     REQUIRE(parse_from<T>({"--second", "--first", "--action"}));
     REQUIRE(parse_from<T>({"-afs"}));
 }
 
 TEST_CASE_TEMPLATE("groups: Excludes is independent of argument order", T, ExcludesFields, ExcludesGroup) {
-    check_errors(parse_from<T>({"--second", "--first", "--action"}),
-                 ErrorKind::INVALID_OVERLAP, {"first", "second"}, "action");
+    check_errors(parse_from<T>({"--second", "--first", "--action"}), ErrorKind::INVALID_OVERLAP, {"first", "second"},
+                 "action");
 }
 
 TEST_CASE("groups: membership alone imposes no requirements and is not an option") {
@@ -151,6 +158,7 @@ TEST_CASE("groups: membership alone imposes no requirements and is not an option
         [[=Opt{""}, =Groups{"targets"}]] bool first{};
         [[=Opt{""}, =Groups{"targets"}]] bool second{};
     };
+
     REQUIRE(parse_from<GroupMembership>({}));
     REQUIRE(parse_from<GroupMembership>({"--first"}));
     REQUIRE(parse_from<GroupMembership>({"--first", "--second"}));
@@ -166,6 +174,7 @@ TEST_CASE("groups: an option can belong to multiple independent groups") {
         [[=Opt{""}, =Groups{"primary", "secondary"}]] bool shared{};
         [[=Opt{""}, =Groups{"secondary"}]] bool other{};
     };
+
     REQUIRE(parse_from<MultipleMembership>({"--action", "--shared"}));
     check_errors(parse_from<MultipleMembership>({"--action", "--other"}), ErrorKind::MISSING_DEPENDENCY, {"shared"});
 }
@@ -177,6 +186,7 @@ TEST_CASE("groups: Needs can mix a field and multiple groups") {
         [[=Opt{""}, =Groups{"input"}]] bool first{};
         [[=Opt{""}, =Groups{"output"}]] bool second{};
     };
+
     REQUIRE(parse_from<MixedNeeds>({"--action", "--token", "--first", "--second"}));
     check_errors(parse_from<MixedNeeds>({"--action", "--first"}), ErrorKind::MISSING_DEPENDENCY, {"token", "second"});
 }
@@ -188,9 +198,10 @@ TEST_CASE("groups: Excludes can mix a field and multiple groups") {
         [[=Opt{""}, =Groups{"input"}]] bool first{};
         [[=Opt{""}, =Groups{"output"}]] bool second{};
     };
+
     REQUIRE(parse_from<MixedExcludes>({"--action"}));
-    check_errors(parse_from<MixedExcludes>({"--action", "--token", "--first", "--second"}),
-                 ErrorKind::INVALID_OVERLAP, {"token", "first", "second"}, "action");
+    check_errors(parse_from<MixedExcludes>({"--action", "--token", "--first", "--second"}), ErrorKind::INVALID_OVERLAP,
+                 {"token", "first", "second"}, "action");
 }
 
 TEST_CASE("groups: Needs and Excludes on the same option both run") {
@@ -199,6 +210,7 @@ TEST_CASE("groups: Needs and Excludes on the same option both run") {
         [[=Opt{""}, =Groups{"required"}]] bool first{};
         [[=Opt{""}, =Groups{"forbidden"}]] bool second{};
     };
+
     REQUIRE(parse_from<CombinedRules>({"--action", "--first"}));
     const auto args = parse_from<CombinedRules>({"--action", "--second"});
     REQUIRE_FALSE(args);
@@ -215,6 +227,7 @@ TEST_CASE("groups: renamed members and aliases satisfy a group dependency") {
         [[=Opt{'a'}, =Name{"launch"}, =Alias{"start"}, =Needs{"settings"}]] bool action{};
         [[=Opt{'d'}, =Name{"dry_run"}, =Alias{"preview"}, =Groups{"settings"}]] bool cpp_flag{};
     };
+
     for (const auto option : {"--dry_run", "--dry-run", "--DRY-RUN", "--preview", "-d"}) {
         CAPTURE(option);
         const auto args = parse_from<RenamedGroup>({"--start", option});
@@ -229,6 +242,7 @@ TEST_CASE("groups: field dependencies use resolved names and accept aliases on t
         [[=Opt{""}, =Needs{"target"}]] bool action{};
         [[=Opt{""}, =Name{"target"}, =Alias{"alias"}]] bool cpp_target{};
     };
+
     REQUIRE(parse_from<RenamedDependency>({"--action", "--alias"}));
     check_errors(parse_from<RenamedDependency>({"--action"}), ErrorKind::MISSING_DEPENDENCY, {"target"});
 }
@@ -238,6 +252,7 @@ TEST_CASE("groups: exclusion diagnostics use both resolved names") {
         [[=Opt{""}, =Name{"launch"}, =Excludes{"settings"}]] bool action{};
         [[=Opt{""}, =Name{"dry_run"}, =Alias{"preview"}, =Groups{"settings"}]] bool cpp_flag{};
     };
+
     const auto args = parse_from<RenamedExclusion>({"--launch", "--preview"});
     check_errors(args, ErrorKind::INVALID_OVERLAP, {"dry_run"}, "launch");
     CHECK(args.error_message() == "Option 'launch' cannot be used in conjunction with: 'dry_run'");
@@ -249,6 +264,7 @@ TEST_CASE("groups: required options and fixed arrays still enforce dependencies"
             [[=Opt{""}, =Required, =Needs{"targets"}]] bool action{};
             [[=Opt{""}, =Groups{"targets"}]] bool target{};
         };
+
         check_errors(parse_from<RequiredOwner>({"--action"}), ErrorKind::MISSING_DEPENDENCY, {"target"});
         REQUIRE(parse_from<RequiredOwner>({"--action", "--target"}));
     }
@@ -257,6 +273,7 @@ TEST_CASE("groups: required options and fixed arrays still enforce dependencies"
             [[=Opt{""}, =Needs{"targets"}]] std::array<int, 2> values{};
             [[=Opt{""}, =Groups{"targets"}]] bool target{};
         };
+
         check_errors(parse_from<ArrayOwner>({"--values=1,2"}), ErrorKind::MISSING_DEPENDENCY, {"target"});
         REQUIRE(parse_from<ArrayOwner>({"--values=1,2", "--target"}));
     }
@@ -269,6 +286,7 @@ TEST_CASE("groups: positional optional and container members can satisfy a group
         [[=Opt{""}, =Groups{"inputs"}]] std::optional<int> count;
         [[=Opt{""}, =Groups{"inputs"}]] std::vector<int> values;
     };
+
     const auto args = parse_from<InputGroup>({"--action", "file.txt", "--count=0", "--values=0"});
     REQUIRE(args);
     CHECK(args->input == "file.txt");
@@ -282,6 +300,7 @@ TEST_CASE("groups: mutual dependencies allow neither or both options") {
         [[=Opt{""}, =Needs{"second"}]] bool first{};
         [[=Opt{""}, =Needs{"first"}]] bool second{};
     };
+
     SUBCASE("neither") {
         REQUIRE(parse_from<MutualNeeds>({}));
     }
@@ -298,6 +317,7 @@ TEST_CASE("groups: mutual exclusions allow either option alone") {
         [[=Opt{""}, =Excludes{"second"}]] bool first{};
         [[=Opt{""}, =Excludes{"first"}]] bool second{};
     };
+
     SUBCASE("neither") {
         REQUIRE(parse_from<MutualExcludes>({}));
     }
@@ -310,7 +330,7 @@ TEST_CASE("groups: mutual exclusions allow either option alone") {
     SUBCASE("both") {
         const auto args = parse_from<MutualExcludes>({"--first", "--second"});
         check_errors(args, ErrorKind::INVALID_OVERLAP, {"first", "second"});
-        for (const auto &error : args.errors())
+        for (const auto& error : args.errors())
             CHECK(error.current_argument == (error.detail == "first" ? "second" : "first"));
     }
 }
@@ -321,6 +341,7 @@ TEST_CASE("groups: a dependency chain validates supplied owners") {
         [[=Opt{""}, =Needs{"third"}]] bool second{};
         [[=Opt{""}]] bool third{};
     };
+
     REQUIRE(parse_from<DependencyChain>({"--first", "--second", "--third"}));
     check_errors(parse_from<DependencyChain>({"--first", "--second"}), ErrorKind::MISSING_DEPENDENCY, {"third"});
     check_errors(parse_from<DependencyChain>({"--first"}), ErrorKind::MISSING_DEPENDENCY, {"second"});
@@ -340,20 +361,24 @@ TEST_CASE("groups: dependencies are checked within the selected subcommand") {
         [[=Subcommand]] std::optional<NeedsGroup> run;
         [[=Subcommand]] std::optional<ExcludesGroup> other;
     };
+
     REQUIRE(parse_from<Commands>({}));
     const auto complete = parse_from<Commands>({"run", "--action", "--first", "--second"});
     REQUIRE(complete);
     REQUIRE(complete->run.has_value());
     CHECK_FALSE(complete->other.has_value());
     check_errors(parse_from<Commands>({"run", "--action", "--first"}), ErrorKind::MISSING_DEPENDENCY, {"second"});
-    check_errors(parse_from<Commands>({"other", "--action", "--second"}), ErrorKind::INVALID_OVERLAP, {"second"}, "action");
+    check_errors(parse_from<Commands>({"other", "--action", "--second"}), ErrorKind::INVALID_OVERLAP, {"second"},
+                 "action");
 }
 
 TEST_CASE("groups: compile-time checks accept empty and valid layouts") {
     struct Empty {};
+
     struct Plain {
         bool flag{};
     };
+
     CHECK(Assertions::check_exclusion_groups<Empty>());
     CHECK(Assertions::check_exclusion_groups<Plain>());
     CHECK(Assertions::check_group_name_collisions<Empty>());
@@ -371,19 +396,24 @@ TEST_CASE("groups: compile-time checks reject unknown and self references") {
         [[=Needs{"target", "missing"}]] bool action{};
         bool target{};
     };
+
     struct UnknownExclusion {
         [[=Excludes{"target", "missing"}]] bool action{};
         bool target{};
     };
+
     struct SelfNeed {
         [[=Needs{"action"}]] bool action{};
     };
+
     struct SelfExclusion {
         [[=Excludes{"action"}]] bool action{};
     };
+
     struct RenamedSelf {
         [[=Name{"launch"}, =Needs{"launch"}]] bool action{};
     };
+
     CHECK_FALSE(Assertions::check_exclusion_groups<UnknownNeed>());
     CHECK_FALSE(Assertions::check_exclusion_groups<UnknownExclusion>());
     CHECK_FALSE(Assertions::check_exclusion_groups<SelfNeed>());
@@ -396,22 +426,27 @@ TEST_CASE("groups: reference validation uses exact resolved names") {
         [[=Needs{"target"}]] bool action{};
         [[=Name{"target"}, =Alias{"alias"}]] bool cpp_target{};
     };
+
     struct OldIdentifier {
         [[=Needs{"cpp_target"}]] bool action{};
         [[=Name{"target"}]] bool cpp_target{};
     };
+
     struct AliasReference {
         [[=Excludes{"alias"}]] bool action{};
         [[=Alias{"alias"}]] bool target{};
     };
+
     struct ShortReference {
         [[=Opt{""}, =Needs{"t"}]] bool action{};
         [[=Opt{'t'}]] bool target{};
     };
+
     struct WrongCase {
         [[=Needs{"TARGETS"}]] bool action{};
         [[=Groups{"targets"}]] bool target{};
     };
+
     CHECK(Assertions::check_exclusion_groups<Resolved>());
     CHECK_FALSE(Assertions::check_exclusion_groups<OldIdentifier>());
     CHECK_FALSE(Assertions::check_exclusion_groups<AliasReference>());
@@ -423,18 +458,22 @@ TEST_CASE("groups: group names cannot collide with resolved field names") {
     struct OwnName {
         [[=Groups{"action"}]] bool action{};
     };
+
     struct OtherName {
         [[=Groups{"target"}]] bool action{};
         bool target{};
     };
+
     struct Renamed {
         [[=Groups{"target"}]] bool action{};
         [[=Name{"target"}]] bool cpp_target{};
     };
+
     struct OldNameAvailable {
         [[=Groups{"cpp_target"}]] bool action{};
         [[=Name{"target"}]] bool cpp_target{};
     };
+
     CHECK_FALSE(Assertions::check_group_name_collisions<OwnName>());
     CHECK_FALSE(Assertions::check_group_name_collisions<OtherName>());
     CHECK_FALSE(Assertions::check_group_name_collisions<Renamed>());
@@ -446,5 +485,6 @@ TEST_CASE("groups: parent references cannot resolve groups inside a child") {
         [[=Opt{""}, =Needs{"targets"}]] bool action{};
         [[=Subcommand]] std::optional<NeedsGroup> run;
     };
+
     CHECK_FALSE(Assertions::check_exclusion_groups<Commands>());
 }

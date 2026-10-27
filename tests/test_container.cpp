@@ -1,4 +1,4 @@
-#include "test_support.hpp"
+﻿#include "test_support.hpp"
 
 #include <array>
 #include <string>
@@ -11,7 +11,7 @@ namespace {
         [[=Opt{'v', "Vector test"}]] std::vector<std::string> vec;
         [[=Opt{'a', "Array test"}, =Separator{','}]] std::array<std::string, 4> arr;
     };
-} // namespace
+}  // namespace
 
 TEST_CASE("container: delimited values fill vectors and arrays") {
     const auto args = parse_from<Args>({"--vec=1,2,3,4", "--arr=1,2,3,4"});

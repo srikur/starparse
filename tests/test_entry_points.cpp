@@ -1,4 +1,4 @@
-#include "test_support.hpp"
+﻿#include "test_support.hpp"
 
 #include <array>
 #include <stdexcept>
@@ -10,7 +10,7 @@ namespace {
         [[=Opt{'v', "Verbose mode"}]] bool verbose;
         [[=Opt{'a', "Argument 1 help string"}]] int arg1;
     };
-} // namespace
+}  // namespace
 
 TEST_CASE("entry points: parse(argc argv) skips argv[0]") {
     constexpr std::array argv{"program", "-a", "3", "--verbose"};

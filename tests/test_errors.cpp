@@ -1,4 +1,4 @@
-#include "test_support.hpp"
+﻿#include "test_support.hpp"
 
 using namespace StarParse;
 
@@ -9,7 +9,7 @@ namespace {
     };
 
     constexpr Settings settings{.allow_repeated_counts = false};
-} // namespace
+}  // namespace
 
 TEST_CASE("errors: unknown option") {
     const auto args = parse_from<Args, settings>({"--nope"});

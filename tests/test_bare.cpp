@@ -1,4 +1,4 @@
-#include "test_support.hpp"
+﻿#include "test_support.hpp"
 
 #include <string>
 
@@ -10,7 +10,7 @@ namespace {
         bool verbose;
         int arg2;
     };
-} // namespace
+}  // namespace
 
 TEST_CASE("bare: fields are addressable by name with one or two dashes") {
     const auto args = parse_from<Bare>({"--arg1=hello", "-arg2=42"});

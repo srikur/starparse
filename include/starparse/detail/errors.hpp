@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <format>
 #include <optional>
@@ -22,8 +22,8 @@ namespace StarParse {
         INVALID_ENV_VALUE,
         MISSING_SUBCOMMAND,
         AMBIGUOUS_OPTION,
-        MISSING_DEPENDENCY, // Needs{}
-        INVALID_OVERLAP, // Excludes{}
+        MISSING_DEPENDENCY,  // Needs{}
+        INVALID_OVERLAP,     // Excludes{}
         READING_RESPONSE_FAILED,
         INVALID_RESPONSE_FILE,
         INVALID_STRING_LENGTH,
@@ -56,7 +56,8 @@ namespace StarParse {
                 case ErrorKind::OUT_OF_RANGE:
                     return std::format("Value {} is out of range for argument '{}'; {}", input_value, option, detail);
                 case ErrorKind::INVALID_CHOICE:
-                    return std::format("Invalid choice '{}' for argument '{}'; allowed choices are {}", input_value, option, detail);
+                    return std::format("Invalid choice '{}' for argument '{}'; allowed choices are {}", input_value,
+                                       option, detail);
                 case ErrorKind::VALIDATION_FAILED:
                     return std::format("Validation failed for input '{}': {}", input_value, detail);
                 case ErrorKind::CUSTOM_PARSING_FAILED:
@@ -64,7 +65,8 @@ namespace StarParse {
                 case ErrorKind::READING_ENV_FAILED:
                     return std::format("Failed to read from dotenv file '{}': {}", input_value, detail);
                 case ErrorKind::INVALID_ENV_VALUE:
-                    return std::format("Error at line {} while reading dotenv line '{}': {}", argv_index, input_value, detail);
+                    return std::format("Error at line {} while reading dotenv line '{}': {}", argv_index, input_value,
+                                       detail);
                 case ErrorKind::MISSING_SUBCOMMAND:
                     return "At least one subcommand must be specified";
                 case ErrorKind::AMBIGUOUS_OPTION:
@@ -84,12 +86,12 @@ namespace StarParse {
             }
         }
     };
-} // namespace StarParse
+}  // namespace StarParse
 
 template<>
 struct std::formatter<StarParse::ParseError> : std::formatter<std::string> {
     template<typename FormatContext>
-    auto format(const StarParse::ParseError &e, FormatContext &ctx) const {
+    auto format(const StarParse::ParseError& e, FormatContext& ctx) const {
         return std::formatter<std::string>::format(e.to_string(), ctx);
     }
 };

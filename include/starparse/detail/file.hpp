@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <cstdlib>
 #include <expected>
@@ -14,11 +14,11 @@
 #include "starparse/detail/errors.hpp"
 #include "utilities.hpp"
 
-
 namespace StarParse::detail::File {
     using EnvMap = std::unordered_map<std::string, std::string>;
 
-    [[nodiscard]] inline std::expected<std::vector<std::string>, ParseError> read_response_file(const std::string_view filename) {
+    [[nodiscard]] inline std::expected<std::vector<std::string>, ParseError> read_response_file(
+        const std::string_view filename) {
         const std::filesystem::path path{filename};
         std::ifstream ifs{path, std::ios::binary};
         if (!ifs.is_open()) {
@@ -137,7 +137,8 @@ namespace StarParse::detail::File {
             auto value = trim(line.substr(equals + 1));
             constexpr std::string_view key_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_";
 
-            if (key.empty() || (key.front() >= '0' && key.front() <= '9') || key.find_first_not_of(key_chars) != std::string_view::npos) {
+            if (key.empty() || (key.front() >= '0' && key.front() <= '9') ||
+                key.find_first_not_of(key_chars) != std::string_view::npos) {
                 return std::unexpected(ParseError{
                     .kind = ErrorKind::INVALID_ENV_VALUE,
                     .input_value = std::string{line},
@@ -194,9 +195,9 @@ namespace StarParse::detail::File {
     }
 
     [[nodiscard]] inline std::optional<std::string> read_env(const std::string_view name) {
-        if (const char *v = std::getenv(name.data())) {
+        if (const char* v = std::getenv(name.data())) {
             return std::string{v};
         }
         return std::nullopt;
     }
-} // namespace StarParse::detail::File
+}  // namespace StarParse::detail::File

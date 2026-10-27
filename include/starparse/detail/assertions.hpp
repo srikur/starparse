@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <algorithm>
 #include <array>
@@ -89,7 +89,8 @@ namespace StarParse::detail::Assertions {
     consteval bool check_annotation_placement() {
         for (const auto annotation : std::meta::annotations_of(^^T)) {
             const auto kind = annotation_kind(annotation);
-            if (kind != AnnotationKind::UNKNOWN && kind != AnnotationKind::PROGRAM && kind != AnnotationKind::REQUIRES_SUBCOMMAND)
+            if (kind != AnnotationKind::UNKNOWN && kind != AnnotationKind::PROGRAM &&
+                kind != AnnotationKind::REQUIRES_SUBCOMMAND)
                 return false;
         }
         for (const auto member : std::meta::members_of(^^T, std::meta::access_context::current())) {
@@ -131,7 +132,8 @@ namespace StarParse::detail::Assertions {
     template<typename T>
     consteval bool no_annotations_on_ignored_fields() {
         for (const auto member : std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current())) {
-            if (!is_named_option<T>(member) && !has_annotation<detail::Subcommand_>(member) && has_parser_annotations(member))
+            if (!is_named_option<T>(member) && !has_annotation<detail::Subcommand_>(member) &&
+                has_parser_annotations(member))
                 return false;
         }
         return true;
@@ -176,8 +178,9 @@ namespace StarParse::detail::Assertions {
                 if (c != 0 && (c <= ' ' || c == 127 || c == '-' || c == '='))
                     return false;
             } else if (kind == AnnotationKind::ALIAS) {
-                for (const auto &alias : alias_name_list(entity)) {
-                    if (!valid_alias(alias)) return false;
+                for (const auto& alias : alias_name_list(entity)) {
+                    if (!valid_alias(alias))
+                        return false;
                 }
             } else if (kind == AnnotationKind::NAME) {
                 const auto name = std::meta::extract<Name>(annotation);
@@ -211,7 +214,8 @@ namespace StarParse::detail::Assertions {
         bool is_alias{};
     };
 
-    consteval void append_names(std::vector<Name> &names, const std::meta::info entity, const bool include_short_name = true) {
+    consteval void append_names(std::vector<Name>& names, const std::meta::info entity,
+                                const bool include_short_name = true) {
         const auto resolved_name = name_of(entity);
         const std::string name{resolved_name.begin(), resolved_name.end()};
         names.push_back({.text = name, .owner = entity});
@@ -222,20 +226,23 @@ namespace StarParse::detail::Assertions {
         if (const auto opt = extraction_of<Opt>(entity); include_short_name && opt && opt->short_name != 0) {
             names.push_back({.text = std::string(1, opt->short_name), .owner = entity, .is_short = true});
         }
-        for (const auto &alias : alias_name_list(entity)) {
+        for (const auto& alias : alias_name_list(entity)) {
             // iterator construction to avoid  UBSan constexpr null-pointer check
-            names.push_back({.text = std::string{alias.begin(), alias.end()}, .owner = entity, .is_short = false, .is_alias = true});
+            names.push_back({.text = std::string{alias.begin(), alias.end()},
+                             .owner = entity,
+                             .is_short = false,
+                             .is_alias = true});
         }
     }
 
-    consteval bool unique_names(const std::vector<Name> &names, const bool reserve_builtin_options) {
+    consteval bool unique_names(const std::vector<Name>& names, const bool reserve_builtin_options) {
         for (auto i{0uz}; i < names.size(); ++i) {
-            const auto &name = names[i];
+            const auto& name = names[i];
             if (reserve_builtin_options && (same_name(name.text, "help") || same_name(name.text, "version"))) {
                 return false;
             }
             for (auto j{0uz}; j < i; ++j) {
-                const auto &other = names[j];
+                const auto& other = names[j];
                 if (!same_name(name.text, other.text, name.is_short && other.is_short))
                     continue;
                 // option's own short name can repeat its one-character field name
@@ -273,7 +280,8 @@ namespace StarParse::detail::Assertions {
         const auto members = std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current());
         for (const auto m : members) {
             if (has_annotation<detail::Subcommand_>(m)) {
-                if (extraction_of<Env>(m).has_value()) return false;
+                if (extraction_of<Env>(m).has_value())
+                    return false;
             }
         }
         return true;
@@ -344,7 +352,7 @@ namespace StarParse::detail::Assertions {
     template<typename T>
     consteval bool check_positional_indices() {
         const auto [count, end] = get_positional_range<T>();
-        return count != -1 && count == end; // -1 used as sentinel to represent false
+        return count != -1 && count == end;  // -1 used as sentinel to represent false
     }
 
     template<typename T>
@@ -352,7 +360,8 @@ namespace StarParse::detail::Assertions {
         const auto members = std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current());
         const auto [count, end] = get_positional_range<T>();
         for (const auto m : members) {
-            if (const auto pos = extraction_of<Positional>(m); pos && is_container(std::meta::remove_cv(std::meta::type_of(m)))) {
+            if (const auto pos = extraction_of<Positional>(m);
+                pos && is_container(std::meta::remove_cv(std::meta::type_of(m)))) {
                 if (static_cast<ssize_t>(pos->index) != end - 1)
                     return false;
             }
@@ -370,22 +379,19 @@ namespace StarParse::detail::Assertions {
             });
             if (validator_count > 1)
                 return false;
-            const auto min_count = std::ranges::count_if(
-                annotations, [](const std::meta::info a) {
-                    return is_specialization_of(std::meta::remove_cv(std::meta::type_of(a)), ^^Min);
-                });
+            const auto min_count = std::ranges::count_if(annotations, [](const std::meta::info a) {
+                return is_specialization_of(std::meta::remove_cv(std::meta::type_of(a)), ^^Min);
+            });
             if (min_count > 1)
                 return false;
-            const auto max_count = std::ranges::count_if(
-                annotations, [](const std::meta::info a) {
-                    return is_specialization_of(std::meta::remove_cv(std::meta::type_of(a)), ^^Max);
-                });
+            const auto max_count = std::ranges::count_if(annotations, [](const std::meta::info a) {
+                return is_specialization_of(std::meta::remove_cv(std::meta::type_of(a)), ^^Max);
+            });
             if (max_count > 1)
                 return false;
-            const auto range_count = std::ranges::count_if(
-                annotations, [](const std::meta::info a) {
-                    return is_specialization_of(std::meta::remove_cv(std::meta::type_of(a)), ^^Range);
-                });
+            const auto range_count = std::ranges::count_if(annotations, [](const std::meta::info a) {
+                return is_specialization_of(std::meta::remove_cv(std::meta::type_of(a)), ^^Range);
+            });
             if (range_count > 1)
                 return false;
             const auto choices_count = std::ranges::count_if(annotations, [](const std::meta::info a) {
@@ -409,7 +415,9 @@ namespace StarParse::detail::Assertions {
             if (length_count > 1)
                 return false;
             // also if more than 1 on a field
-            if (validator_count + min_count + max_count + range_count + choices_count + min_len_count + max_len_count + length_count > 1)
+            if (validator_count + min_count + max_count + range_count + choices_count + min_len_count + max_len_count +
+                    length_count >
+                1)
                 return false;
         }
         return true;
@@ -428,32 +436,41 @@ namespace StarParse::detail::Assertions {
     template<typename T>
     consteval bool check_exclusion_groups() {
         // verify that all Needs and Excludes values are either a valid field or valid group name
-        static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
+        static constexpr auto members =
+            std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
         template for (constexpr auto m : members) {
             if constexpr (specialization_of<^^Needs>(m).has_value()) {
                 static constexpr auto needs = get_annotation_list_values<m, ^^Needs>();
                 template for (constexpr auto need : needs) {
-                    if constexpr (name_of(m) == std::string_view{need}) return false;
+                    if constexpr (name_of(m) == std::string_view{need})
+                        return false;
                     bool found{false};
                     template for (constexpr auto inner_mem : members) {
                         static constexpr auto needs_group = std::define_static_array(group_named<T>(need));
-                        if constexpr (name_of(inner_mem) == std::string_view{need}) found = true;
-                        else if constexpr (!needs_group.empty()) found = true;
+                        if constexpr (name_of(inner_mem) == std::string_view{need})
+                            found = true;
+                        else if constexpr (!needs_group.empty())
+                            found = true;
                     }
-                    if (!found) return false;
+                    if (!found)
+                        return false;
                 }
             }
             if constexpr (specialization_of<^^Excludes>(m).has_value()) {
                 static constexpr auto excludes = get_annotation_list_values<m, ^^Excludes>();
                 template for (constexpr auto exclude : excludes) {
-                    if constexpr (name_of(m) == std::string_view{exclude}) return false;
+                    if constexpr (name_of(m) == std::string_view{exclude})
+                        return false;
                     bool found{false};
                     template for (constexpr auto inner_mem : members) {
                         static constexpr auto excludes_group = std::define_static_array(group_named<T>(exclude));
-                        if constexpr (name_of(inner_mem) == std::string_view{exclude}) found = true;
-                        else if constexpr (!excludes_group.empty()) found = true;
+                        if constexpr (name_of(inner_mem) == std::string_view{exclude})
+                            found = true;
+                        else if constexpr (!excludes_group.empty())
+                            found = true;
                     }
-                    if (!found) return false;
+                    if (!found)
+                        return false;
                 }
             }
         }
@@ -463,13 +480,15 @@ namespace StarParse::detail::Assertions {
     template<typename T>
     consteval bool check_group_name_collisions() {
         // ensure Groups values do not collide with any resolved field names
-        static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
+        static constexpr auto members =
+            std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
         template for (constexpr auto m : members) {
             if constexpr (specialization_of<^^Groups>(m).has_value()) {
                 static constexpr auto groups = get_annotation_list_values<m, ^^Groups>();
                 template for (constexpr auto group : groups) {
                     template for (constexpr auto inner_mem : members) {
-                        if constexpr (name_of(inner_mem) == std::string_view{group}) return false;
+                        if constexpr (name_of(inner_mem) == std::string_view{group})
+                            return false;
                     }
                 }
             }
@@ -478,13 +497,17 @@ namespace StarParse::detail::Assertions {
     }
 
     template<typename T>
-    consteval bool check_negated_name_collisions(const Settings &settings) {
-        if (!settings.autogenerate_negations) return true;
-        static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
+    consteval bool check_negated_name_collisions(const Settings& settings) {
+        if (!settings.autogenerate_negations)
+            return true;
+        static constexpr auto members =
+            std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
         template for (constexpr auto member : members) {
             template for (constexpr auto inner_mem : members) {
-                if (name_of(member) == snake_negated_name_v<inner_mem>) return false;
-                if (settings.allow_kebab_casing && name_of(member) == kebab_negated_name_v<inner_mem>) return false;
+                if (name_of(member) == snake_negated_name_v<inner_mem>)
+                    return false;
+                if (settings.allow_kebab_casing && name_of(member) == kebab_negated_name_v<inner_mem>)
+                    return false;
             }
         }
         return true;
@@ -492,7 +515,8 @@ namespace StarParse::detail::Assertions {
 
     template<typename T>
     consteval bool check_string_length_annotations() {
-        static constexpr auto members = std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
+        static constexpr auto members =
+            std::define_static_array(std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::current()));
         template for (constexpr auto m : members) {
             if constexpr (specialization_of<^^MinLength>(m)) {
                 using V = [:std::meta::dealias(std::meta::remove_cvref(std::meta::type_of(m))):];
@@ -503,5 +527,4 @@ namespace StarParse::detail::Assertions {
         }
         return true;
     }
-
-} // namespace StarParse::detail::Assertions
+}  // namespace StarParse::detail::Assertions

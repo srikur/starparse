@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <string>
 #ifdef _WIN32
 #ifndef WIN32_LEAN_AND_MEAN
@@ -32,9 +32,10 @@ namespace StarParse::detail::Terminal {
 
     inline constexpr std::string_view whitespace = " \t\r";
 
-    constexpr void wrap_line(std::string_view line, const std::size_t width, std::size_t hang, std::string &out) {
+    constexpr void wrap_line(std::string_view line, const std::size_t width, std::size_t hang, std::string& out) {
         const auto skip = [line](const std::size_t from, const bool space) {
-            return std::min(space ? line.find_first_not_of(whitespace, from) : line.find_first_of(whitespace, from), line.size());
+            return std::min(space ? line.find_first_not_of(whitespace, from) : line.find_first_of(whitespace, from),
+                            line.size());
         };
 
         std::size_t pos = skip(0, true);
@@ -78,7 +79,8 @@ namespace StarParse::detail::Terminal {
         }
     }
 
-    constexpr std::string wrap(std::string_view text, const int width = terminal_width(), const std::size_t hang = std::string_view::npos) {
+    constexpr std::string wrap(std::string_view text, const int width = terminal_width(),
+                               const std::size_t hang = std::string_view::npos) {
         const std::size_t w = width > 0 ? static_cast<std::size_t>(width) : 1;
         std::string out;
         out.reserve(text.size() + text.size() / w);
@@ -91,4 +93,4 @@ namespace StarParse::detail::Terminal {
         }
         return out;
     }
-} // namespace StarParse::detail::Terminal
+}  // namespace StarParse::detail::Terminal

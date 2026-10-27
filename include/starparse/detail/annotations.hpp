@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <array>
 #include <cmath>
@@ -11,6 +11,11 @@
 #include <utility>
 
 namespace StarParse::inline annotations {
+    template<std::convertible_to<std::string_view>... Ts>
+    static consteval const char* const* intern(Ts... ns) {
+        return std::define_static_array(std::array{std::define_static_string(std::string_view{ns})...}).data();
+    }
+
     namespace detail {
         template<typename F>
         struct first_arg : first_arg<decltype(&F::operator())> {};
@@ -36,7 +41,7 @@ namespace StarParse::inline annotations {
         };
 
         template<typename F>
-        using first_arg_t = first_arg<std::remove_cvref_t<F> >::type;
+        using first_arg_t = first_arg<std::remove_cvref_t<F>>::type;
 
         struct Subcommand_ final {};
 
@@ -47,14 +52,15 @@ namespace StarParse::inline annotations {
         struct RequiresSubcommand_ final {};
 
         struct Nargs_ final {};
-    } // namespace detail
+    }  // namespace detail
 
     struct Opt final {
         char short_name{0};
-        const char *help_{};
-        const char *metavar_{}; // TODO: support multiple
+        const char* help_{};
+        const char* metavar_{};  // TODO: support multiple
 
-        explicit consteval Opt(const char s, std::string_view h, std::string_view m) : short_name(s), help_(std::define_static_string(h)), metavar_(std::define_static_string(m)) {}
+        explicit consteval Opt(const char s, std::string_view h, std::string_view m)
+            : short_name(s), help_(std::define_static_string(h)), metavar_(std::define_static_string(m)) {}
 
         explicit consteval Opt(const char s, std::string_view h) : short_name(s), help_(std::define_static_string(h)) {}
 
@@ -72,7 +78,7 @@ namespace StarParse::inline annotations {
     constexpr Opt Option{};
 
     struct Name final {
-        const char *name_{};
+        const char* name_{};
 
         explicit consteval Name(std::string_view n) : name_(std::define_static_string(n)) {
             if (n.empty()) {
@@ -83,9 +89,10 @@ namespace StarParse::inline annotations {
 
     struct Positional final {
         size_t index{};
-        const char *help_{};
+        const char* help_{};
 
-        explicit consteval Positional(const size_t i, std::string_view h) : index(i), help_(std::define_static_string(h)) {}
+        explicit consteval Positional(const size_t i, std::string_view h)
+            : index(i), help_(std::define_static_string(h)) {}
 
         explicit consteval Positional(const size_t i) : index(i) {}
 
@@ -101,12 +108,12 @@ namespace StarParse::inline annotations {
     };
 
     struct Alias final {
-        const char *const *names_{};
+        const char* const* names_{};
         size_t count_{};
 
         template<std::convertible_to<std::string_view>... Ts>
             requires(sizeof...(Ts) > 0)
-        explicit consteval Alias(Ts... ns) : names_(std::define_static_array(std::array{std::define_static_string(std::string_view{ns})...}).data()), count_(sizeof...(ns)) {
+        explicit consteval Alias(Ts... ns) : names_(intern(ns...)), count_(sizeof...(ns)) {
             if ((std::string_view{ns}.empty() || ...)) {
                 throw std::invalid_argument("Alias cannot contain empty strings");
             }
@@ -114,27 +121,30 @@ namespace StarParse::inline annotations {
     };
 
     struct Program final {
-        explicit consteval Program(std::string_view n, std::string_view d, std::string_view v) : name(std::define_static_string(n)), description(std::define_static_string(d)), version(std::define_static_string(v)) {}
+        explicit consteval Program(std::string_view n, std::string_view d, std::string_view v)
+            : name(std::define_static_string(n)),
+              description(std::define_static_string(d)),
+              version(std::define_static_string(v)) {}
 
-        const char *name{};
-        const char *description{};
-        const char *version{};
+        const char* name{};
+        const char* description{};
+        const char* version{};
     };
 
     struct Prologue final {
-        const char *value{};
+        const char* value{};
 
         explicit consteval Prologue(std::string_view n) : value(std::define_static_string(n)) {}
     };
 
     struct Epilogue final {
-        const char *value{};
+        const char* value{};
 
         explicit consteval Epilogue(std::string_view n) : value(std::define_static_string(n)) {}
     };
 
     struct Usage final {
-        const char *value{};
+        const char* value{};
 
         explicit consteval Usage(std::string_view n) : value(std::define_static_string(n)) {}
     };
@@ -143,7 +153,8 @@ namespace StarParse::inline annotations {
     inline constexpr bool is_any_of_v = (std::is_same_v<T, Ts> || ...);
 
     template<typename T>
-    struct is_char : std::bool_constant<is_any_of_v<std::remove_cv_t<T>, char, wchar_t, char8_t, char16_t, char32_t> > {};
+    struct is_char : std::bool_constant<is_any_of_v<std::remove_cv_t<T>, char, wchar_t, char8_t, char16_t, char32_t>> {
+    };
 
     template<typename T>
     inline constexpr bool is_char_v = is_char<T>::value;
@@ -203,13 +214,15 @@ namespace StarParse::inline annotations {
 
     template<typename T>
     struct Choices final {
-        using value_type = std::conditional_t<std::convertible_to<T, std::string_view>, const char *, T>;
-        const value_type *values_{};
+        using value_type = std::conditional_t<std::convertible_to<T, std::string_view>, const char*, T>;
+        const value_type* values_{};
         size_t count_{};
 
         template<std::convertible_to<std::string_view>... Ts>
             requires(sizeof...(Ts) > 0 && std::convertible_to<T, std::string_view>)
-        explicit consteval Choices(Ts... ns) : values_(std::define_static_array(std::array{std::define_static_string(std::string_view{ns})...}).data()), count_(sizeof...(ns)) {
+        explicit consteval Choices(Ts... ns)
+            : values_(std::define_static_array(std::array{std::define_static_string(std::string_view{ns})...}).data()),
+              count_(sizeof...(ns)) {
             if ((std::string_view{ns}.empty() || ...)) {
                 throw std::invalid_argument("Choices cannot contain empty strings");
             }
@@ -217,32 +230,34 @@ namespace StarParse::inline annotations {
 
         template<std::convertible_to<T>... Ts>
             requires(sizeof...(Ts) > 0 && !std::convertible_to<T, std::string_view>)
-        explicit consteval Choices(Ts... ns) : values_(std::define_static_array(std::array<T, sizeof...(Ts)>{T{ns}...}).data()), count_(sizeof...(ns)) {}
+        explicit consteval Choices(Ts... ns) : values_(intern(ns...)), count_(sizeof...(ns)) {}
     };
 
     template<typename... Ts>
-    Choices(Ts...) -> Choices<std::common_type_t<Ts...> >;
+    Choices(Ts...) -> Choices<std::common_type_t<Ts...>>;
 
     template<typename T>
     struct Validator final {
         using Result = std::expected<void, std::string>;
-        using BoolFn = bool (*)(const T &);
-        using CStrFn = const char *(*)(const T &);
-        using ExpectedFn = Result (*)(const T &);
+        using BoolFn = bool (*)(const T&);
+        using CStrFn = const char* (*)(const T&);
+        using ExpectedFn = Result (*)(const T&);
 
         BoolFn bool_fn{};
         CStrFn cstr_fn{};
         ExpectedFn expected_fn{};
 
         explicit consteval Validator(const BoolFn f) : bool_fn(f) {}
+
         explicit consteval Validator(const CStrFn f) : cstr_fn(f) {}
+
         explicit consteval Validator(const ExpectedFn f) : expected_fn(f) {}
 
-        [[nodiscard]] constexpr Result operator()(const T &v) const {
+        [[nodiscard]] constexpr Result operator()(const T& v) const {
             if (expected_fn)
                 return expected_fn(v);
             if (cstr_fn) {
-                if (const char *msg = cstr_fn(v)) {
+                if (const char* msg = cstr_fn(v)) {
                     return std::unexpected{std::string{msg}};
                 }
                 return {};
@@ -254,7 +269,7 @@ namespace StarParse::inline annotations {
     };
 
     template<typename F>
-    Validator(F) -> Validator<detail::first_arg_t<F> >;
+    Validator(F) -> Validator<detail::first_arg_t<F>>;
 
     constexpr detail::Subcommand_ Subcommand{};
 
@@ -264,8 +279,8 @@ namespace StarParse::inline annotations {
     struct Parser final {
         using Result = std::expected<T, std::string>;
         using ValueFn = Result (*)(std::string_view);
-        using RefFn = Result (*)(const std::string_view &);
-        using RawFn = Result (*)(const char *);
+        using RefFn = Result (*)(const std::string_view&);
+        using RawFn = Result (*)(const char*);
         using StringFn = Result (*)(std::string);
 
         ValueFn value_fn{};
@@ -274,30 +289,37 @@ namespace StarParse::inline annotations {
         StringFn string_fn{};
 
         explicit consteval Parser(const RefFn f) : ref_fn(f) {}
+
         explicit consteval Parser(const ValueFn f) : value_fn(f) {}
+
         explicit consteval Parser(const RawFn f) : raw_fn(f) {}
+
         explicit consteval Parser(const StringFn f) : string_fn(f) {}
 
         [[nodiscard]] constexpr Result operator()(const std::string_view s) const {
-            if (value_fn) return value_fn(s);
-            if (ref_fn) return ref_fn(s);
-            if (raw_fn) return raw_fn(s.data());
-            if (string_fn) return string_fn(std::string{s});
+            if (value_fn)
+                return value_fn(s);
+            if (ref_fn)
+                return ref_fn(s);
+            if (raw_fn)
+                return raw_fn(s.data());
+            if (string_fn)
+                return string_fn(std::string{s});
             return std::unexpected{std::string{}};
         }
     };
 
     template<typename F>
-    Parser(F) -> Parser<detail::first_arg_t<F> >;
+    Parser(F) -> Parser<detail::first_arg_t<F>>;
 
     struct Env final {
-        const char *name{};
+        const char* name{};
 
         explicit consteval Env(std::string_view n) : name(std::define_static_string(n)) {}
     };
 
     struct File final {
-        const char *filename{};
+        const char* filename{};
 
         explicit consteval File(std::string_view f) : filename(std::define_static_string(f)) {}
     };
@@ -310,64 +332,65 @@ namespace StarParse::inline annotations {
 
     template<typename T>
     struct Needs final {
-        using value_type = std::conditional_t<std::convertible_to<T, std::string_view>, const char *, T>;
-        const value_type *values_{};
+        using value_type = std::conditional_t<std::convertible_to<T, std::string_view>, const char*, T>;
+        const value_type* values_{};
         size_t count_{};
 
         template<std::convertible_to<std::string_view>... Ts>
             requires(sizeof...(Ts) > 0 && std::convertible_to<T, std::string_view>)
-        explicit consteval Needs(Ts... ns) : values_(std::define_static_array(std::array{std::define_static_string(std::string_view{ns})...}).data()), count_(sizeof...(ns)) {}
+        explicit consteval Needs(Ts... ns) : values_(intern(ns...)), count_(sizeof...(ns)) {}
 
         template<std::convertible_to<T>... Ts>
             requires(sizeof...(Ts) > 0 && !std::convertible_to<T, std::string_view>)
-        explicit consteval Needs(Ts... ns) : values_(std::define_static_array(std::array<T, sizeof...(Ts)>{T{ns}...}).data()), count_(sizeof...(ns)) {}
+        explicit consteval Needs(Ts... ns) : values_(intern(ns...)), count_(sizeof...(ns)) {}
     };
 
     template<typename... Ts>
-    Needs(Ts...) -> Needs<std::common_type_t<Ts...> >;
+    Needs(Ts...) -> Needs<std::common_type_t<Ts...>>;
 
     template<typename T>
     struct Excludes final {
-        using value_type = std::conditional_t<std::convertible_to<T, std::string_view>, const char *, T>;
-        const value_type *values_{};
+        using value_type = std::conditional_t<std::convertible_to<T, std::string_view>, const char*, T>;
+        const value_type* values_{};
         size_t count_{};
 
         template<std::convertible_to<std::string_view>... Ts>
             requires(sizeof...(Ts) > 0 && std::convertible_to<T, std::string_view>)
-        explicit consteval Excludes(Ts... ns) : values_(std::define_static_array(std::array{std::define_static_string(std::string_view{ns})...}).data()), count_(sizeof...(ns)) {}
+        explicit consteval Excludes(Ts... ns) : values_(intern(ns...)), count_(sizeof...(ns)) {}
 
         template<std::convertible_to<T>... Ts>
             requires(sizeof...(Ts) > 0 && !std::convertible_to<T, std::string_view>)
-        explicit consteval Excludes(Ts... ns) : values_(std::define_static_array(std::array<T, sizeof...(Ts)>{T{ns}...}).data()), count_(sizeof...(ns)) {}
+        explicit consteval Excludes(Ts... ns) : values_(intern(ns...)), count_(sizeof...(ns)) {}
     };
 
     template<typename... Ts>
-    Excludes(Ts...) -> Excludes<std::common_type_t<Ts...> >;
+    Excludes(Ts...) -> Excludes<std::common_type_t<Ts...>>;
 
     template<typename T>
     struct Groups final {
-        using value_type = std::conditional_t<std::convertible_to<T, std::string_view>, const char *, T>;
-        const value_type *values_{};
+        using value_type = std::conditional_t<std::convertible_to<T, std::string_view>, const char*, T>;
+        const value_type* values_{};
         size_t count_{};
 
         template<std::convertible_to<std::string_view>... Ts>
             requires(sizeof...(Ts) > 0 && std::convertible_to<T, std::string_view>)
-        explicit consteval Groups(Ts... ns) : values_(std::define_static_array(std::array{std::define_static_string(std::string_view{ns})...}).data()), count_(sizeof...(ns)) {}
+        explicit consteval Groups(Ts... ns) : values_(intern(ns...)), count_(sizeof...(ns)) {}
 
         template<std::convertible_to<T>... Ts>
             requires(sizeof...(Ts) > 0 && !std::convertible_to<T, std::string_view>)
-        explicit consteval Groups(Ts... ns) : values_(std::define_static_array(std::array<T, sizeof...(Ts)>{T{ns}...}).data()), count_(sizeof...(ns)) {}
+        explicit consteval Groups(Ts... ns) : values_(intern(ns...)), count_(sizeof...(ns)) {}
     };
 
     template<typename... Ts>
-    Groups(Ts...) -> Groups<std::common_type_t<Ts...> >;
+    Groups(Ts...) -> Groups<std::common_type_t<Ts...>>;
 
     template<std::integral T>
     struct MinLength final {
         T length_{};
 
         explicit consteval MinLength(const T length) : length_(length) {
-            if (length <= 0) throw std::out_of_range("Minimum length must be greater than zero");
+            if (length <= 0)
+                throw std::out_of_range("Minimum length must be greater than zero");
             if (length < std::numeric_limits<T>::lowest() || length > std::numeric_limits<T>::max())
                 throw std::out_of_range("Specified length must be within the bounds of its integral type");
         }
@@ -378,7 +401,8 @@ namespace StarParse::inline annotations {
         T length_{};
 
         explicit consteval MaxLength(const T length) : length_(length) {
-            if (length <= 0) throw std::out_of_range("Maximum length must be greater than zero");
+            if (length <= 0)
+                throw std::out_of_range("Maximum length must be greater than zero");
             if (length < std::numeric_limits<T>::lowest() || length > std::numeric_limits<T>::max())
                 throw std::out_of_range("Specified length is not within the bounds of its integral type");
         }
@@ -390,7 +414,8 @@ namespace StarParse::inline annotations {
         T max_{};
 
         explicit consteval Length(const T min, const T max) : min_(min), max_(max) {
-            if (min <= 0 || max <= 0) throw std::out_of_range("Min and Max lengths must both be greater than zero");
+            if (min <= 0 || max <= 0)
+                throw std::out_of_range("Min and Max lengths must both be greater than zero");
             if (std::cmp_less(max, min) || min == max)
                 throw std::invalid_argument("Minimum length must be strictly less than maximum length");
             if (min < std::numeric_limits<T>::lowest() || min > std::numeric_limits<T>::max())
@@ -399,4 +424,4 @@ namespace StarParse::inline annotations {
                 throw std::out_of_range("Specified maximum length is not within the bounds of its integral type");
         }
     };
-} // namespace StarParse::inline annotations
+}  // namespace StarParse::inline annotations
