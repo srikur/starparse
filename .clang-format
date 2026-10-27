@@ -1,71 +1,83 @@
----
+# Copied from https://github.com/kehanXue/google-style-clang-format with some personal style changes
 Language: Cpp
-BasedOnStyle: LLVM
-AccessModifierOffset: -4
-AlignConsecutiveAssignments: false
-AlignConsecutiveDeclarations: false
-AlignOperands: true
-AlignTrailingComments: false
+BasedOnStyle: Google
+AccessModifierOffset: -1
 AlignAfterOpenBracket: Align
-# Keep every nonempty function/lambda body multiline; empty bodies stay compact.
+AlignConsecutiveAssignments: None
+AlignOperands: Align
+AllowAllArgumentsOnNextLine: true
+AllowAllConstructorInitializersOnNextLine: true
+AllowAllParametersOfDeclarationOnNextLine: false
+AllowShortBlocksOnASingleLine: Empty
+AllowShortCaseLabelsOnASingleLine: false
 AllowShortFunctionsOnASingleLine: Empty
-AllowShortLambdasOnASingleLine: Empty
-AllowShortEnumsOnASingleLine: false
-# With ColumnLimit: 0, preserve both compact and multiline if statements.
-AllowShortIfStatementsOnASingleLine: AllIfsAndElse
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLambdasOnASingleLine: Inline
+AllowShortLoopsOnASingleLine: false
+AlwaysBreakAfterReturnType: None
 AlwaysBreakTemplateDeclarations: Yes
-BraceWrapping: 
+BinPackArguments: true
+BreakBeforeBraces: Custom
+BraceWrapping:
   AfterCaseLabel: false
   AfterClass: false
-  AfterControlStatement: false
+  AfterStruct: false
+  AfterControlStatement: Never
   AfterEnum: false
   AfterFunction: false
   AfterNamespace: false
-  AfterStruct: false
   AfterUnion: false
   AfterExternBlock: false
   BeforeCatch: false
   BeforeElse: false
   BeforeLambdaBody: false
-  BeforeWhile: false
+  IndentBraces: false
   SplitEmptyFunction: false
   SplitEmptyRecord: false
   SplitEmptyNamespace: false
-BreakBeforeBraces: Custom
-BreakConstructorInitializers: AfterColon
-BreakConstructorInitializersBeforeComma: false
-# Preserve manual wrapping instead of repacking statements to a fixed width.
-ColumnLimit: 0
-# Keep constructor initializers together on the signature line.
-PackConstructorInitializers: CurrentLine
+BreakBeforeBinaryOperators: None
+BreakBeforeTernaryOperators: true
+BreakConstructorInitializers: BeforeColon
+BreakInheritanceList: BeforeColon
+ColumnLimit: 120
+CompactNamespaces: false
 ContinuationIndentWidth: 4
-BracedInitializerIndentWidth: 4
-# Preserve include order, existing namespace comments, and comment wrapping.
-SortIncludes: Never
-FixNamespaceComments: false
-ReflowComments: Never
-IncludeCategories: 
-  - Regex: '^<.*'
-    Priority: 1
-  - Regex: '^".*'
-    Priority: 2
-  - Regex: '.*'
-    Priority: 3
-IncludeIsMainRegex: '([-_](test|unittest))?$'
+Cpp11BracedListStyle: true
+DerivePointerAlignment: false
+EmptyLineBeforeAccessModifier: LogicalBlock
+FixNamespaceComments: true
+IncludeBlocks: Preserve
 IndentCaseLabels: true
+IndentPPDirectives: None
 IndentWidth: 4
-InsertNewlineAtEOF: true
-MacroBlockBegin: ''
-MacroBlockEnd: ''
-MaxEmptyLinesToKeep: 2
+KeepEmptyLinesAtTheStartOfBlocks: true
+MaxEmptyLinesToKeep: 1
 NamespaceIndentation: All
+ObjCSpaceAfterProperty: false
+ObjCSpaceBeforeProtocolList: true
+PointerAlignment: Left
+ReflowComments: false
+SeparateDefinitionBlocks: Always
 SpaceAfterCStyleCast: false
+SpaceAfterLogicalNot: false
 SpaceAfterTemplateKeyword: false
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeCpp11BracedList: false
+SpaceBeforeCtorInitializerColon: true
+SpaceBeforeInheritanceColon: true
+SpaceBeforeParens: ControlStatements
+SpaceBeforeRangeBasedForLoopColon: true
+SpaceBeforeSquareBrackets: false
 SpaceInEmptyParentheses: false
-# Preserve the existing spacing in nested template closers (> >).
-SpacesInAngles: Leave
-SpacesInConditionalStatement: false
+SpacesBeforeTrailingComments: 2
+SpacesInAngles: false
 SpacesInCStyleCastParentheses: false
+SpacesInContainerLiterals: false
 SpacesInParentheses: false
+SpacesInSquareBrackets: false
+Standard: Latest
 TabWidth: 4
-...
+UseTab: Never
+InsertNewlineAtEOF: true
+KeepEmptyLines:
+  AtEndOfFile: true
